@@ -12,44 +12,31 @@ declare module "obsidian-local-rest-api" {
 
 export default class ObsidianMCPPlugin extends Plugin {
 	private api: LocalRestApiPublicApi;
+	private server: McpServer;
+	private transport: StreamableHTTPServerTransport;
 
-	registerRoutes() {
-		// Get the API handle
+	async registerRoutes() {
 		this.api = getAPI(this.app, this.manifest);
 
-		// Add the MCP route for streamable HTTP
+		this.server = new McpServer({
+			name: "Obsidian MCP Plugin",
+			version: this.manifest.version,
+		});
+
+		this.server.tool("ping", {}, async () => ({
+			content: [{ type: "text", text: "pong" }]
+		}));
+
+		this.transport = new StreamableHTTPServerTransport({
+			sessionIdGenerator: undefined,
+			enableJsonResponse: true,
+		});
+
+		await this.server.connect(this.transport);
+
 		this.api.addRoute("/mcp").all(async (request, response) => {
 			try {
-				// Create a new server and transport for each request (stateless approach)
-				const server = new McpServer({
-					name: "Obsidian MCP Plugin",
-					version: this.manifest.version,
-				});
-
-				// Add basic tools here
-				server.tool("ping", 
-					{}, 
-					async () => ({
-						content: [{ type: "text", text: "pong" }]
-					})
-				);
-
-				// Create a stateless transport (no session management)
-				const transport = new StreamableHTTPServerTransport({
-					sessionIdGenerator: undefined,
-				});
-
-				// Close resources when the connection ends
-				response.on('close', () => {
-					transport.close();
-					server.close();
-				});
-
-				// Connect the server to the transport
-				await server.connect(transport);
-
-				// Handle the request
-				await transport.handleRequest(request, response, request.body);
+				await this.transport.handleRequest(request, response, request.body);
 			} catch (error) {
 				console.error("Error handling MCP request:", error);
 				response.status(500).json({
@@ -62,30 +49,11 @@ export default class ObsidianMCPPlugin extends Plugin {
 				});
 			}
 		});
-
-		// Keep the example route
-		this.api.addRoute("/my-route/").get((request, response) => {
-			response.status(200).json({
-				sample_plugin_response_ok: true,
-			});
-		});
 	}
-
-	//
-	//
-	//
-	//
-	// Everything below this point can be left as it is -- this is just
-	// setting up machinery to properly register your routes with
-	// Obsidian Local REST API
-	//
-	//
-	//
-	//
 
 	async onload() {
 		if (this.app.plugins.enabledPlugins.has("obsidian-local-rest-api")) {
-			this.registerRoutes();
+			await this.registerRoutes();
 		}
 
 		this.registerEvent(
@@ -99,6 +67,12 @@ export default class ObsidianMCPPlugin extends Plugin {
 	onunload() {
 		if (this.api) {
 			this.api.unregister();
+		}
+		if (this.transport) {
+			this.transport.close();
+		}
+		if (this.server) {
+			this.server.close();
 		}
 	}
 }
