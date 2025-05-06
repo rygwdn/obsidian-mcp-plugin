@@ -1,6 +1,13 @@
 import { Plugin } from "obsidian";
 import { getAPI, LocalRestApiPublicApi } from "obsidian-local-rest-api";
 
+// Extend the LocalRestApiPublicApi interface to include the unregister method
+declare module "obsidian-local-rest-api" {
+	interface LocalRestApiPublicApi {
+		unregister(): void;
+	}
+}
+
 export default class ObsidianLocalRESTAPISamplePlugin extends Plugin {
 	private api: LocalRestApiPublicApi;
 
