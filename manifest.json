@@ -1,10 +1,10 @@
 {
-	"id": "obsidian-local-rest-api-sample-api-extension",
-	"name": "Local REST API Sample API Extension",
+	"id": "obsidian-mcp-plugin",
+	"name": "MCP API for Obsidian",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "Example of how you can add additional routes to Obsidian Local REST API via a plugin",
-	"author": "Obsidian",
-	"authorUrl": "https://coddingtonbear.net/",
+	"description": "Provides a Model Context Protocol (MCP) endpoint via Obsidian Local REST API",
+	"author": "Ryan Wooden",
+	"authorUrl": "https://github.com/rygwdn",
 	"isDesktopOnly": true
 }

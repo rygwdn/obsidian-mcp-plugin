@@ -1,5 +1,7 @@
 import { Plugin } from "obsidian";
 import { getAPI, LocalRestApiPublicApi } from "obsidian-local-rest-api";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 
 // Extend the LocalRestApiPublicApi interface to include the unregister method
 declare module "obsidian-local-rest-api" {
@@ -8,27 +10,65 @@ declare module "obsidian-local-rest-api" {
 	}
 }
 
-export default class ObsidianLocalRESTAPISamplePlugin extends Plugin {
+export default class ObsidianMCPPlugin extends Plugin {
 	private api: LocalRestApiPublicApi;
 
 	registerRoutes() {
-		// Here is how you register your routes:
-		//
-		// 1. Get an API handle:
+		// Get the API handle
 		this.api = getAPI(this.app, this.manifest);
 
-		// 2. Add your routes -- `addRoute` returns a route object
-		//    https://www.geeksforgeeks.org/express-js-router-route-function/
-		//    that you can attach handlers to
+		// Add the MCP route for streamable HTTP
+		this.api.addRoute("/mcp").all(async (request, response) => {
+			try {
+				// Create a new server and transport for each request (stateless approach)
+				const server = new McpServer({
+					name: "Obsidian MCP Plugin",
+					version: this.manifest.version,
+				});
+
+				// Add basic tools here
+				server.tool("ping", 
+					{}, 
+					async () => ({
+						content: [{ type: "text", text: "pong" }]
+					})
+				);
+
+				// Create a stateless transport (no session management)
+				const transport = new StreamableHTTPServerTransport({
+					sessionIdGenerator: undefined,
+				});
+
+				// Close resources when the connection ends
+				response.on('close', () => {
+					transport.close();
+					server.close();
+				});
+
+				// Connect the server to the transport
+				await server.connect(transport);
+
+				// Handle the request
+				await transport.handleRequest(request, response, request.body);
+			} catch (error) {
+				console.error("Error handling MCP request:", error);
+				response.status(500).json({
+					jsonrpc: "2.0",
+					error: {
+						code: -32603,
+						message: "Internal error"
+					},
+					id: null
+				});
+			}
+		});
+
+		// Keep the example route
 		this.api.addRoute("/my-route/").get((request, response) => {
 			response.status(200).json({
 				sample_plugin_response_ok: true,
 			});
 		});
-
-		// For more insight into what you can put into a route, have
-		// a look at the existing routes that are handled by
-		// the API itself: https://github.com/coddingtonbear/obsidian-local-rest-api/blob/main/src/requestHandler.ts
 	}
 
 	//
