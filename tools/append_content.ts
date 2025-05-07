@@ -1,4 +1,4 @@
-import { App, normalizePath, TFile } from "obsidian";
+import { App, normalizePath } from "obsidian";
 import { z } from "zod";
 import { ToolRegistration } from "./types";
 
@@ -14,19 +14,14 @@ export const appendContentTool: ToolRegistration = {
 		const content = args.content;
 		const adapter = app.vault.adapter;
 
-		try {
-			await app.vault.createFolder(filePath.substring(0, filePath.lastIndexOf("/")));
-		} catch {
-			// the folder/file already exists, but we don't care
+		const file = app.vault.getFileByPath(filePath);
+		if (!file) {
+			throw new Error("File not found: " + filePath);
 		}
 
-		let fileContents = "";
-		const file = app.vault.getAbstractFileByPath(filePath);
-		if (file instanceof TFile) {
-			fileContents = await app.vault.read(file);
-			if (!fileContents.endsWith("\n")) {
-				fileContents += "\n";
-			}
+		let fileContents = await app.vault.read(file);
+		if (!fileContents.endsWith("\n")) {
+			fileContents += "\n";
 		}
 
 		fileContents += content;

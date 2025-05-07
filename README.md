@@ -68,6 +68,62 @@ Content-Type: application/json
 npm run build
 ```
 
+## Development
+
+### Testing
+
+This project uses Vitest for testing. The tests mock the Obsidian API to ensure proper functionality without requiring an actual Obsidian instance.
+
+```bash
+# Run tests once
+npm run test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage report
+npm run test:coverage
+```
+
+### Type Checking
+
+The project uses TypeScript's strict type checking for the main code, with more flexible typing for test mocks:
+
+```bash
+# Check types in main code
+npm run check-types
+
+# Check types in test code (warnings allowed)
+npm run check-test-types 
+
+# Check all types
+npm run typecheck
+```
+
+### Linting and Formatting
+
+```bash
+# Check for linting issues
+npm run lint
+
+# Fix linting issues automatically
+npm run lint:fix
+
+# Format code using Prettier
+npm run format
+
+# Check if code is properly formatted
+npm run format:check
+```
+
+### CI
+
+Run all checks at once (lint, format, build, test):
+
+```bash
+npm run ci
+```
+
 ## License
 
 [MIT](LICENSE)

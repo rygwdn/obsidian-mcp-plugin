@@ -1,33 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { getFileContentsTool } from "../tools/get_file_contents";
-import { App, TFile } from "obsidian";
+import { MockApp } from "./mocks/obsidian";
 
 describe("get_file_contents tool", () => {
-	const mockApp = new App();
+	let mockApp: MockApp;
 
 	beforeEach(() => {
 		vi.clearAllMocks();
-
-		// Clear previous file data
-		mockApp.vault.files = [];
-		mockApp.vault.adapter.files.clear();
-
-		// Set up test files
-		const testFilePath = "test.md";
-		const testFileContent = "This is a test file content";
-
-		// Add file to vault
-		mockApp.vault.files.push(new TFile(testFilePath, testFileContent));
-
-		// Add file to adapter
-		mockApp.vault.adapter.files.set(testFilePath, {
-			content: testFileContent,
-			isFolder: false,
+		mockApp = new MockApp();
+		mockApp.setFiles({
+			"test.md": "This is a test file content",
 		});
 	});
 
 	it("should return the content of an existing file", async () => {
-		const handler = getFileContentsTool.handler(mockApp);
+		const handler = getFileContentsTool.handler(mockApp as any);
 		const result = await handler({ path: "test.md" });
 
 		expect(mockApp.vault.getAbstractFileByPath).toHaveBeenCalledWith("test.md");
@@ -36,7 +23,7 @@ describe("get_file_contents tool", () => {
 	});
 
 	it("should throw an error when the file does not exist", async () => {
-		const handler = getFileContentsTool.handler(mockApp);
+		const handler = getFileContentsTool.handler(mockApp as any);
 
 		await expect(handler({ path: "nonexistent.md" })).rejects.toThrow(
 			"File not found: nonexistent.md"
@@ -44,7 +31,7 @@ describe("get_file_contents tool", () => {
 	});
 
 	it("should normalize file paths", async () => {
-		const handler = getFileContentsTool.handler(mockApp);
+		const handler = getFileContentsTool.handler(mockApp as any);
 		await handler({ path: "test.md" });
 
 		// Check that normalizePath was used by checking the path

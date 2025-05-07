@@ -1,24 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { listFilesTool } from "../tools/list_files";
-import { App, TFile } from "obsidian"; // This will use the mocked obsidian module
+import { MockApp } from "./mocks/obsidian";
 
 describe("list_files tool", () => {
-	// Mock Obsidian App object
-	const mockApp = new App();
-
-	// Create mock files
-	const mockFiles = [
-		{ path: "file1.md" },
-		{ path: "file2.md" },
-		{ path: "dir1/file3.md" },
-		{ path: "dir1/file4.md" },
-		{ path: "dir2/file5.md" },
-		{ path: "dir2/subdir/file6.md" },
-	] as TFile[];
+	let mockApp: MockApp;
 
 	beforeEach(() => {
 		vi.clearAllMocks();
-		mockApp.vault.getFiles.mockReturnValue(mockFiles);
+		mockApp = new MockApp();
+		mockApp.setFiles({
+			"file1.md": "",
+			"file2.md": "",
+			"dir1/file3.md": "",
+			"dir1/file4.md": "",
+			"dir2/file5.md": "",
+			"dir2/subdir/file6.md": "",
+		});
 	});
 
 	it("should list files from root when no path is provided", async () => {
@@ -43,7 +40,7 @@ describe("list_files tool", () => {
 	});
 
 	it("should throw an error when no files are found", async () => {
-		mockApp.vault.getFiles.mockReturnValue([]);
+		mockApp.setFiles({});
 
 		const handler = listFilesTool.handler(mockApp);
 

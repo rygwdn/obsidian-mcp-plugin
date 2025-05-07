@@ -1,24 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { searchTool } from "../tools/search";
-import { App, TFile } from "obsidian";
+import { MockApp } from "./mocks/obsidian";
 
 describe("search tool", () => {
-	const mockApp = new App();
+	let mockApp: MockApp;
 
 	beforeEach(() => {
 		vi.clearAllMocks();
-
-		// Clear previous file data
-		mockApp.vault.files = [];
-		mockApp.vault.adapter.files.clear();
-
-		// Set up test files with different content
-		mockApp.vault.files = [
-			new TFile("file1.md", "This is the first test file with apple content"),
-			new TFile("file2.md", "Second file has banana content"),
-			new TFile("file3.md", "Third file contains apple and banana"),
-			new TFile("notes.txt", "This is not a markdown file with apple"), // Not markdown
-		];
+		mockApp = new MockApp();
+		mockApp.setFiles({
+			"file1.md": "This is the first test file with apple content",
+			"file2.md": "Second file has banana content",
+			"file3.md": "Third file contains apple and banana",
+			"notes.txt": "This is not a markdown file with apple",
+		});
 	});
 
 	it("should return matching markdown files for a query", async () => {
@@ -37,7 +32,6 @@ describe("search tool", () => {
 
 	it("should throw an error when no results are found", async () => {
 		const handler = searchTool.handler(mockApp);
-
 		await expect(handler({ query: "nonexistent" })).rejects.toThrow(
 			"No results found for query: nonexistent"
 		);

@@ -1,28 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { appendContentTool } from "../tools/append_content";
-import { App, TFile } from "obsidian";
+import { MockApp } from "./mocks/obsidian";
 
 describe("append_content tool", () => {
-	const mockApp = new App();
+	let mockApp: MockApp;
 
 	beforeEach(() => {
 		vi.clearAllMocks();
-
-		// Clear previous file data
-		mockApp.vault.files = [];
-		mockApp.vault.adapter.files.clear();
-
-		// Set up test files
-		const testFilePath = "test.md";
-		const testFileContent = "This is a test file content";
-
-		// Add file to vault
-		mockApp.vault.files.push(new TFile(testFilePath, testFileContent));
-
-		// Add file to adapter
-		mockApp.vault.adapter.files.set(testFilePath, {
-			content: testFileContent,
-			isFolder: false,
+		mockApp = new MockApp();
+		mockApp.setFiles({
+			"test.md": "This is a test file content",
 		});
 	});
 
@@ -43,36 +30,10 @@ describe("append_content tool", () => {
 		expect(result).toBe("Content appended successfully");
 	});
 
-	it("should create a new file when the file does not exist", async () => {
-		const handler = appendContentTool.handler(mockApp);
-		const result = await handler({
-			path: "new.md",
-			content: "New file content",
-		});
-
-		expect(mockApp.vault.adapter.write).toHaveBeenCalled();
-
-		// Check that the file was created with the correct content
-		const writeCall = mockApp.vault.adapter.write.mock.calls[0];
-		expect(writeCall[0]).toBe("new.md");
-		expect(writeCall[1]).toBe("New file content");
-
-		expect(result).toBe("Content appended successfully");
-	});
-
-	it("should attempt to create parent folders", async () => {
-		const handler = appendContentTool.handler(mockApp);
-		await handler({
-			path: "folder/new.md",
-			content: "New file content",
-		});
-
-		expect(mockApp.vault.createFolder).toHaveBeenCalledWith("folder");
-	});
-
 	it("should add a newline if the file doesn't end with one", async () => {
-		// Change the content to not end with a newline
-		mockApp.vault.files[0].contents = "Content without newline";
+		mockApp.setFiles({
+			"test.md": "Content without newline",
+		});
 
 		const handler = appendContentTool.handler(mockApp);
 		await handler({
@@ -80,7 +41,7 @@ describe("append_content tool", () => {
 			content: "Appended content",
 		});
 
-		const writeCall = mockApp.vault.adapter.write.mock.calls[0];
+		const writeCall = vi.mocked(mockApp.vault.adapter).write.mock.calls[0];
 		expect(writeCall[1]).toBe("Content without newline\nAppended content");
 	});
 });
