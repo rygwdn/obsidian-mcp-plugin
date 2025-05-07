@@ -10,7 +10,7 @@ export default class ObsidianMCPPlugin extends Plugin {
 
 		this.api.addRoute("/mcp").all(async (request, response) => {
 			try {
-				const server = new ObsidianMcpServer(this.app, {version: this.manifest.version});
+				const server = new ObsidianMcpServer(this.app, { version: this.manifest.version });
 				await server.handleRequest(request, response);
 			} catch (error) {
 				console.error("Error handling MCP request:", error);
@@ -18,9 +18,9 @@ export default class ObsidianMCPPlugin extends Plugin {
 					jsonrpc: "2.0",
 					error: {
 						code: -32603,
-						message: "Internal error"
+						message: "Internal error",
 					},
-					id: null
+					id: null,
 				});
 			}
 		});
@@ -32,10 +32,7 @@ export default class ObsidianMCPPlugin extends Plugin {
 		}
 
 		this.registerEvent(
-			this.app.workspace.on(
-				"obsidian-local-rest-api:loaded",
-				this.registerRoutes.bind(this)
-			)
+			this.app.workspace.on("obsidian-local-rest-api:loaded", this.registerRoutes.bind(this))
 		);
 	}
 
@@ -46,7 +43,6 @@ export default class ObsidianMCPPlugin extends Plugin {
 	}
 }
 
-
 declare module "obsidian" {
 	interface App {
 		plugins: {
@@ -54,10 +50,6 @@ declare module "obsidian" {
 		};
 	}
 	interface Workspace {
-		on(
-			name: "obsidian-local-rest-api:loaded",
-			callback: () => void,
-			ctx?: any
-		): EventRef;
+		on(name: "obsidian-local-rest-api:loaded", callback: () => void, ctx?: unknown): EventRef;
 	}
 }

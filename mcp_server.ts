@@ -9,8 +9,10 @@ import { searchTool } from "tools/search";
 import { ToolRegistration } from "tools/types";
 
 export class ObsidianMcpServer {
-	constructor(private app: App, private config: {version: string}) {
-	}
+	constructor(
+		private app: App,
+		private config: { version: string }
+	) {}
 
 	async handleRequest(request: IncomingMessage & { body: unknown }, response: ServerResponse) {
 		const { server, transport } = this.buildServer();
@@ -44,21 +46,19 @@ export class ObsidianMcpServer {
 	}
 
 	private registerTool(server: McpServer, toolReg: ToolRegistration) {
-		server.tool(
-			toolReg.name,
-			toolReg.description,
-			toolReg.schema,
-			async (args) => {
-				try {
-					const data = await toolReg.handler(this.app)(args);
-					return { content: [{ type: "text", text: data }] };
-				} catch (error) {
+		server.tool(toolReg.name, toolReg.description, toolReg.schema, async (args) => {
+			try {
+				const data = await toolReg.handler(this.app)(args);
+				return { content: [{ type: "text", text: data }] };
+			} catch (error) {
 				return {
 					isError: true,
-					content: [{
-						type: "text",
-						text: error.toString(),
-					}]
+					content: [
+						{
+							type: "text",
+							text: error.toString(),
+						},
+					],
 				};
 			}
 		});
