@@ -29,6 +29,18 @@ http://localhost:27123/mcp
 
 (The port may vary depending on your Obsidian Local REST API configuration)
 
+### Available Tools
+
+The plugin provides the following tools:
+
+| Tool Name | Description |
+|-----------|-------------|
+| `list_files` | Lists files and folders in a specified directory |
+| `get_file_contents` | Gets the content of a file from the vault |
+| `append_content` | Appends content to the end of a file (creates the file if it doesn't exist) |
+| `search` | Searches for content in markdown files |
+| `replace_content` | Replaces specific content in a file with new content, failing if not found or if there are multiple matches |
+
 ### Example Request
 
 ```

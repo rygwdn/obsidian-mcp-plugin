@@ -6,6 +6,7 @@ import { listFilesTool } from "tools/list_files";
 import { getFileContentsTool } from "tools/get_file_contents";
 import { appendContentTool } from "tools/append_content";
 import { searchTool } from "tools/search";
+import { replaceContentTool } from "tools/replace_content";
 import { ToolRegistration } from "tools/types";
 
 export class ObsidianMcpServer {
@@ -37,6 +38,7 @@ export class ObsidianMcpServer {
 		this.registerTool(server, getFileContentsTool);
 		this.registerTool(server, searchTool);
 		this.registerTool(server, appendContentTool);
+		this.registerTool(server, replaceContentTool);
 
 		const transport = new StreamableHTTPServerTransport({
 			sessionIdGenerator: undefined,
