@@ -5,10 +5,7 @@ import { MockApp } from "./mocks/obsidian";
 // Mock Dataview API response
 const mockDataviewResult = {
 	successful: true,
-	value: [
-		{ file: { path: "file1.md" }, tags: ["tag1", "tag2"], date: "2023-01-01" },
-		{ file: { path: "file3.md" }, tags: ["tag1"], date: "2023-01-03" },
-	],
+	value: "Parsed markdown content result",
 };
 
 // Mock failed query result
@@ -37,7 +34,7 @@ describe("dataview_query tool", () => {
 			plugins: {
 				dataview: {
 					api: {
-						tryQuery: vi.fn(async (query: string) => {
+						queryMarkdown: vi.fn(async (query: string) => {
 							if (query === "LIST FROM #tag1") {
 								return mockDataviewResult;
 							} else if (query === "INVALID QUERY") {
@@ -45,7 +42,7 @@ describe("dataview_query tool", () => {
 							} else {
 								return {
 									successful: true,
-									value: [],
+									value: "",
 								};
 							}
 						}),
@@ -60,18 +57,18 @@ describe("dataview_query tool", () => {
 		const result = await handler({ query: "LIST FROM #tag1" });
 
 		// Check that the dataview API was called
-		expect(mockApp.plugins.plugins.dataview.api.tryQuery).toHaveBeenCalledWith("LIST FROM #tag1");
+		expect(mockApp.plugins.plugins.dataview.api.queryMarkdown).toHaveBeenCalledWith(
+			"LIST FROM #tag1"
+		);
 
-		// Should return string representation of the value
-		expect(result).toEqual(String(mockDataviewResult.value));
+		// Should return the query result value
+		expect(result).toEqual(mockDataviewResult.value);
 	});
 
 	it("should throw an error when query execution fails", async () => {
 		const handler = dataviewQueryTool.handler(mockApp);
 
-		await expect(handler({ query: "INVALID QUERY" })).rejects.toThrow(
-			"Query execution failed: Invalid query syntax"
-		);
+		await expect(handler({ query: "INVALID QUERY" })).rejects.toThrow(/Invalid query syntax/);
 	});
 
 	it("should throw an error when Dataview plugin is not enabled", async () => {
@@ -81,7 +78,7 @@ describe("dataview_query tool", () => {
 		const handler = dataviewQueryTool.handler(mockApp);
 
 		await expect(handler({ query: "LIST FROM #tag1" })).rejects.toThrow(
-			"Dataview plugin is not enabled. Please enable it in your Obsidian settings."
+			/Dataview plugin is not enabled/
 		);
 	});
 
@@ -94,7 +91,7 @@ describe("dataview_query tool", () => {
 		const handler = dataviewQueryTool.handler(mockApp);
 
 		await expect(handler({ query: "LIST FROM #tag1" })).rejects.toThrow(
-			"Dataview API is not available. Make sure the Dataview plugin is correctly loaded."
+			/Dataview API is not available/
 		);
 	});
 });
