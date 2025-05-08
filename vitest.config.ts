@@ -14,6 +14,7 @@ export default defineConfig({
 	resolve: {
 		alias: {
 			obsidian: resolve(__dirname, "./test/mocks/obsidian.ts"),
+			"obsidian-dataview": resolve(__dirname, "./test/mocks/obsidian-dataview.ts"),
 		},
 	},
 });

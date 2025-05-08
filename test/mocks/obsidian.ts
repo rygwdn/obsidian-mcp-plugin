@@ -208,6 +208,7 @@ export class MockApp implements Obsidian.App {
 	vault: Obsidian.Vault = this.mockVault as unknown as Obsidian.Vault;
 	plugins = {
 		enabledPlugins: new Set<string>(),
+		plugins: {},
 	};
 	workspace: Obsidian.Workspace = new Workspace() as unknown as Obsidian.Workspace;
 }

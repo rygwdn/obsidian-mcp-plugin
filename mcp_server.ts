@@ -9,11 +9,15 @@ import { searchTool } from "tools/search";
 import { replaceContentTool } from "tools/replace_content";
 import { dataviewQueryTool } from "tools/dataview_query";
 import { ToolRegistration } from "tools/types";
+import { MCPPluginSettings } from "./settings";
+import { registerPrompts } from "tools/prompts";
+import { VaultFileResource } from "tools/resources";
 
 export class ObsidianMcpServer {
 	constructor(
 		private app: App,
-		private config: { version: string }
+		private manifest: { version: string; name: string },
+		private settings: MCPPluginSettings
 	) {}
 
 	async handleRequest(request: IncomingMessage & { body: unknown }, response: ServerResponse) {
@@ -31,8 +35,8 @@ export class ObsidianMcpServer {
 
 	private buildServer() {
 		const server = new McpServer({
-			name: "Obsidian MCP Plugin",
-			version: this.config.version,
+			name: this.manifest.name,
+			version: this.manifest.version,
 		});
 
 		this.registerTool(server, listFilesTool);
@@ -41,6 +45,9 @@ export class ObsidianMcpServer {
 		this.registerTool(server, appendContentTool);
 		this.registerTool(server, replaceContentTool);
 		this.registerTool(server, dataviewQueryTool);
+
+		new VaultFileResource(this.app).register(server);
+		registerPrompts(this.app, server, this.settings);
 
 		const transport = new StreamableHTTPServerTransport({
 			sessionIdGenerator: undefined,

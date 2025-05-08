@@ -1,16 +1,18 @@
 import { Plugin } from "obsidian";
 import { getAPI, LocalRestApiPublicApi } from "obsidian-local-rest-api";
 import { ObsidianMcpServer } from "mcp_server";
+import { DEFAULT_SETTINGS, MCPPluginSettings, MCPSettingTab } from "./settings";
 
 export default class ObsidianMCPPlugin extends Plugin {
 	private api: LocalRestApiPublicApi;
+	settings: MCPPluginSettings;
 
 	async registerRoutes() {
 		this.api = getAPI(this.app, this.manifest);
 
 		this.api.addRoute("/mcp").all(async (request, response) => {
 			try {
-				const server = new ObsidianMcpServer(this.app, { version: this.manifest.version });
+				const server = new ObsidianMcpServer(this.app, this.manifest, this.settings);
 				await server.handleRequest(request, response);
 			} catch (error) {
 				console.error("Error handling MCP request:", error);
@@ -26,7 +28,17 @@ export default class ObsidianMCPPlugin extends Plugin {
 		});
 	}
 
+	async loadSettings() {
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+	}
+
+	async saveSettings() {
+		await this.saveData(this.settings);
+	}
+
 	async onload() {
+		await this.loadSettings();
+		this.addSettingTab(new MCPSettingTab(this.app, this));
 		if (this.app.plugins.enabledPlugins.has("obsidian-local-rest-api")) {
 			await this.registerRoutes();
 		}
@@ -47,6 +59,7 @@ declare module "obsidian" {
 	interface App {
 		plugins: {
 			enabledPlugins: Set<string>;
+			plugins: Record<string, unknown>;
 		};
 	}
 	interface Workspace {

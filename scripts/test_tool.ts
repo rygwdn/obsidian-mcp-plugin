@@ -31,12 +31,11 @@ async function main() {
 	console.log(`Params: ${JSON.stringify(params, null, 2)}`);
 
 	// Create MCP client with transport
-	const transport = new StreamableHTTPClientTransport(url, {
+	const transport = new StreamableHTTPClientTransport(new URL(url), {
 		requestInit: {
 			headers: {
 				Authorization: `Bearer ${token}`,
 			},
-			allowInsecureConnections: true,
 		},
 	});
 

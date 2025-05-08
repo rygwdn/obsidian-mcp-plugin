@@ -14,7 +14,7 @@ describe("get_file_contents tool", () => {
 	});
 
 	it("should return the content of an existing file", async () => {
-		const handler = getFileContentsTool.handler(mockApp as any);
+		const handler = getFileContentsTool.handler(mockApp as unknown as App);
 		const result = await handler({ path: "test.md" });
 
 		expect(mockApp.vault.getAbstractFileByPath).toHaveBeenCalledWith("test.md");
@@ -23,7 +23,7 @@ describe("get_file_contents tool", () => {
 	});
 
 	it("should throw an error when the file does not exist", async () => {
-		const handler = getFileContentsTool.handler(mockApp as any);
+		const handler = getFileContentsTool.handler(mockApp as unknown as App);
 
 		await expect(handler({ path: "nonexistent.md" })).rejects.toThrow(
 			"File not found: nonexistent.md"
@@ -31,7 +31,7 @@ describe("get_file_contents tool", () => {
 	});
 
 	it("should normalize file paths", async () => {
-		const handler = getFileContentsTool.handler(mockApp as any);
+		const handler = getFileContentsTool.handler(mockApp as unknown as App);
 		await handler({ path: "test.md" });
 
 		// Check that normalizePath was used by checking the path

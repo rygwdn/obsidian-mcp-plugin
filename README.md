@@ -22,6 +22,14 @@ Model Context Protocol (MCP) is a standardized way for AI assistants to interact
 
 Once the plugin is enabled, it registers a `/mcp` endpoint with the Obsidian Local REST API. This endpoint can be used by MCP clients to send requests to Obsidian.
 
+### Configuration
+
+The plugin settings can be found in the Obsidian settings page under "MCP Plugin":
+
+- **Enable Resources**: When enabled, allows registering vault files as MCP resources that can be accessed directly by the client.
+- **Enable Prompts**: When enabled, loads prompts from the configured prompts folder.
+- **Prompts Location**: The folder path (relative to vault root) where prompt files are stored. Default is `prompts`.
+
 ### Endpoint
 
 ```
@@ -32,7 +40,9 @@ http://localhost:27123/mcp
 
 ### Available Tools
 
-The plugin provides the following tools:
+The plugin provides the following features:
+
+### Tools
 
 | Tool Name | Description |
 |-----------|-------------|
@@ -42,6 +52,16 @@ The plugin provides the following tools:
 | `search` | Searches for content in markdown files |
 | `replace_content` | Replaces specific content in a file with new content, failing if not found or if there are multiple matches |
 | `dataview_query` | Executes a Dataview query against your vault's notes and returns the results in markdown format (requires Dataview plugin) |
+
+### Resources
+
+Any file in your vault can be accessed directly as an MCP resource.
+
+### Prompts
+
+Markdown files in the configured prompts folder are available as MCP resources with the `prompt:` prefix.
+| `list_prompts` | Lists all available prompts from the configured prompts folder (requires Prompts enabled in settings) |
+| `reload_prompts` | Reloads all prompts from the configured prompts folder (requires Prompts enabled in settings) |
 
 ### Example Request
 
@@ -137,6 +157,10 @@ Run all checks at once (lint, format, build, test):
 ```bash
 npm run ci
 ```
+
+## Advanced Features
+
+For detailed information about MCP Resources and Prompts, see [features.md](features.md).
 
 ## License
 
