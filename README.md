@@ -10,6 +10,7 @@ Model Context Protocol (MCP) is a standardized way for AI assistants to interact
 
 - [Obsidian](https://obsidian.md/)
 - [Obsidian Local REST API](https://github.com/coddingtonbear/obsidian-local-rest-api) plugin
+- [Dataview](https://github.com/blacksmithgu/obsidian-dataview) plugin (optional, required for `dataview_query` tool)
 
 ## Installation
 
@@ -40,6 +41,7 @@ The plugin provides the following tools:
 | `append_content` | Appends content to the end of a file (creates the file if it doesn't exist) |
 | `search` | Searches for content in markdown files |
 | `replace_content` | Replaces specific content in a file with new content, failing if not found or if there are multiple matches |
+| `dataview_query` | Executes a Dataview query against your vault's notes and returns the results in markdown format (requires Dataview plugin) |
 
 ### Example Request
 

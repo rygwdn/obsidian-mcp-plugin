@@ -7,6 +7,7 @@ import { getFileContentsTool } from "tools/get_file_contents";
 import { appendContentTool } from "tools/append_content";
 import { searchTool } from "tools/search";
 import { replaceContentTool } from "tools/replace_content";
+import { dataviewQueryTool } from "tools/dataview_query";
 import { ToolRegistration } from "tools/types";
 
 export class ObsidianMcpServer {
@@ -39,6 +40,7 @@ export class ObsidianMcpServer {
 		this.registerTool(server, searchTool);
 		this.registerTool(server, appendContentTool);
 		this.registerTool(server, replaceContentTool);
+		this.registerTool(server, dataviewQueryTool);
 
 		const transport = new StreamableHTTPServerTransport({
 			sessionIdGenerator: undefined,

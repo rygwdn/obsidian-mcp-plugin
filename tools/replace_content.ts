@@ -16,16 +16,13 @@ export const replaceContentTool: ToolRegistration = {
 		const findContent = args.find;
 		const replaceContent = args.replace;
 
-		// Check if file exists
 		const file = app.vault.getFileByPath(filePath);
 		if (!file) {
 			throw new Error(`File not found: ${filePath}`);
 		}
 
-		// Read file content
 		const fileContent = await app.vault.read(file);
 
-		// Find occurrences
 		const matches = fileContent.split(findContent).length - 1;
 
 		if (matches === 0) {
@@ -38,10 +35,8 @@ export const replaceContentTool: ToolRegistration = {
 			);
 		}
 
-		// Replace content
 		const updatedContent = fileContent.replace(findContent, replaceContent);
 
-		// Write updated content back to file
 		await app.vault.adapter.write(filePath, updatedContent);
 
 		return `Content successfully replaced in ${filePath}`;
