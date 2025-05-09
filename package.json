@@ -19,8 +19,7 @@
 		"test:coverage": "vitest run --coverage",
 		"typecheck": "npm run check-types && npm run check-test-types",
 		"check": "npm-run-all -p lint format:check build -s test",
-		"test:tool": "tsx scripts/test_tool.ts",
-		"mcp:inspect": "npx @modelcontextprotocol/inspector sse https://127.0.0.1:27124/mcp"
+		"mcp:inspect": "npx @modelcontextprotocol/inspector"
 	},
 	"keywords": [],
 	"author": "",
