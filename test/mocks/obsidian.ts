@@ -227,8 +227,28 @@ export function normalizePath(path: string): string {
 	return path.replace(/\\/g, "/").replace(/\/+/g, "/");
 }
 
+export type SearchMatchPart = [number, number];
+
 export function prepareSimpleSearch(query: string) {
+	const lowercaseQuery = query.toLowerCase();
+
 	return (text: string) => {
-		return text.toLowerCase().includes(query.toLowerCase());
+		const lowercaseText = text.toLowerCase();
+		const index = lowercaseText.indexOf(lowercaseQuery);
+
+		if (index === -1) {
+			return null;
+		}
+
+		const matches: SearchMatchPart[] = [[index, index + query.length]];
+
+		return {
+			score: 1,
+			matches: matches,
+		};
 	};
+}
+
+export function prepareFuzzySearch(query: string) {
+	return prepareSimpleSearch(query); // Simplified for tests
 }

@@ -13,6 +13,7 @@ import { MCPPluginSettings } from "./settings";
 import { registerPrompts } from "tools/prompts";
 import { VaultFileResource } from "tools/resources";
 import type { Request, Response } from "express";
+import { isPluginEnabled as isDataviewEnabled } from "obsidian-dataview";
 
 export class ObsidianMcpServer {
 	private server: McpServer;
@@ -23,29 +24,60 @@ export class ObsidianMcpServer {
 		private manifest: { version: string; name: string },
 		private settings: MCPPluginSettings
 	) {
+		const vaultDescription = this.settings.vaultDescription
+			? this.settings.vaultDescription
+			: "This is an Obsidian vault with various tools available to interact with it.";
+
 		this.server = new McpServer(
 			{
 				name: this.manifest.name,
 				version: this.manifest.version,
 			},
 			{
-				// TODO
-				instructions: "stuff",
+				instructions: vaultDescription,
 			}
 		);
 		this.server.server.onerror = (error) => {
 			console.error("MCP Server Error:", error);
 		};
 
-		this.registerTool(this.server, listFilesTool);
-		this.registerTool(this.server, getFileContentsTool);
-		this.registerTool(this.server, searchTool);
-		this.registerTool(this.server, appendContentTool);
-		this.registerTool(this.server, replaceContentTool);
-		this.registerTool(this.server, dataviewQueryTool);
+		// Register enabled tools
+		const { enabledTools } = this.settings;
 
-		new VaultFileResource(this.app).register(this.server);
-		registerPrompts(this.app, this.server, this.settings);
+		if (enabledTools.list_files) {
+			this.registerTool(this.server, listFilesTool);
+		}
+
+		if (enabledTools.get_file_contents) {
+			this.registerTool(this.server, getFileContentsTool);
+		}
+
+		if (enabledTools.search) {
+			this.registerTool(this.server, searchTool);
+		}
+
+		if (enabledTools.append_content) {
+			this.registerTool(this.server, appendContentTool);
+		}
+
+		if (enabledTools.replace_content) {
+			this.registerTool(this.server, replaceContentTool);
+		}
+
+		// Only register dataview query tool if the plugin is enabled and the tool is enabled
+		if (enabledTools.dataview_query && isDataviewEnabled(this.app)) {
+			this.registerTool(this.server, dataviewQueryTool);
+		}
+
+		// Register resources if enabled
+		if (this.settings.enableResources) {
+			new VaultFileResource(this.app, this.settings.toolNamePrefix).register(this.server);
+		}
+
+		// Register prompts if enabled
+		if (this.settings.enablePrompts) {
+			registerPrompts(this.app, this.server, this.settings);
+		}
 	}
 
 	async handleSseRequest(request: Request, response: Response) {
@@ -85,7 +117,11 @@ export class ObsidianMcpServer {
 	}
 
 	private registerTool(server: McpServer, toolReg: ToolRegistration) {
-		server.tool(toolReg.name, toolReg.description, toolReg.schema, async (args) => {
+		const toolName = this.settings.toolNamePrefix
+			? `${this.settings.toolNamePrefix}_${toolReg.name}`
+			: toolReg.name;
+
+		server.tool(toolName, toolReg.description, toolReg.schema, async (args) => {
 			try {
 				const data = await toolReg.handler(this.app)(args);
 				return { content: [{ type: "text", text: data }] };

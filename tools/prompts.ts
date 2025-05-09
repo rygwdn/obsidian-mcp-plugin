@@ -6,18 +6,23 @@ import { MCPPluginSettings } from "settings";
 
 export class VaultPrompt {
 	public registration: RegisteredPrompt | undefined;
+	private promptPrefix: string;
 
 	constructor(
 		public file: TFile,
-		private app: App
-	) {}
+		private app: App,
+		prefix: string = "vault"
+	) {
+		this.promptPrefix = prefix;
+	}
 
 	private get metadata() {
 		return this.app.metadataCache.getFileCache(this.file);
 	}
 
 	public get name() {
-		return this.file.basename;
+		const promptName = this.file.basename;
+		return this.promptPrefix ? `${this.promptPrefix}_${promptName}` : promptName;
 	}
 
 	public get description() {
@@ -63,7 +68,7 @@ export function getPrompts(app: App, settings: MCPPluginSettings) {
 	return app.vault
 		.getMarkdownFiles()
 		.filter((file) => file.path.startsWith(settings.promptsFolder))
-		.map((file) => new VaultPrompt(file, app));
+		.map((file) => new VaultPrompt(file, app, settings.toolNamePrefix));
 }
 
 export function registerPrompts(app: App, server: McpServer, settings: MCPPluginSettings) {

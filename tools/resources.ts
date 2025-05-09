@@ -4,11 +4,18 @@ import { ReadResourceResult } from "@modelcontextprotocol/sdk/types";
 import { Variables } from "@modelcontextprotocol/sdk/shared/uriTemplate";
 
 export class VaultFileResource {
-	constructor(private app: App) {}
+	private resourceName: string;
+
+	constructor(
+		private app: App,
+		prefix: string = "vault"
+	) {
+		this.resourceName = `${prefix}-file`;
+	}
 
 	public register(server: McpServer) {
 		server.resource(
-			"vault-file",
+			this.resourceName,
 			this.template,
 			{ description: "Provides access to files in the Obsidian vault" },
 			async (uri, variables) => this.handler(uri, variables)
@@ -16,7 +23,8 @@ export class VaultFileResource {
 	}
 
 	public get template() {
-		return new ResourceTemplate("vault-file:///{+path}", {
+		const uriTemplate = `${this.resourceName}:///{+path}`;
+		return new ResourceTemplate(uriTemplate, {
 			list: async () => {
 				return this.list();
 			},
@@ -33,7 +41,7 @@ export class VaultFileResource {
 		return {
 			resources: files.map((file) => ({
 				name: file.path,
-				uri: `vault-file:///${file.path}`,
+				uri: `${this.resourceName}:///${file.path}`,
 				mimeType: "text/markdown",
 			})),
 		};

@@ -1,8 +1,25 @@
 /*
-
 This CSS file will be included with your plugin, and
 available in the app when your plugin is enabled.
-
-If your plugin does not need CSS, delete this file.
-
 */
+
+/* Warning for missing required plugins */
+.mcp-warning {
+	background-color: rgba(255, 0, 0, 0.1);
+	border-left: 3px solid #ff5555;
+	padding: 10px;
+	margin-bottom: 15px;
+	border-radius: 4px;
+}
+
+.mcp-warning-text {
+	color: #ff5555;
+	font-weight: bold;
+}
+
+/* Settings styles */
+.mcp-settings-container h3 {
+	margin-top: 20px;
+	border-bottom: 1px solid var(--background-modifier-border);
+	padding-bottom: 5px;
+}
