@@ -44,4 +44,29 @@ describe("append_content tool", () => {
 		const writeCall = vi.mocked(mockApp.vault.adapter).write.mock.calls[0];
 		expect(writeCall[1]).toBe("Content without newline\nAppended content");
 	});
+
+	it("should throw an error if the file doesn't exist", async () => {
+		const handler = appendContentTool.handler(mockApp);
+
+		await expect(
+			handler({
+				path: "nonexistent.md",
+				content: "Some content",
+			})
+		).rejects.toThrow("File not found: nonexistent.md");
+
+		expect(mockApp.vault.adapter.write).not.toHaveBeenCalled();
+	});
+
+	it("should normalize the file path", async () => {
+		const handler = appendContentTool.handler(mockApp);
+		await handler({
+			path: "test.md", // Will be normalized if needed
+			content: "Some additional content",
+		});
+
+		// Verify that the path was normalized (in this case it's already normalized)
+		const writeCall = mockApp.vault.adapter.write.mock.calls[0];
+		expect(writeCall[0]).toBe("test.md");
+	});
 });

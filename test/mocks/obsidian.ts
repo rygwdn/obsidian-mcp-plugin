@@ -194,6 +194,8 @@ export class MockApp implements Obsidian.App {
 
 	loadLocalStorage = vi.fn();
 	saveLocalStorage = vi.fn();
+	prepareSimpleSearch = prepareSimpleSearch;
+	prepareFuzzySearch = prepareFuzzySearch;
 
 	mockVault: MockVault = new MockVault();
 	get mockFiles() {
@@ -213,8 +215,6 @@ export class MockApp implements Obsidian.App {
 	workspace: Obsidian.Workspace = new Workspace() as unknown as Obsidian.Workspace;
 }
 
-export const App = MockApp as unknown as typeof Obsidian.App;
-
 export class EventRef implements Partial<Obsidian.EventRef> {}
 
 class MockWorkspace implements Partial<Obsidian.Workspace> {
@@ -222,6 +222,7 @@ class MockWorkspace implements Partial<Obsidian.Workspace> {
 }
 
 export const Workspace = MockWorkspace as unknown as typeof Obsidian.Workspace;
+export const App = MockApp as unknown as typeof Obsidian.App;
 
 export function normalizePath(path: string): string {
 	return path.replace(/\\/g, "/").replace(/\/+/g, "/");
