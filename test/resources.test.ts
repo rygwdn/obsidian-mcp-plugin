@@ -20,6 +20,7 @@ describe("VaultFileResource", () => {
 		});
 
 		// Silence console.log during tests
+		// eslint-disable-next-line @typescript-eslint/no-empty-function
 		vi.spyOn(console, "log").mockImplementation(() => {});
 
 		resource = new VaultFileResource(mockApp);

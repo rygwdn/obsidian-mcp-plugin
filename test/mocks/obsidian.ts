@@ -1,4 +1,5 @@
 import { vi } from "vitest";
+import yaml from "yaml";
 import type * as Obsidian from "obsidian/obsidian.d.ts";
 
 export class MockFile implements Obsidian.TFile, Obsidian.TFolder {
@@ -188,7 +189,32 @@ export const Vault = MockVault as unknown as typeof Obsidian.Vault;
 export class MockApp implements Obsidian.App {
 	keymap = vi.fn()();
 	scope = vi.fn()();
-	metadataCache = vi.fn()();
+	metadataCache = {
+		getFileCache: vi.fn((file: Obsidian.TFile) => {
+			if (file instanceof MockFile) {
+				const [frontdoc, bodydoc] = yaml.parseAllDocuments(file.contents);
+				if (!bodydoc) {
+					return {
+						frontmatter: {},
+						frontmatterPosition: { end: { offset: 0 } },
+					};
+				}
+
+				const frontmatter = frontdoc.toJS();
+				return {
+					frontmatter,
+					frontmatterPosition: {
+						end: { offset: bodydoc.contents?.range[0] },
+					},
+				};
+			}
+			throw new Error("File not found");
+		}),
+		getCache: vi.fn(),
+		getFirstLinkpathDest: vi.fn(),
+		fileToLinktext: vi.fn(),
+	} as unknown as Obsidian.MetadataCache;
+
 	fileManager = vi.fn()();
 	lastEvent = vi.fn()();
 
@@ -252,4 +278,22 @@ export function prepareSimpleSearch(query: string) {
 
 export function prepareFuzzySearch(query: string) {
 	return prepareSimpleSearch(query); // Simplified for tests
+}
+
+export class PluginSettingTab implements Obsidian.PluginSettingTab {
+	containerEl: HTMLElement;
+	plugin: Obsidian.Plugin;
+
+	constructor(plugin: Obsidian.Plugin) {
+		this.plugin = plugin;
+	}
+	app: Obsidian.App;
+
+	hide(): void {
+		throw new Error("Method not implemented.");
+	}
+
+	display() {
+		throw new Error("Method not implemented.");
+	}
 }

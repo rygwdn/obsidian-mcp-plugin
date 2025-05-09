@@ -18,8 +18,84 @@ available in the app when your plugin is enabled.
 }
 
 /* Settings styles */
-.mcp-settings-container h3 {
-	margin-top: 20px;
-	border-bottom: 1px solid var(--background-modifier-border);
+.mcp-settings-container h2.mcp-settings-heading {
+	margin-top: 30px;
+	margin-bottom: 20px;
 	padding-bottom: 5px;
+	font-size: var(--font-ui-large);
+}
+
+.mcp-settings-container h1 {
+	font-size: calc(var(--font-ui-large) * 1.2);
+}
+
+/* Info boxes for documentation */
+.mcp-info-box {
+	background-color: var(--background-secondary);
+	border-left: 3px solid var(--interactive-accent);
+	padding: 10px 15px;
+	margin: 15px 0;
+	border-radius: 4px;
+}
+
+.mcp-info-box h4 {
+	margin-top: 0;
+	margin-bottom: 8px;
+	color: var(--text-normal);
+}
+
+.mcp-info-box ul {
+	margin-top: 8px;
+	margin-bottom: 8px;
+	padding-left: 20px;
+}
+
+.mcp-info-box pre {
+	background-color: var(--background-primary);
+	padding: 8px;
+	border-radius: 4px;
+	overflow-x: auto;
+	margin-top: 8px;
+	margin-bottom: 8px;
+}
+
+/* Collapsible sections */
+.mcp-collapsible {
+	margin: 10px 0 20px 44px;
+	border-radius: 4px;
+}
+
+.mcp-collapsible-summary {
+	cursor: pointer;
+	color: var(--text-muted);
+	font-size: 0.9em;
+	margin-bottom: 8px;
+}
+
+.mcp-collapsible-summary:hover {
+	color: var(--text-normal);
+	text-decoration: underline;
+}
+
+/* Remove default details marker */
+.mcp-collapsible > summary::-webkit-details-marker {
+	display: none;
+}
+
+/* Custom marker */
+.mcp-collapsible > summary::before {
+	content: "⮞";
+	color: var(--text-muted);
+	display: inline-block;
+	margin-right: 8px;
+	transition: transform 0.2s;
+}
+
+.mcp-collapsible[open] > summary::before {
+	transform: rotate(90deg);
+}
+
+.mcp-collapsible .mcp-info-box {
+	margin-top: 8px;
+	margin-left: 0;
 }

@@ -9,7 +9,7 @@ import { searchTool } from "tools/search";
 import { replaceContentTool } from "tools/replace_content";
 import { dataviewQueryTool } from "tools/dataview_query";
 import { ToolRegistration } from "tools/types";
-import { MCPPluginSettings } from "./settings";
+import { DEFAULT_SETTINGS, MCPPluginSettings } from "./settings";
 import { registerPrompts } from "tools/prompts";
 import { VaultFileResource } from "tools/resources";
 import type { Request, Response } from "express";
@@ -24,9 +24,7 @@ export class ObsidianMcpServer {
 		private manifest: { version: string; name: string },
 		private settings: MCPPluginSettings
 	) {
-		const vaultDescription = this.settings.vaultDescription
-			? this.settings.vaultDescription
-			: "This is an Obsidian vault with various tools available to interact with it.";
+		const vaultDescription = this.settings.vaultDescription ?? DEFAULT_SETTINGS.vaultDescription;
 
 		this.server = new McpServer(
 			{
