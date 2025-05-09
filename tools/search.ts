@@ -1,4 +1,4 @@
-import { App, prepareSimpleSearch } from "obsidian";
+import { App, prepareFuzzySearch, prepareSimpleSearch, SearchMatchPart } from "obsidian";
 import { z } from "zod";
 import { ToolRegistration } from "./types";
 
@@ -7,27 +7,82 @@ export const searchTool: ToolRegistration = {
 	description: "Searches vault files for the given query and returns matching files",
 	schema: {
 		query: z.string().describe("Search query"),
+		limit: z.number().default(100).describe("Limit the number of results"),
+		fuzzy: z.boolean().default(false).describe("Use fuzzy search"),
+		folder: z.string().optional().describe("Search under specific folder"),
 	},
-	handler: (app: App) => async (args: { query: string }) => {
-		const query = args.query;
-		const results = [];
+	handler:
+		(app: App) =>
+		async (args: { query: string; limit: number; fuzzy: boolean; folder?: string }) => {
+			const query = args.query;
 
-		const search = prepareSimpleSearch(query);
+			const allMatches = await getResults(app, query, args.fuzzy, args.folder);
+			const totalMatches = allMatches.flatMap((m) => m.result.matches).length;
 
-		for (const file of app.vault.getMarkdownFiles()) {
-			const cachedContents = await app.vault.cachedRead(file);
-			const result = search(cachedContents);
-			if (result) {
-				results.push({
-					filename: file.path,
-				});
+			if (totalMatches === 0) {
+				throw new Error("No results found for query: " + query);
 			}
-		}
 
-		if (results.length === 0) {
-			throw new Error("No results found for query: " + query);
-		}
+			const lines = [`# ${Math.min(args.limit, totalMatches)} of ${totalMatches} matches:`, ""];
 
-		return results.map((r) => r.filename).join("\n");
-	},
+			let remainingMatches = args.limit;
+
+			for (const { result, cachedContents, file } of allMatches) {
+				lines.push(`## /${file.path}\n`);
+
+				for (const match of result.matches) {
+					if (remainingMatches <= 0) break;
+					lines.push(...writeMatch(match, cachedContents));
+					remainingMatches--;
+				}
+
+				if (remainingMatches <= 0) break;
+				lines.push("");
+			}
+
+			return lines.join("\n");
+		},
 };
+
+async function getResults(app: App, query: string, fuzzy: boolean, folder?: string) {
+	const search = fuzzy ? prepareFuzzySearch(query) : prepareSimpleSearch(query);
+	const results = [];
+
+	for (const file of app.vault.getMarkdownFiles()) {
+		if (folder && !file.path.startsWith(folder)) {
+			continue;
+		}
+
+		const cachedContents = await app.vault.cachedRead(file);
+		const result = search(cachedContents);
+		if (result) {
+			results.push({
+				result,
+				cachedContents,
+				file,
+			});
+		}
+	}
+	return results;
+}
+
+function writeMatch([start, end]: SearchMatchPart, cachedContents: string) {
+	const { startOffset, endOffset } = getOffsets(start, end, cachedContents);
+	const matchLines = cachedContents.slice(startOffset, endOffset).split("\n");
+
+	return [`@[${start}, ${end}]`, ...matchLines.map((l) => `> ${l}`), ""];
+}
+
+function getOffsets(start: number, end: number, contents: string) {
+	let startOffset = start;
+	while (startOffset > 0 && contents[startOffset - 1] !== "\n" && start - startOffset < 100) {
+		startOffset--;
+	}
+
+	let endOffset = end;
+	while (endOffset < contents.length && contents[endOffset] !== "\n" && endOffset - end < 100) {
+		endOffset++;
+	}
+
+	return { startOffset, endOffset };
+}
