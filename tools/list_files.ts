@@ -22,7 +22,8 @@ export const listFilesTool: ToolRegistration = {
 					.map((e) => e.path)
 					.filter((filename) => filename.startsWith(dirPath))
 					.map((filename) => {
-						const subPath = filename.slice(dirPath.length);
+						// Remove directory prefix if it exists
+						const subPath = dirPath ? filename.slice(dirPath.length + 1) : filename;
 						if (subPath.indexOf("/") > -1) {
 							return subPath.slice(0, subPath.indexOf("/") + 1);
 						}

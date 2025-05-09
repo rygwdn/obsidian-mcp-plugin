@@ -16,12 +16,12 @@ export class VaultFileResource {
 	}
 
 	public get template() {
-		return new ResourceTemplate("vault-file://{path}", {
+		return new ResourceTemplate("vault-file:///{+path}", {
 			list: async () => {
 				return this.list();
 			},
 			complete: {
-				path: async (value) => {
+				["+path"]: async (value) => {
 					return this.completePath(value);
 				},
 			},
@@ -32,8 +32,8 @@ export class VaultFileResource {
 		const files = this.app.vault.getMarkdownFiles();
 		return {
 			resources: files.map((file) => ({
-				name: file.name,
-				uri: `vault-file://${file.path}`,
+				name: file.path,
+				uri: `vault-file:///${file.path}`,
 				mimeType: "text/markdown",
 			})),
 		};
@@ -41,6 +41,11 @@ export class VaultFileResource {
 
 	public completePath(value: string) {
 		const files = this.app.vault.getMarkdownFiles();
+		console.log(
+			"completePath",
+			value,
+			files.map((file) => file.path)
+		);
 		return files.map((file) => file.path).filter((path) => path.startsWith(value));
 	}
 
