@@ -19,14 +19,17 @@
 		"test:coverage": "vitest run --coverage",
 		"typecheck": "npm run check-types && npm run check-test-types",
 		"check": "npm-run-all -p lint format:check build -s test",
-		"test:tool": "tsx scripts/test_tool.ts"
+		"test:tool": "tsx scripts/test_tool.ts",
+		"mcp:inspect": "npx @modelcontextprotocol/inspector sse https://127.0.0.1:27124/mcp"
 	},
 	"keywords": [],
 	"author": "",
 	"license": "MIT",
 	"devDependencies": {
 		"@eslint/js": "^9.26.0",
+		"@types/commander": "^2.12.0",
 		"@types/cors": "^2.8.17",
+		"@types/express": "^5.0.1",
 		"@types/glob-to-regexp": "^0.4.4",
 		"@types/json-logic-js": "^2.0.8",
 		"@types/mime-types": "^2.1.4",
@@ -36,6 +39,7 @@
 		"@typescript-eslint/parser": "^8.32.0",
 		"builtin-modules": "^5.0.0",
 		"c8": "^10.1.3",
+		"commander": "^13.1.0",
 		"esbuild": "^0.25.4",
 		"eslint-config-prettier": "^10.1.3",
 		"eslint-plugin-prettier": "^5.4.0",
