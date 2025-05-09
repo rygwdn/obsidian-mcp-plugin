@@ -11,7 +11,7 @@ import { dataviewQueryTool } from "tools/dataview_query";
 import { ToolRegistration } from "tools/types";
 import { DEFAULT_SETTINGS, MCPPluginSettings } from "./settings";
 import { registerPrompts } from "tools/prompts";
-import { VaultFileResource } from "tools/resources";
+import { VaultFileResource } from "tools/vault_file_resource";
 import type { Request, Response } from "express";
 import { isPluginEnabled as isDataviewEnabled } from "obsidian-dataview";
 
