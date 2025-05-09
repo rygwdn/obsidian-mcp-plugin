@@ -2,28 +2,50 @@ import { Plugin } from "obsidian";
 import { getAPI, LocalRestApiPublicApi } from "obsidian-local-rest-api";
 import { ObsidianMcpServer } from "mcp_server";
 import { DEFAULT_SETTINGS, MCPPluginSettings, MCPSettingTab } from "./settings";
+import type { Response } from "express";
 
 export default class ObsidianMCPPlugin extends Plugin {
 	private api: LocalRestApiPublicApi;
+	private server: ObsidianMcpServer;
 	settings: MCPPluginSettings;
+
+	private errorResponse(response: Response, error: Error) {
+		console.error("Error handling MCP request:", error);
+		response.status(500).json({
+			jsonrpc: "2.0",
+			error: {
+				code: -32603,
+				message: "Internal error",
+			},
+			id: null,
+		});
+	}
 
 	async registerRoutes() {
 		this.api = getAPI(this.app, this.manifest);
+		this.server = new ObsidianMcpServer(this.app, this.manifest, this.settings);
 
-		this.api.addRoute("/mcp").all(async (request, response) => {
+		this.api.addRoute("/mcp").post(async (request, response) => {
 			try {
-				const server = new ObsidianMcpServer(this.app, this.manifest, this.settings);
-				await server.handleRequest(request, response);
+				await this.server.handleStreamingRequest(request, response);
 			} catch (error) {
-				console.error("Error handling MCP request:", error);
-				response.status(500).json({
-					jsonrpc: "2.0",
-					error: {
-						code: -32603,
-						message: "Internal error",
-					},
-					id: null,
-				});
+				this.errorResponse(response, error);
+			}
+		});
+
+		this.api.addRoute("/mcp").get(async (request, response) => {
+			try {
+				await this.server.handleSseRequest(request, response);
+			} catch (error) {
+				this.errorResponse(response, error);
+			}
+		});
+
+		this.api.addRoute("/mcp/messages").post(async (request, response) => {
+			try {
+				await this.server.handleSseRequest(request, response);
+			} catch (error) {
+				this.errorResponse(response, error);
 			}
 		});
 	}
@@ -51,6 +73,9 @@ export default class ObsidianMCPPlugin extends Plugin {
 	onunload() {
 		if (this.api) {
 			this.api.unregister();
+		}
+		if (this.server) {
+			this.server.close();
 		}
 	}
 }
