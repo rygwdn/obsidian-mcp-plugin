@@ -6,9 +6,11 @@ import { ToolRegistration } from "./types";
 import { DailyNotesPlugin, PeriodicNotesPlugin } from "./obsidian_types";
 
 export function getDailyNotesPlugin(app: App): DailyNotesPlugin | null {
-	const plugin = (app as any).internalPlugins.plugins["daily-notes"] as
-		| DailyNotesPlugin
-		| undefined;
+	// Cast to unknown first, then to the specific type to avoid direct any usage
+	const internalPlugins = (
+		app as unknown as { internalPlugins: { plugins: Record<string, unknown> } }
+	).internalPlugins;
+	const plugin = internalPlugins.plugins["daily-notes"] as DailyNotesPlugin | undefined;
 	return plugin?.enabled ? plugin : null;
 }
 
@@ -129,6 +131,13 @@ async function getDailyNoteMetadata({
 export const getDailyNoteTool: ToolRegistration = {
 	name: "get_daily_note",
 	description: "Gets the current daily note or for a specific date",
+	annotations: {
+		title: "Get Daily Note",
+		readOnlyHint: true,
+		destructiveHint: false,
+		idempotentHint: true,
+		openWorldHint: false,
+	},
 	schema: {
 		create: z.boolean().default(false).describe("Create the daily note if it doesn't exist"),
 		date: z.string().default("today").describe("Date in YYYY-MM-DD"),

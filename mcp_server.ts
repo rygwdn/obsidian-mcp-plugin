@@ -54,8 +54,7 @@ export class ObsidianMcpServer {
 			this.registerTool(this.server, searchTool);
 		}
 
-		// Unified content modification tool that handles both append and replace operations
-		if (enabledTools.update_content || enabledTools.append_content || enabledTools.replace_content) {
+		if (enabledTools.update_content) {
 			this.registerTool(this.server, updateContentTool);
 		}
 
@@ -123,21 +122,27 @@ export class ObsidianMcpServer {
 			? `${this.settings.toolNamePrefix}_${toolReg.name}`
 			: toolReg.name;
 
-		server.tool(toolName, toolReg.description, toolReg.schema, async (args) => {
-			try {
-				const data = await toolReg.handler(this.app)(args);
-				return { content: [{ type: "text", text: data }] };
-			} catch (error) {
-				return {
-					isError: true,
-					content: [
-						{
-							type: "text",
-							text: error.toString(),
-						},
-					],
-				};
+		server.tool(
+			toolName,
+			toolReg.description,
+			toolReg.schema,
+			toolReg.annotations,
+			async (args) => {
+				try {
+					const data = await toolReg.handler(this.app)(args);
+					return { content: [{ type: "text", text: data }] };
+				} catch (error) {
+					return {
+						isError: true,
+						content: [
+							{
+								type: "text",
+								text: error.toString(),
+							},
+						],
+					};
+				}
 			}
-		});
+		);
 	}
 }

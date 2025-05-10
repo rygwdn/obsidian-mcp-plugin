@@ -5,6 +5,13 @@ import { ToolRegistration } from "./types";
 export const searchTool: ToolRegistration = {
 	name: "search",
 	description: "Searches vault files for the given query and returns matching files",
+	annotations: {
+		title: "Search Vault Files",
+		readOnlyHint: true,
+		destructiveHint: false,
+		idempotentHint: true,
+		openWorldHint: false,
+	},
 	schema: {
 		query: z.string().describe("Search query"),
 		limit: z.number().default(100).describe("Limit the number of results"),

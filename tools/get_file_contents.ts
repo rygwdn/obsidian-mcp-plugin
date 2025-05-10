@@ -5,6 +5,13 @@ import { ToolRegistration } from "./types";
 export const getFileContentsTool: ToolRegistration = {
 	name: "get_file_contents",
 	description: "Gets the content of a file from the vault",
+	annotations: {
+		title: "Get File Contents",
+		readOnlyHint: true,
+		destructiveHint: false,
+		idempotentHint: true,
+		openWorldHint: false,
+	},
 	schema: {
 		path: z.string().describe("Path to the file (relative to vault root)"),
 		startOffset: z.number().optional().default(0).describe("Start offset defaults to 0"),

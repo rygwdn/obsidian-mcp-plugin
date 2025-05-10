@@ -1,7 +1,9 @@
+import { ToolAnnotations } from "@modelcontextprotocol/sdk/types";
 import { App } from "obsidian";
 import { ZodRawShape } from "zod";
 
 export interface ToolRegistration {
+	annotations: ToolAnnotations;
 	name: string;
 	description: string;
 	schema: ZodRawShape;

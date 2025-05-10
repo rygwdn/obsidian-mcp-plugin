@@ -7,6 +7,13 @@ export const dataviewQueryTool: ToolRegistration = {
 	name: "dataview_query",
 	description:
 		"Executes a Dataview query against your vault's notes and returns the results in markdown format",
+	annotations: {
+		title: "Execute Dataview Query",
+		readOnlyHint: true,
+		destructiveHint: false,
+		idempotentHint: true,
+		openWorldHint: false,
+	},
 	schema: {
 		query: z
 			.string()

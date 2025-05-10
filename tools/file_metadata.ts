@@ -53,6 +53,13 @@ export function generateFileMetadata(app: App, filePath: string): string {
 export const getFileMetadataTool: ToolRegistration = {
 	name: "get_file_metadata",
 	description: "Retrieve metadata for a specified file",
+	annotations: {
+		title: "Get File Metadata",
+		readOnlyHint: true,
+		destructiveHint: false,
+		idempotentHint: true,
+		openWorldHint: false,
+	},
 	schema: {
 		path: z.string().describe("Path to the file to get metadata for"),
 	},

@@ -10,15 +10,15 @@ const MOCK_DATE = new Date("2023-05-09T12:00:00.000Z");
 
 // Mock the window.moment object for consistent date testing
 vi.stubGlobal("window", {
-  moment: (...args: any[]) => {
-    if (args.length === 0) {
-      return moment(MOCK_DATE);
-    }
-    if (args.length === 1) {
-      return moment(args[0]);
-    }
-    return moment(args[0], args[1]);
-  }
+	moment: (...args: unknown[]) => {
+		if (args.length === 0) {
+			return moment(MOCK_DATE);
+		}
+		if (args.length === 1) {
+			return moment(args[0]);
+		}
+		return moment(args[0], args[1] as string);
+	},
 });
 
 describe("getDailyNoteTool", () => {
@@ -28,7 +28,7 @@ describe("getDailyNoteTool", () => {
 		// Setup fake timers and set a fixed date
 		vi.useFakeTimers();
 		vi.setSystemTime(MOCK_DATE);
-		
+
 		vi.clearAllMocks();
 		mockApp = new MockApp();
 
@@ -43,7 +43,7 @@ describe("getDailyNoteTool", () => {
 		// Enable daily notes plugin
 		mockApp.internalPlugins.plugins["daily-notes"].enabled = true;
 	});
-	
+
 	afterEach(() => {
 		// Restore real timers after each test
 		vi.useRealTimers();
@@ -143,31 +143,31 @@ describe("getDailyNoteTool", () => {
 		it("should verify createFolder is called when necessary", async () => {
 			// Clear the vault files
 			mockApp.mockVault.files.clear();
-			
-			// Setup folder creation mock 
+
+			// Setup folder creation mock
 			const createFolder = vi.fn(async (path) => {
 				const folder = new MockFile(path, "", true);
 				mockApp.mockVault.files.set(path, folder);
 				return folder;
 			});
 			mockApp.vault.createFolder = createFolder;
-			
+
 			// Setup file creation mock
 			mockApp.vault.create = vi.fn(async (path, content) => {
 				const file = new MockFile(path, content);
 				mockApp.mockVault.files.set(path, file);
 				return file;
 			});
-			
+
 			// Setup file existence check
 			mockApp.vault.adapter.exists = vi.fn(async (path) => {
 				return mockApp.mockVault.files.has(path);
 			});
-			
+
 			// Call the handler to create a daily note when the folder doesn't exist
 			const handler = getDailyNoteTool.handler(mockApp);
 			await handler({ create: true, date: "today" });
-			
+
 			expect(createFolder).toHaveBeenCalledWith("daily");
 			expect(mockApp.vault.create).toHaveBeenCalledWith("daily/2023-05-09.md", "");
 		});
@@ -175,18 +175,20 @@ describe("getDailyNoteTool", () => {
 		it("should throw error when no daily notes plugin is enabled", async () => {
 			// Disable the daily notes plugin
 			mockApp.internalPlugins.plugins["daily-notes"].enabled = false;
-			
+
 			// Also remove the periodic notes plugin to test the error
 			mockApp.plugins.plugins["periodic-notes"] = null;
 
 			const handler = getDailyNoteTool.handler(mockApp);
-			await expect(handler({ create: false, date: "today" })).rejects.toThrow("No daily notes plugin is enabled");
+			await expect(handler({ create: false, date: "today" })).rejects.toThrow(
+				"No daily notes plugin is enabled"
+			);
 		});
 
 		it("should use periodic-notes plugin when daily-notes is not enabled", async () => {
 			// Disable core daily-notes plugin
 			mockApp.internalPlugins.plugins["daily-notes"].enabled = false;
-			
+
 			// The periodic-notes plugin should now be used
 			const handler = getDailyNoteTool.handler(mockApp);
 			const result = await handler({ create: false, date: "today" });
@@ -205,7 +207,9 @@ describe("getDailyNoteTool", () => {
 			});
 
 			const handler = getDailyNoteTool.handler(mockApp);
-			await expect(handler({ create: true, date: "today" })).rejects.toThrow("Failed to create daily note");
+			await expect(handler({ create: true, date: "today" })).rejects.toThrow(
+				"Failed to create daily note"
+			);
 		});
 	});
 });
