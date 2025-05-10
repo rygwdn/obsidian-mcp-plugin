@@ -64,6 +64,8 @@ export class MCPSettingTab extends PluginSettingTab {
 			"Local REST API"
 		);
 
+		this.createConnectionInfoSection();
+
 		this.addBasicSettings();
 		this.addPromptsSettings();
 		this.addToolsSection();
@@ -290,6 +292,62 @@ export class MCPSettingTab extends PluginSettingTab {
 		}
 	}
 
+	private createConnectionInfoSection(): void {
+		const infoBox = this.createInfoBox();
+
+		const apiSettings = getLocalRestApiSettings(this.app);
+		if (!apiSettings) {
+			return;
+		}
+
+		const endpointUrl = `https://${apiSettings.bindingHost}:${apiSettings.port}/mcp`;
+
+		const codeContainer = infoBox.createDiv({ cls: "mcp-copyable-container" });
+		this.createCopyableCode(codeContainer, endpointUrl);
+		if (apiSettings.authToken) {
+			this.createCopyableCode(codeContainer, `Authorization: Bearer ${apiSettings.authToken}`);
+		}
+
+		const detailsEl = infoBox.createEl("details", { cls: "mcp-collapsible" });
+
+		const vaultNameForCommand = this.app.vault.getName().replace(/\s+/g, "");
+		const claudeCommand = `claude mcp add -H 'Authorization: Bearer ${apiSettings.authToken}' -t sse ${vaultNameForCommand} ${endpointUrl}`;
+		const mcpConfigJson = {
+			type: "sse",
+			url: endpointUrl,
+			headers: apiSettings.authToken ? { Authorization: `Bearer ${apiSettings.authToken}` } : {},
+		};
+
+		const jsonContainer = detailsEl.createDiv({ cls: "mcp-copyable-container" });
+		jsonContainer
+			.createDiv({ cls: "mcp-copyable-label" })
+			.createEl("span", { text: "MCP JSON Configuration" });
+		this.createCopyableCode(jsonContainer, JSON.stringify(mcpConfigJson));
+
+		const commandContainer = detailsEl.createDiv({ cls: "mcp-copyable-container" });
+		commandContainer
+			.createDiv({ cls: "mcp-copyable-label" })
+			.createEl("span", { text: "Claude MCP Command" });
+		this.createCopyableCode(commandContainer, claudeCommand);
+	}
+
+	private createCopyableCode(container: HTMLElement, code: string): void {
+		const codeBlock = container.createEl("pre", { cls: "mcp-copyable-code" });
+		codeBlock.createEl("code", { text: code });
+		const copyButton = codeBlock.createEl("button", { cls: "mcp-copy-button", text: "📋" });
+
+		copyButton.addEventListener("click", (e) => {
+			e.preventDefault();
+			navigator.clipboard.writeText(code).then(() => {
+				const originalText = copyButton.textContent;
+				copyButton.textContent = "Copied!";
+				setTimeout(() => {
+					copyButton.textContent = originalText;
+				}, 2000);
+			});
+		});
+	}
+
 	private createTextSetting({
 		name,
 		desc,
@@ -377,4 +435,27 @@ export class MCPSettingTab extends PluginSettingTab {
 
 		return setting;
 	}
+}
+
+export function getLocalRestApiSettings(app: App) {
+	if (!app.plugins.enabledPlugins.has("obsidian-local-rest-api")) {
+		console.error("Local REST API plugin is not enabled");
+		return null;
+	}
+
+	const localRestApiPlugin = app.plugins.plugins["obsidian-local-rest-api"] as any;
+	if (!localRestApiPlugin) {
+		console.error("Local REST API plugin instance not found");
+		return null;
+	}
+
+	if (localRestApiPlugin.settings) {
+		return {
+			port: localRestApiPlugin.settings.port as number,
+			authToken: localRestApiPlugin.settings.apiKey as string,
+			bindingHost: (localRestApiPlugin.settings.bindingHost ?? "localhost") as string,
+		};
+	}
+
+	return null;
 }

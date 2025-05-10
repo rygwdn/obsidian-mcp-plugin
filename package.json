@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-mcp-plugin",
-	"version": "0.1.0",
+	"version": "0.1.2",
 	"description": "Provides a Model Context Protocol (MCP) endpoint via Obsidian Local REST API",
 	"type": "module",
 	"main": "main.js",
@@ -21,8 +21,8 @@
 		"fix": "npm run lint:fix ; npm run format",
 		"check": "npm-run-all -p lint format:check check-types check-test-types -s test",
 		"inspect": "npx @modelcontextprotocol/inspector",
-		"install:copy": "node scripts/install.js copy",
-		"install:link": "node scripts/install.js link"
+		"install:copy": "npm run build && node scripts/install.js copy",
+		"install:link": "npm run build && node scripts/install.js link"
 	},
 	"keywords": [],
 	"author": "",
