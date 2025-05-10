@@ -147,6 +147,20 @@ npm run check
 npm run install:link -- /path/to/your/vault
 ```
 
+## Release Process
+
+```bash
+# 1. Update CHANGELOG.md with format: ## [x.y.z] - YYYY-MM-DD
+# 2. Bump version
+npm run version
+
+# 3. Tag and push
+git tag x.y.z
+git push origin x.y.z
+```
+
+GitHub Actions will create a draft release with notes from the changelog.
+
 ## Related Projects
 
 Here are some other projects in the MCP ecosystem:
