@@ -9,6 +9,7 @@ import { searchTool } from "tools/search";
 import { replaceContentTool } from "tools/replace_content";
 import { dataviewQueryTool } from "tools/dataview_query";
 import { getDailyNoteTool, DailyNoteResource, isDailyNotesEnabled } from "tools/daily_notes";
+import { getFileMetadataTool, FileMetadataResource } from "tools/file_metadata";
 import { ToolRegistration } from "tools/types";
 import { DEFAULT_SETTINGS, MCPPluginSettings } from "./settings";
 import { registerPrompts } from "tools/prompts";
@@ -40,7 +41,6 @@ export class ObsidianMcpServer {
 			console.error("MCP Server Error:", error);
 		};
 
-		// Register enabled tools
 		const { enabledTools } = this.settings;
 
 		if (enabledTools.list_files) {
@@ -63,23 +63,24 @@ export class ObsidianMcpServer {
 			this.registerTool(this.server, replaceContentTool);
 		}
 
-		// Only register dataview query tool if the plugin is enabled and the tool is enabled
 		if (enabledTools.dataview_query && isDataviewEnabled(this.app)) {
 			this.registerTool(this.server, dataviewQueryTool);
 		}
 
-		// Register daily notes features if enabled and daily notes plugin is available
 		if (enabledTools.daily_notes && isDailyNotesEnabled(this.app)) {
 			this.registerTool(this.server, getDailyNoteTool);
 			new DailyNoteResource(this.app, this.settings.toolNamePrefix).register(this.server);
 		}
 
-		// Register resources if enabled
 		if (this.settings.enableResources) {
 			new VaultFileResource(this.app, this.settings.toolNamePrefix).register(this.server);
 		}
 
-		// Register prompts if enabled
+		if (enabledTools.get_file_metadata) {
+			new FileMetadataResource(this.app, this.settings.toolNamePrefix).register(this.server);
+			this.registerTool(this.server, getFileMetadataTool);
+		}
+
 		if (this.settings.enablePrompts) {
 			registerPrompts(this.app, this.server, this.settings);
 		}

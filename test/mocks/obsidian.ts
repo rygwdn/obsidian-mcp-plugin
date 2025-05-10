@@ -3,10 +3,6 @@ import yaml from "yaml";
 import type * as Obsidian from "obsidian/obsidian.d.ts";
 
 export class MockFile implements Obsidian.TFile, Obsidian.TFolder {
-	name: string;
-	stat: { ctime: number; mtime: number; size: number };
-	basename: string;
-	extension: string;
 	parent: null = null;
 	vault: Obsidian.Vault;
 
@@ -17,24 +13,66 @@ export class MockFile implements Obsidian.TFile, Obsidian.TFolder {
 			.map(([_, file]) => file);
 	}
 
+	get stat(): Obsidian.FileStats {
+		return {
+			ctime: new Date("2025-01-01").getTime(),
+			mtime: new Date("2025-02-01").getTime(),
+			size: this.contents.length,
+		};
+	}
+
+	get name(): string {
+		return this.path.split("/").pop() || "";
+	}
+
+	get basename(): string {
+		return this.name.split(".")[0];
+	}
+
+	get extension(): string {
+		return this.name.split(".").pop() || "";
+	}
+
 	isRoot(): boolean {
 		return this.path === "/";
+	}
+
+	getMetadata(): Obsidian.CachedMetadata {
+		const [frontdoc, bodydoc] = yaml.parseAllDocuments(this.contents);
+
+		let line = 0;
+		const matches = Array.from(this.contents.matchAll(/(#+)\s+(.*)/g) || []);
+
+		const headings = Array.from(matches).map((match) => ({
+			heading: match[2],
+			level: match[1].length,
+			position: {
+				start: { offset: match.index, line: line++, col: 0 },
+				end: { offset: match.index + match[0].length, line: line, col: 0 },
+			},
+		}));
+
+		if (!bodydoc) {
+			return { headings };
+		}
+
+		const frontmatter = frontdoc.toJS();
+		return {
+			headings,
+			tags: (frontmatter.tags || []).map((tag: string) => ({ tag })),
+			frontmatter,
+			frontmatterPosition: {
+				start: { offset: bodydoc.contents?.range[0] || 0, line: 0, col: 0 },
+				end: { offset: bodydoc.contents?.range[0] || 0, line: 0, col: 0 },
+			},
+		};
 	}
 
 	constructor(
 		public path: string,
 		public contents: string = "",
 		public isFolder: boolean = false
-	) {
-		this.name = path.split("/").pop() || "";
-		this.basename = this.name.split(".")[0];
-		this.extension = path.includes(".") ? path.split(".").pop() || "" : "";
-		this.stat = {
-			ctime: Date.now(),
-			mtime: Date.now(),
-			size: contents.length,
-		};
-	}
+	) {}
 }
 
 export class MockVaultAdapter implements Obsidian.DataAdapter {
@@ -192,21 +230,7 @@ export class MockApp implements Obsidian.App {
 	metadataCache = {
 		getFileCache: vi.fn((file: Obsidian.TFile) => {
 			if (file instanceof MockFile) {
-				const [frontdoc, bodydoc] = yaml.parseAllDocuments(file.contents);
-				if (!bodydoc) {
-					return {
-						frontmatter: {},
-						frontmatterPosition: { end: { offset: 0 } },
-					};
-				}
-
-				const frontmatter = frontdoc.toJS();
-				return {
-					frontmatter,
-					frontmatterPosition: {
-						end: { offset: bodydoc.contents?.range[0] },
-					},
-				};
+				return file.getMetadata();
 			}
 			throw new Error("File not found");
 		}),
@@ -242,10 +266,10 @@ export class MockApp implements Obsidian.App {
 					daily: {
 						format: "YYYY-MM-DD",
 						folder: "daily",
-						template: ""
-					}
-				}
-			}
+						template: "",
+					},
+				},
+			},
 		},
 	};
 	internalPlugins = {

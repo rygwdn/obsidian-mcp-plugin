@@ -14,6 +14,7 @@ export interface MCPPluginSettings {
 		replace_content: boolean;
 		dataview_query: boolean;
 		daily_notes: boolean;
+		get_file_metadata: boolean;
 	};
 	enableResources: boolean;
 	enablePrompts: boolean;
@@ -32,6 +33,7 @@ export const DEFAULT_SETTINGS: MCPPluginSettings = {
 		replace_content: true,
 		dataview_query: true,
 		daily_notes: true,
+		get_file_metadata: true,
 	},
 	enableResources: true,
 	enablePrompts: true,
@@ -174,6 +176,13 @@ export class MCPSettingTab extends PluginSettingTab {
 			desc: "Replace content in files in your vault",
 			getValue: () => this.plugin.settings.enabledTools.replace_content,
 			setValue: (value) => (this.plugin.settings.enabledTools.replace_content = value),
+		});
+
+		this.createToggleSetting({
+			name: "File Metadata Tool",
+			desc: "Retrieve metadata for files in your vault",
+			getValue: () => this.plugin.settings.enabledTools.get_file_metadata,
+			setValue: (value) => (this.plugin.settings.enabledTools.get_file_metadata = value),
 		});
 
 		this.addDataviewToolSetting(isDataviewEnabled);
