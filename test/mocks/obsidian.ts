@@ -274,6 +274,7 @@ export class MockApp implements Obsidian.App {
 					},
 				},
 			},
+			quickadd: {} as any, // Will be set by tests when needed
 		},
 	};
 	internalPlugins = {

@@ -18,7 +18,8 @@
 		"test:watch": "vitest",
 		"test:coverage": "vitest run --coverage",
 		"typecheck": "npm run check-types && npm run check-test-types",
-		"check": "npm-run-all -p lint format:check build -s test",
+		"fix": "npm run lint:fix ; npm run format",
+		"check": "npm-run-all -p lint format:check check-types check-test-types -s test",
 		"mcp:inspect": "npx @modelcontextprotocol/inspector"
 	},
 	"keywords": [],

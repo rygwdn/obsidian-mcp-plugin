@@ -14,6 +14,10 @@ describe("update_content tool", () => {
 			"multiple.md": "This has multiple matches. This has multiple matches.",
 			"empty.md": "",
 		});
+
+		// Replace functions with vi.fn() to properly capture calls
+		mockApp.vault.adapter.write = vi.fn(mockApp.vault.adapter.write);
+		mockApp.vault.create = vi.fn(mockApp.vault.create);
 	});
 
 	describe("append mode", () => {
@@ -26,11 +30,10 @@ describe("update_content tool", () => {
 			});
 
 			expect(mockApp.vault.adapter.write).toHaveBeenCalled();
-
-			// Make sure the content includes both the original and appended content
-			const writeCall = mockApp.vault.adapter.write.mock.calls[0];
-			expect(writeCall[0]).toBe("test.md");
-			expect(writeCall[1]).toBe("This is a test file content\nSome additional content");
+			expect(mockApp.vault.adapter.write).toHaveBeenCalledWith(
+				"test.md",
+				"This is a test file content\nSome additional content"
+			);
 
 			expect(result).toBe("Content appended successfully");
 		});
@@ -47,8 +50,10 @@ describe("update_content tool", () => {
 				content: "Appended content",
 			});
 
-			const writeCall = vi.mocked(mockApp.vault.adapter).write.mock.calls[0];
-			expect(writeCall[1]).toBe("Content without newline\nAppended content");
+			expect(mockApp.vault.adapter.write).toHaveBeenCalledWith(
+				"test.md",
+				"Content without newline\nAppended content"
+			);
 		});
 
 		it("should throw an error if the file doesn't exist and create_if_missing is false", async () => {
@@ -75,9 +80,7 @@ describe("update_content tool", () => {
 			});
 
 			expect(mockApp.vault.create).toHaveBeenCalled();
-			const createCall = mockApp.vault.create.mock.calls[0];
-			expect(createCall[0]).toBe("new_file.md");
-			expect(createCall[1]).toBe("New file content");
+			expect(mockApp.vault.create).toHaveBeenCalledWith("new_file.md", "New file content");
 			expect(result).toBe("File created with content");
 		});
 	});
@@ -93,11 +96,10 @@ describe("update_content tool", () => {
 			});
 
 			expect(mockApp.vault.adapter.write).toHaveBeenCalled();
-
-			// Verify content was replaced correctly
-			const writeCall = vi.mocked(mockApp.vault.adapter).write.mock.calls[0];
-			expect(writeCall[0]).toBe("replace.md");
-			expect(writeCall[1]).toBe("This is a file with replacement text to replace.");
+			expect(mockApp.vault.adapter.write).toHaveBeenCalledWith(
+				"replace.md",
+				"This is a file with replacement text to replace."
+			);
 			expect(result).toBe("Content successfully replaced in replace.md");
 		});
 
@@ -148,8 +150,10 @@ describe("update_content tool", () => {
 				content: "",
 			});
 
-			const writeCall = vi.mocked(mockApp.vault.adapter).write.mock.calls[0];
-			expect(writeCall[1]).toBe("This is a file with  to replace.");
+			expect(mockApp.vault.adapter.write).toHaveBeenCalledWith(
+				"replace.md",
+				"This is a file with  to replace."
+			);
 			expect(result).toBe("Content successfully replaced in replace.md");
 		});
 	});

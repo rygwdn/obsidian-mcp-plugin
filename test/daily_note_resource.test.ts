@@ -16,9 +16,9 @@ vi.stubGlobal("window", {
 			return moment(MOCK_DATE);
 		}
 		if (args.length === 1) {
-			return moment(args[0]);
+			return moment(args[0] as moment.MomentInput);
 		}
-		return moment(args[0], args[1] as string);
+		return moment(args[0] as moment.MomentInput, args[1] as string);
 	},
 });
 
@@ -170,7 +170,7 @@ describe("DailyNoteResource", () => {
 
 			// But leave the periodic notes plugin, since it should be used as a fallback
 			// If we want to test the case where both are disabled, we need to remove it
-			mockApp.plugins.plugins["periodic-notes"] = null;
+			mockApp.plugins.plugins["periodic-notes"] = null as any;
 
 			await expect(
 				resource.handler(new URL("vault-daily-note:///today"), { date: "today" })

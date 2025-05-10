@@ -15,9 +15,9 @@ vi.stubGlobal("window", {
 			return moment(MOCK_DATE);
 		}
 		if (args.length === 1) {
-			return moment(args[0]);
+			return moment(args[0] as moment.MomentInput);
 		}
-		return moment(args[0], args[1] as string);
+		return moment(args[0] as moment.MomentInput, args[1] as string);
 	},
 });
 
@@ -177,7 +177,7 @@ describe("getDailyNoteTool", () => {
 			mockApp.internalPlugins.plugins["daily-notes"].enabled = false;
 
 			// Also remove the periodic notes plugin to test the error
-			mockApp.plugins.plugins["periodic-notes"] = null;
+			mockApp.plugins.plugins["periodic-notes"] = null as any;
 
 			const handler = getDailyNoteTool.handler(mockApp);
 			await expect(handler({ create: false, date: "today" })).rejects.toThrow(

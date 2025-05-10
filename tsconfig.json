@@ -17,5 +17,5 @@
 		"skipLibCheck": true // Skip type checking of declaration files
 	},
 	"include": ["**/*.ts"],
-	"exclude": ["node_modules", "test/**/*"]
+	"exclude": ["test/**/*"]
 }

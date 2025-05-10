@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { getFileContentsTool } from "../tools/get_file_contents";
 import { MockApp } from "./mocks/obsidian";
+import { App } from "obsidian";
 
 describe("get_file_contents tool", () => {
 	let mockApp: MockApp;

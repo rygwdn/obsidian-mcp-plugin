@@ -1,4 +1,4 @@
-import { App, prepareFuzzySearch, prepareSimpleSearch, SearchMatchPart } from "obsidian";
+import { App, prepareFuzzySearch, prepareSimpleSearch, SearchMatchPart, TFile } from "obsidian";
 import { z } from "zod";
 import { ToolRegistration } from "./types";
 
@@ -24,7 +24,7 @@ export const searchTool: ToolRegistration = {
 			const query = args.query;
 
 			const allMatches = await getResults(app, query, args.fuzzy, args.folder);
-			const totalMatches = allMatches.flatMap((m) => m.result.matches).length;
+			const totalMatches = allMatches.flatMap((m) => m.result.matches ?? []).length;
 
 			if (totalMatches === 0) {
 				throw new Error("No results found for query: " + query);
@@ -37,7 +37,7 @@ export const searchTool: ToolRegistration = {
 			for (const { result, cachedContents, file } of allMatches) {
 				lines.push(`## /${file.path}\n`);
 
-				for (const match of result.matches) {
+				for (const match of result.matches ?? []) {
 					if (remainingMatches <= 0) break;
 					lines.push(...writeMatch(match, cachedContents));
 					remainingMatches--;
@@ -51,9 +51,24 @@ export const searchTool: ToolRegistration = {
 		},
 };
 
-async function getResults(app: App, query: string, fuzzy: boolean, folder?: string) {
+interface SearchResult {
+	matches?: SearchMatchPart[];
+}
+
+interface SearchMatch {
+	result: SearchResult;
+	cachedContents: string;
+	file: TFile;
+}
+
+async function getResults(
+	app: App,
+	query: string,
+	fuzzy: boolean,
+	folder?: string
+): Promise<SearchMatch[]> {
 	const search = fuzzy ? prepareFuzzySearch(query) : prepareSimpleSearch(query);
-	const results = [];
+	const results: SearchMatch[] = [];
 
 	for (const file of app.vault.getMarkdownFiles()) {
 		if (folder && !file.path.startsWith(folder)) {
