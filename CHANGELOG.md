@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.1.2] - Unreleased
+## [0.1.2] - 2025-05-10
 - feat: Add MCP connection information display with copy buttons
 - feat: Support schema-less tools in MCP server
 - feat: Add custom prompt naming via frontmatter
