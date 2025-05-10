@@ -1,5 +1,6 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import ObsidianMCPPlugin from "./main";
+import { isDailyNotesEnabled } from "tools/daily_notes";
 
 export interface MCPPluginSettings {
 	promptsFolder: string;
@@ -12,6 +13,7 @@ export interface MCPPluginSettings {
 		search: boolean;
 		replace_content: boolean;
 		dataview_query: boolean;
+		daily_notes: boolean;
 	};
 	enableResources: boolean;
 	enablePrompts: boolean;
@@ -29,6 +31,7 @@ export const DEFAULT_SETTINGS: MCPPluginSettings = {
 		search: true,
 		replace_content: true,
 		dataview_query: true,
+		daily_notes: true,
 	},
 	enableResources: true,
 	enablePrompts: true,
@@ -174,6 +177,28 @@ export class MCPSettingTab extends PluginSettingTab {
 		});
 
 		this.addDataviewToolSetting(isDataviewEnabled);
+		this.addDailyNotesToolSetting(isDailyNotesEnabled(this.plugin.app));
+	}
+
+	private addDailyNotesToolSetting(isDailyNotesEnabled: boolean): void {
+		const dailyNoteSetting = this.createToggleSetting({
+			name: "Daily Notes Features",
+			desc: "Enable daily notes tool and resource to access daily notes in your vault",
+			getValue: () => isDailyNotesEnabled && this.plugin.settings.enabledTools.daily_notes,
+			setValue: (value) => (this.plugin.settings.enabledTools.daily_notes = value),
+			disabled: !isDailyNotesEnabled,
+		});
+
+		if (!isDailyNotesEnabled) {
+			dailyNoteSetting.setDesc(
+				"Enable daily notes tool and resource (Daily Notes plugin is not enabled)"
+			);
+			dailyNoteSetting.descEl.createSpan({ text: " — ", cls: "mcp-warning-text" });
+			dailyNoteSetting.descEl.createSpan({
+				text: "Requires Daily Notes or Periodic Notes plugin",
+				cls: "mcp-warning-text",
+			});
+		}
 	}
 
 	private addAdvancedSection(): void {

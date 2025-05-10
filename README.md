@@ -11,6 +11,7 @@ Model Context Protocol (MCP) is a standardized way for AI assistants to interact
 - [Obsidian](https://obsidian.md/)
 - [Obsidian Local REST API](https://github.com/coddingtonbear/obsidian-local-rest-api) plugin
 - [Dataview](https://github.com/blacksmithgu/obsidian-dataview) plugin (optional, required for `dataview_query` tool)
+- Daily Notes (built-in core plugin) or [Periodic Notes](https://github.com/liamcain/obsidian-periodic-notes) plugin (optional, required for daily note functionality)
 
 ## Installation
 
@@ -52,10 +53,13 @@ The plugin provides the following features:
 | `search` | Searches for content in markdown files |
 | `replace_content` | Replaces specific content in a file with new content, failing if not found or if there are multiple matches |
 | `dataview_query` | Executes a Dataview query against your vault's notes and returns the results in markdown format (requires Dataview plugin) |
+| `get_daily_note` | Gets information about the current daily note or for a specific date (requires Daily Notes or Periodic Notes plugin) |
 
 ### Resources
 
-Any file in your vault can be accessed directly as an MCP resource.
+Any file in your vault can be accessed directly as an MCP resource via the `vault-file` resource.
+
+The plugin also provides direct access to daily notes through the `vault-daily-note` resource when enabled in the settings.
 
 ### Prompts
 
@@ -128,7 +132,7 @@ The project uses TypeScript's strict type checking for the main code, with more 
 npm run check-types
 
 # Check types in test code (warnings allowed)
-npm run check-test-types 
+npm run check-test-types
 
 # Check all types
 npm run typecheck
@@ -158,9 +162,6 @@ Run all checks at once (lint, format, build, test):
 npm run ci
 ```
 
-## Advanced Features
-
-For detailed information about MCP Resources and Prompts, see [features.md](features.md).
 
 ## License
 

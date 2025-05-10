@@ -236,7 +236,30 @@ export class MockApp implements Obsidian.App {
 	vault: Obsidian.Vault = this.mockVault as unknown as Obsidian.Vault;
 	plugins = {
 		enabledPlugins: new Set<string>(),
-		plugins: {},
+		plugins: {
+			"periodic-notes": {
+				settings: {
+					daily: {
+						format: "YYYY-MM-DD",
+						folder: "daily",
+						template: ""
+					}
+				}
+			}
+		},
+	};
+	internalPlugins = {
+		plugins: {
+			"daily-notes": {
+				instance: {
+					options: {
+						format: "YYYY-MM-DD",
+						folder: "daily",
+					},
+				},
+				enabled: false,
+			},
+		},
 	};
 	workspace: Obsidian.Workspace = new Workspace() as unknown as Obsidian.Workspace;
 }

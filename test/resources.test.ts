@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { VaultFileResource } from "../tools/resources";
+import { VaultFileResource } from "../tools/vault_file_resource";
 import { MockApp } from "./mocks/obsidian";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
