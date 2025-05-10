@@ -24,14 +24,7 @@ describe("prompt tools", () => {
 	describe("VaultPrompt", () => {
 		it("should properly initialize with correct name", () => {
 			const file = mockApp.vault.getFileByPath("prompts/test-prompt.md") as MockFile;
-			const prompt = new VaultPrompt(file, mockApp, "custom");
-
-			expect(prompt.name).toBe("custom_test-prompt");
-		});
-
-		it("should handle name without prefix", () => {
-			const file = mockApp.vault.getFileByPath("prompts/test-prompt.md") as MockFile;
-			const prompt = new VaultPrompt(file, mockApp, "");
+			const prompt = new VaultPrompt(file, mockApp);
 
 			expect(prompt.name).toBe("test-prompt");
 		});

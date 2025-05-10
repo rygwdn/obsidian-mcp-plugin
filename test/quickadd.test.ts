@@ -2,6 +2,28 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { quickAddListTool, quickAddExecuteTool, isQuickAddEnabled } from "../tools/quickadd";
 import { MockApp } from "./mocks/obsidian";
 
+describe("quickadd tool annotations", () => {
+	it("should have the correct annotations for the list tool", () => {
+		expect(quickAddListTool.annotations).toEqual({
+			title: "QuickAdd List Tool",
+			readOnlyHint: true,
+			destructiveHint: false,
+			idempotentHint: true,
+			openWorldHint: false,
+		});
+	});
+
+	it("should have the correct annotations for the execute tool", () => {
+		expect(quickAddExecuteTool.annotations).toEqual({
+			title: "QuickAdd Execute Tool",
+			readOnlyHint: false,
+			destructiveHint: true,
+			idempotentHint: false,
+			openWorldHint: false,
+		});
+	});
+});
+
 // Create mock for QuickAdd plugin
 class MockQuickAddPlugin {
 	constructor() {
@@ -61,6 +83,26 @@ describe("quickadd tools", () => {
 		// Set up the QuickAdd plugin in the mock app
 		mockApp.plugins.enabledPlugins.add("quickadd");
 		mockApp.plugins.plugins.quickadd = mockQuickAdd;
+
+		mockApp.plugins.plugins.quickadd.settings = {
+			choices: [
+				{
+					id: "choice1",
+					name: "Test Choice 1",
+					type: "template",
+					command: {
+						name: "Template command",
+						templatePath: "templates/template1.md",
+					},
+				},
+				{
+					id: "choice2",
+					name: "Test Choice 2",
+					type: "macro",
+					macros: [{ name: "Macro 1" }, { name: "Macro 2" }],
+				},
+			],
+		};
 	});
 
 	describe("isQuickAddEnabled", () => {
@@ -81,63 +123,62 @@ describe("quickadd tools", () => {
 			const handler = quickAddListTool.handler(mockApp);
 			const result = await handler({});
 
-			expect(result).toMatchInlineSnapshot(`
-              "# Available QuickAdd Choices
+			expect(result).toBe(`# Available QuickAdd Choices
 
-              ## template Choices
+## template Choices
 
-              ### Test Choice 1
-              - **ID**: \`choice1\`
-              - **Command**:
-                - name: Template command
-                - templatePath: templates/template1.md
+### Test Choice 1
+- **ID**: \`choice1\`
+- **Command**:
+  - name: Template command
+  - templatePath: templates/template1.md
 
-              ## macro Choices
+## macro Choices
 
-              ### Test Choice 2
-              - **ID**: \`choice2\`
-              - **Macros**: 2 defined
+### Test Choice 2
+- **ID**: \`choice2\`
+- **Macros**: 2 defined
 
-              ## Usage
+## Usage
 
-              To execute a choice:
-              \`\`\`json
-              {
-                "choice": "My Choice Name"
-              }
-              \`\`\`
+To execute a choice:
+\`\`\`json
+{
+  "choice": "My Choice Name"
+}
+\`\`\`
 
-              You can also pass variables to the choice:
-              \`\`\`json
-              {
-                "choice": "My Choice Name",
-                "variables": {
-                  "title": "My Document",
-                  "tags": "tag1, tag2"
-                }
-              }
-              \`\`\`
+You can also pass variables to the choice:
+\`\`\`json
+{
+  "choice": "My Choice Name",
+  "variables": {
+    "title": "My Document",
+    "tags": "tag1, tag2"
+  }
+}
+\`\`\`
 
-              To format a template:
-              \`\`\`json
-              {
-                "template": "Hello {{name}}!",
-                "variables": {
-                  "name": "World"
-                }
-              }
-              \`\`\`
-              "
-            `);
+To format a template:
+\`\`\`json
+{
+  "template": "Hello {{name}}!",
+  "variables": {
+    "name": "World"
+  }
+}
+\`\`\`
+`);
 		});
 
 		it("should return a message when no choices are found", async () => {
 			mockQuickAdd.api.getChoices.mockReturnValueOnce([]);
+			mockApp.plugins.plugins.quickadd.settings.choices = [];
 
 			const handler = quickAddListTool.handler(mockApp);
 			const result = await handler({});
 
-			expect(result).toMatchInlineSnapshot(`"No QuickAdd choices found"`);
+			expect(result).toBe("No QuickAdd choices found");
 		});
 
 		it("should throw an error if QuickAdd plugin is not enabled", async () => {
@@ -149,12 +190,11 @@ describe("quickadd tools", () => {
 		});
 
 		it("should throw an error if the API is not available", async () => {
-			// Remove the API from the mock
-			mockApp.plugins.plugins.quickadd = {} as unknown;
+			mockApp.plugins.plugins.quickadd = {};
 
 			const handler = quickAddListTool.handler(mockApp);
 
-			await expect(handler({})).rejects.toThrow("QuickAdd API is not available");
+			await expect(handler({})).rejects.toThrow("QuickAdd settings or choices not available");
 		});
 	});
 
@@ -166,10 +206,8 @@ describe("quickadd tools", () => {
 					choice: "choice1",
 				});
 
-				expect(mockQuickAdd.api.executeChoice).toHaveBeenCalledWith("choice1", undefined);
-				expect(result).toMatchInlineSnapshot(
-					`"Successfully executed QuickAdd choice: **Test Choice 1**"`
-				);
+				expect(mockQuickAdd.api.executeChoice).toHaveBeenCalledWith("Test Choice 1", undefined);
+				expect(result).toBe("Successfully executed QuickAdd choice: **Test Choice 1**");
 			});
 
 			it("should execute a choice by name", async () => {
@@ -178,10 +216,8 @@ describe("quickadd tools", () => {
 					choice: "Test Choice 2",
 				});
 
-				expect(mockQuickAdd.api.executeChoice).toHaveBeenCalledWith("choice2", undefined);
-				expect(result).toMatchInlineSnapshot(
-					`"Successfully executed QuickAdd choice: **Test Choice 2**"`
-				);
+				expect(mockQuickAdd.api.executeChoice).toHaveBeenCalledWith("Test Choice 2", undefined);
+				expect(result).toBe("Successfully executed QuickAdd choice: **Test Choice 2**");
 			});
 
 			it("should pass variables to the choice execution", async () => {
@@ -196,10 +232,8 @@ describe("quickadd tools", () => {
 					variables,
 				});
 
-				expect(mockQuickAdd.api.executeChoice).toHaveBeenCalledWith("choice1", variables);
-				expect(result).toMatchInlineSnapshot(
-					`"Successfully executed QuickAdd choice: **Test Choice 1**"`
-				);
+				expect(mockQuickAdd.api.executeChoice).toHaveBeenCalledWith("Test Choice 1", variables);
+				expect(result).toBe("Successfully executed QuickAdd choice: **Test Choice 1**");
 			});
 
 			it("should throw an error if the choice is not found", async () => {
@@ -240,7 +274,7 @@ describe("quickadd tools", () => {
 				});
 
 				expect(mockQuickAdd.api.format).toHaveBeenCalledWith(template, variables, true);
-				expect(result).toMatchInlineSnapshot(`"Hello World!"`);
+				expect(result).toBe("Hello World!");
 			});
 
 			it("should format a complex template with multiple variables", async () => {
@@ -258,9 +292,7 @@ describe("quickadd tools", () => {
 				});
 
 				expect(mockQuickAdd.api.format).toHaveBeenCalledWith(template, variables, true);
-				expect(result).toMatchInlineSnapshot(
-					`"# My Document\n\nCreated by: Test User\nDate: 2025-05-10"`
-				);
+				expect(result).toBe("# My Document\n\nCreated by: Test User\nDate: 2025-05-10");
 			});
 
 			it("should support variables of different types", async () => {
@@ -277,7 +309,7 @@ describe("quickadd tools", () => {
 				});
 
 				expect(mockQuickAdd.api.format).toHaveBeenCalledWith(template, variables, true);
-				expect(result).toMatchInlineSnapshot(`"Count: 42\nActive: true"`);
+				expect(result).toBe("Count: 42\nActive: true");
 			});
 
 			it("should handle errors from format", async () => {
@@ -328,7 +360,7 @@ describe("quickadd tools", () => {
 
 			it("should throw an error if the API is not available", async () => {
 				// Remove the API from the mock
-				mockApp.plugins.plugins.quickadd = {} as unknown;
+				mockApp.plugins.plugins.quickadd = {};
 
 				const handler = quickAddExecuteTool.handler(mockApp);
 

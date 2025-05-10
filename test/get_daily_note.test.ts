@@ -2,6 +2,18 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { getDailyNoteTool } from "../tools/daily_notes";
 import { MockApp, MockFile } from "./mocks/obsidian";
 
+describe("daily_notes tool annotations", () => {
+	it("should have the correct annotations for the tool", () => {
+		expect(getDailyNoteTool.annotations).toEqual({
+			title: "Get Daily Note",
+			readOnlyHint: true,
+			destructiveHint: false,
+			idempotentHint: true,
+			openWorldHint: false,
+		});
+	});
+});
+
 // Import moment for testing only
 import moment from "moment";
 

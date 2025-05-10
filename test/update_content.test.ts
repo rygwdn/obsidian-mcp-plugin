@@ -2,6 +2,18 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { updateContentTool } from "../tools/update_content";
 import { MockApp } from "./mocks/obsidian";
 
+describe("update_content tool annotations", () => {
+	it("should have the correct annotations for the tool", () => {
+		expect(updateContentTool.annotations).toEqual({
+			title: "Update File Content",
+			readOnlyHint: false,
+			destructiveHint: true,
+			idempotentHint: false,
+			openWorldHint: false,
+		});
+	});
+});
+
 describe("update_content tool", () => {
 	let mockApp: MockApp;
 

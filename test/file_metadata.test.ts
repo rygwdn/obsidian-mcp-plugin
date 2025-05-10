@@ -7,6 +7,18 @@ import {
 import { MockApp } from "./mocks/obsidian";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
+describe("file_metadata tool annotations", () => {
+	it("should have the correct annotations for the tool", () => {
+		expect(getFileMetadataTool.annotations).toEqual({
+			title: "Get File Metadata",
+			readOnlyHint: true,
+			destructiveHint: false,
+			idempotentHint: true,
+			openWorldHint: false,
+		});
+	});
+});
+
 describe("File metadata functionality", () => {
 	let mockApp: MockApp;
 
