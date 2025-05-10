@@ -15,6 +15,7 @@ describe("list_files tool", () => {
 			"dir1/file4.md": "",
 			"dir2/file5.md": "",
 			"dir2/subdir/file6.md": "",
+			"dir2/subdir/nested/file7.md": "",
 		});
 	});
 
@@ -23,10 +24,14 @@ describe("list_files tool", () => {
 		const result = await handler({});
 
 		expect(mockApp.vault.getFiles).toHaveBeenCalled();
-		expect(result).toContain("file1.md");
-		expect(result).toContain("file2.md");
-		expect(result).toContain("dir1/");
-		expect(result).toContain("dir2/");
+		expect(result).toMatchInlineSnapshot(`
+			"dir1/file3.md
+			dir1/file4.md
+			dir2/file5.md
+			dir2/subdir/
+			file1.md
+			file2.md"
+		`);
 	});
 
 	it("should list files from a specific directory", async () => {
@@ -34,9 +39,54 @@ describe("list_files tool", () => {
 		const result = await handler({ path: "dir1/" });
 
 		expect(mockApp.vault.getFiles).toHaveBeenCalled();
-		// Since we're mocking, the actual filtering logic in the tool may not work as expected
-		// Just verify that the function was called and returned something
-		expect(result).toBeTruthy();
+		expect(result).toMatchInlineSnapshot(`
+			"ile3.md
+			ile4.md"
+		`);
+	});
+
+	it("should respect the depth parameter when set to 0", async () => {
+		const handler = listFilesTool.handler(mockApp);
+		const result = await handler({ depth: 0 });
+
+		expect(mockApp.vault.getFiles).toHaveBeenCalled();
+		expect(result).toMatchInlineSnapshot(`
+			"dir1/
+			dir2/
+			file1.md
+			file2.md"
+		`);
+	});
+
+	it("should respect the depth parameter when set to 2", async () => {
+		const handler = listFilesTool.handler(mockApp);
+		const result = await handler({ depth: 2 });
+
+		expect(mockApp.vault.getFiles).toHaveBeenCalled();
+		expect(result).toMatchInlineSnapshot(`
+			"dir1/file3.md
+			dir1/file4.md
+			dir2/file5.md
+			dir2/subdir/file6.md
+			dir2/subdir/nested/
+			file1.md
+			file2.md"
+		`);
+	});
+
+	it("should use depth 1 by default", async () => {
+		const handler = listFilesTool.handler(mockApp);
+		const result = await handler({});
+
+		expect(mockApp.vault.getFiles).toHaveBeenCalled();
+		expect(result).toMatchInlineSnapshot(`
+			"dir1/file3.md
+			dir1/file4.md
+			dir2/file5.md
+			dir2/subdir/
+			file1.md
+			file2.md"
+		`);
 	});
 
 	it("should throw an error when no files are found", async () => {

@@ -4,9 +4,8 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { listFilesTool } from "tools/list_files";
 import { getFileContentsTool } from "tools/get_file_contents";
-import { appendContentTool } from "tools/append_content";
 import { searchTool } from "tools/search";
-import { replaceContentTool } from "tools/replace_content";
+import { updateContentTool } from "tools/update_content";
 import { dataviewQueryTool } from "tools/dataview_query";
 import { getDailyNoteTool, DailyNoteResource, isDailyNotesEnabled } from "tools/daily_notes";
 import { getFileMetadataTool, FileMetadataResource } from "tools/file_metadata";
@@ -55,12 +54,9 @@ export class ObsidianMcpServer {
 			this.registerTool(this.server, searchTool);
 		}
 
-		if (enabledTools.append_content) {
-			this.registerTool(this.server, appendContentTool);
-		}
-
-		if (enabledTools.replace_content) {
-			this.registerTool(this.server, replaceContentTool);
+		// Unified content modification tool that handles both append and replace operations
+		if (enabledTools.update_content || enabledTools.append_content || enabledTools.replace_content) {
+			this.registerTool(this.server, updateContentTool);
 		}
 
 		if (enabledTools.dataview_query && isDataviewEnabled(this.app)) {

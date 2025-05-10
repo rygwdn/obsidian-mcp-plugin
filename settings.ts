@@ -9,9 +9,8 @@ export interface MCPPluginSettings {
 	enabledTools: {
 		list_files: boolean;
 		get_file_contents: boolean;
-		append_content: boolean;
 		search: boolean;
-		replace_content: boolean;
+		update_content: boolean;
 		dataview_query: boolean;
 		daily_notes: boolean;
 		get_file_metadata: boolean;
@@ -28,9 +27,8 @@ export const DEFAULT_SETTINGS: MCPPluginSettings = {
 	enabledTools: {
 		list_files: true,
 		get_file_contents: true,
-		append_content: true,
 		search: true,
-		replace_content: true,
+		update_content: true,
 		dataview_query: true,
 		daily_notes: true,
 		get_file_metadata: true,
@@ -165,17 +163,10 @@ export class MCPSettingTab extends PluginSettingTab {
 		});
 
 		this.createToggleSetting({
-			name: "Append Content Tool",
-			desc: "Append content to files in your vault",
-			getValue: () => this.plugin.settings.enabledTools.append_content,
-			setValue: (value) => (this.plugin.settings.enabledTools.append_content = value),
-		});
-
-		this.createToggleSetting({
-			name: "Replace Content Tool",
-			desc: "Replace content in files in your vault",
-			getValue: () => this.plugin.settings.enabledTools.replace_content,
-			setValue: (value) => (this.plugin.settings.enabledTools.replace_content = value),
+			name: "Update Content Tool",
+			desc: "Update files by appending or replacing content",
+			getValue: () => this.plugin.settings.enabledTools.update_content,
+			setValue: (value) => (this.plugin.settings.enabledTools.update_content = value),
 		});
 
 		this.createToggleSetting({

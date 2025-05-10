@@ -131,7 +131,11 @@ export class MockVaultAdapter implements Obsidian.DataAdapter {
 
 class MockVault implements Obsidian.Vault {
 	getRoot = vi.fn();
-	create = vi.fn();
+	create = vi.fn(async (path: string, content: string) => {
+		const newFile = new MockFile(path, content);
+		this.files.set(path, newFile);
+		return newFile;
+	});
 	createBinary = vi.fn();
 	readBinary = vi.fn();
 	getResourcePath = vi.fn();

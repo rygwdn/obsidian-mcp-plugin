@@ -11,26 +11,55 @@ export const listFilesTool: ToolRegistration = {
 			.string()
 			.optional()
 			.describe("Path to list files from (relative to vault root). Defaults to root."),
+		depth: z
+			.number()
+			.int()
+			.min(0)
+			.optional()
+			.describe("Directory depth to show (0=current dir only, 1=one level of subdirs, etc). Default is 1."),
 	},
-	handler: (app: App) => async (args: { path?: string }) => {
+	handler: (app: App) => async (args: { path?: string, depth?: number }) => {
 		const dirPath = args.path ? normalizePath(args.path) : "";
+		const depth = args.depth !== undefined ? args.depth : 1;
 
-		const files = [
-			...new Set(
-				app.vault
-					.getFiles()
-					.map((e) => e.path)
-					.filter((filename) => filename.startsWith(dirPath))
-					.map((filename) => {
-						// Remove directory prefix if it exists
-						const subPath = dirPath ? filename.slice(dirPath.length + 1) : filename;
-						if (subPath.indexOf("/") > -1) {
-							return subPath.slice(0, subPath.indexOf("/") + 1);
-						}
-						return subPath;
-					})
-			),
-		];
+		// Get all files from the vault
+		const allFilePaths = app.vault.getFiles().map((f) => f.path);
+		
+		// Filter files that start with our directory path
+		const matchingFiles = allFilePaths.filter((filename) => 
+			filename.startsWith(dirPath)
+		);
+		
+		// Process matching files according to depth
+		const processedPaths = new Set<string>();
+		
+		for (const filePath of matchingFiles) {
+			// Remove directory prefix if it exists
+			const relativePath = dirPath ? filePath.slice(dirPath.length + 1) : filePath;
+			const pathSegments = relativePath.split('/');
+			
+			if (pathSegments.length === 1) {
+				// This is a file in the root of our search
+				processedPaths.add(relativePath);
+			} else if (depth === 0) {
+				// At depth 0, we just want the first directory level
+				processedPaths.add(pathSegments[0] + '/');
+			} else {
+				// For deeper paths
+				const segmentsToInclude = Math.min(depth + 1, pathSegments.length);
+				const truncatedPath = pathSegments.slice(0, segmentsToInclude).join('/');
+				
+				if (segmentsToInclude < pathSegments.length) {
+					// This is a directory
+					processedPaths.add(truncatedPath + '/');
+				} else {
+					// This is a file
+					processedPaths.add(truncatedPath);
+				}
+			}
+		}
+		
+		const files = [...processedPaths];
 		files.sort();
 
 		if (files.length === 0) {
