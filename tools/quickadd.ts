@@ -49,6 +49,20 @@ function getQuickAddPlugin(app: App): QuickAddPlugin {
 	return quickAdd;
 }
 
+// Get choices from QuickAdd plugin settings
+function getQuickAddChoices(app: App): QuickAddChoice[] {
+	if (!app.plugins.plugins.quickadd) {
+		throw new Error("QuickAdd plugin is not enabled");
+	}
+
+	const quickAddPlugin = app.plugins.plugins.quickadd as any;
+	if (!quickAddPlugin.settings || !quickAddPlugin.settings.choices) {
+		throw new Error("QuickAdd settings or choices not available");
+	}
+
+	return quickAddPlugin.settings.choices as QuickAddChoice[];
+}
+
 function formatChoicesAsMarkdown(choices: QuickAddChoice[]): string {
 	if (choices.length === 0) {
 		return "No QuickAdd choices found";
@@ -123,10 +137,10 @@ export const quickAddListTool: ToolRegistration = {
 		idempotentHint: true,
 		openWorldHint: false,
 	},
-	schema: {},
+	schema: undefined,
 	handler: (app: App) => async (_args: Record<string, unknown>) => {
-		const quickAdd = getQuickAddPlugin(app);
-		return formatChoicesAsMarkdown(quickAdd.api.getChoices());
+		const choices = getQuickAddChoices(app);
+		return formatChoicesAsMarkdown(choices);
 	},
 };
 
@@ -163,8 +177,7 @@ export const quickAddExecuteTool: ToolRegistration = {
 		}
 
 		if (choice) {
-			// Execute choice
-			const choices = quickAdd.api.getChoices();
+			const choices = getQuickAddChoices(app);
 			const targetChoice = choices.find((c) => c.id === choice || c.name === choice);
 
 			if (!targetChoice) {
@@ -175,7 +188,7 @@ export const quickAddExecuteTool: ToolRegistration = {
 			}
 
 			try {
-				await quickAdd.api.executeChoice(targetChoice.id, variables as Record<string, string>);
+				await quickAdd.api.executeChoice(targetChoice.name, variables as Record<string, string>);
 				return `Successfully executed QuickAdd choice: **${targetChoice.name}**`;
 			} catch (error) {
 				throw new Error(`Error executing QuickAdd choice: ${error.message}`);

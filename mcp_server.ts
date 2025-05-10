@@ -1,5 +1,5 @@
 import { App } from "obsidian";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer, ToolCallback } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { listFilesTool } from "tools/list_files";
@@ -128,27 +128,28 @@ export class ObsidianMcpServer {
 			? `${this.settings.toolNamePrefix}_${toolReg.name}`
 			: toolReg.name;
 
-		server.tool(
-			toolName,
-			toolReg.description,
-			toolReg.schema,
-			toolReg.annotations,
-			async (args) => {
-				try {
-					const data = await toolReg.handler(this.app)(args);
-					return { content: [{ type: "text", text: data }] };
-				} catch (error) {
-					return {
-						isError: true,
-						content: [
-							{
-								type: "text",
-								text: error.toString(),
-							},
-						],
-					};
-				}
+		const handler: ToolCallback = async (args) => {
+			try {
+				const data = await toolReg.handler(this.app)(args);
+				return { content: [{ type: "text", text: data }] };
+			} catch (error) {
+				console.error("Error in tool:", error);
+				return {
+					isError: true,
+					content: [
+						{
+							type: "text",
+							text: error.toString(),
+						},
+					],
+				};
 			}
-		);
+		};
+
+		if (toolReg.schema) {
+			server.tool(toolName, toolReg.description, toolReg.schema, toolReg.annotations, handler);
+		} else {
+			server.tool(toolName, toolReg.description, toolReg.annotations, handler);
+		}
 	}
 }
