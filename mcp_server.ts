@@ -9,6 +9,7 @@ import { updateContentTool } from "tools/update_content";
 import { dataviewQueryTool } from "tools/dataview_query";
 import { getDailyNoteTool, DailyNoteResource, isDailyNotesEnabled } from "tools/daily_notes";
 import { getFileMetadataTool, FileMetadataResource } from "tools/file_metadata";
+import { quickAddListTool, quickAddExecuteTool, isQuickAddEnabled } from "tools/quickadd";
 import { ToolRegistration } from "tools/types";
 import { DEFAULT_SETTINGS, MCPPluginSettings } from "./settings";
 import { registerPrompts } from "tools/prompts";
@@ -74,6 +75,11 @@ export class ObsidianMcpServer {
 		if (enabledTools.get_file_metadata) {
 			new FileMetadataResource(this.app, this.settings.toolNamePrefix).register(this.server);
 			this.registerTool(this.server, getFileMetadataTool);
+		}
+
+		if (isQuickAddEnabled(this.app) && enabledTools.quickadd) {
+			this.registerTool(this.server, quickAddListTool);
+			this.registerTool(this.server, quickAddExecuteTool);
 		}
 
 		if (this.settings.enablePrompts) {

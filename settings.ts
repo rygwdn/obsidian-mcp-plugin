@@ -14,6 +14,7 @@ export interface MCPPluginSettings {
 		dataview_query: boolean;
 		daily_notes: boolean;
 		get_file_metadata: boolean;
+		quickadd: boolean;
 	};
 	enableResources: boolean;
 	enablePrompts: boolean;
@@ -32,6 +33,7 @@ export const DEFAULT_SETTINGS: MCPPluginSettings = {
 		dataview_query: true,
 		daily_notes: true,
 		get_file_metadata: true,
+		quickadd: true,
 	},
 	enableResources: true,
 	enablePrompts: true,
@@ -140,6 +142,7 @@ export class MCPSettingTab extends PluginSettingTab {
 		});
 
 		const isDataviewEnabled = this.plugin.app.plugins.enabledPlugins.has("dataview");
+		const isQuickAddEnabled = this.plugin.app.plugins.enabledPlugins.has("quickadd");
 
 		this.createToggleSetting({
 			name: "List Files Tool",
@@ -178,6 +181,7 @@ export class MCPSettingTab extends PluginSettingTab {
 
 		this.addDataviewToolSetting(isDataviewEnabled);
 		this.addDailyNotesToolSetting(isDailyNotesEnabled(this.plugin.app));
+		this.addQuickAddToolSetting(isQuickAddEnabled);
 	}
 
 	private addDailyNotesToolSetting(isDailyNotesEnabled: boolean): void {
@@ -229,6 +233,25 @@ export class MCPSettingTab extends PluginSettingTab {
 			dataviewSetting.descEl.createSpan({ text: " — ", cls: "mcp-warning-text" });
 			dataviewSetting.descEl.createSpan({
 				text: "Requires Dataview plugin",
+				cls: "mcp-warning-text",
+			});
+		}
+	}
+
+	private addQuickAddToolSetting(isQuickAddEnabled: boolean): void {
+		const quickAddSetting = this.createToggleSetting({
+			name: "QuickAdd Tool",
+			desc: "Execute and list QuickAdd choices",
+			getValue: () => isQuickAddEnabled && this.plugin.settings.enabledTools.quickadd,
+			setValue: (value) => (this.plugin.settings.enabledTools.quickadd = value),
+			disabled: !isQuickAddEnabled,
+		});
+
+		if (!isQuickAddEnabled) {
+			quickAddSetting.setDesc("Execute and list QuickAdd choices (QuickAdd plugin is not enabled)");
+			quickAddSetting.descEl.createSpan({ text: " — ", cls: "mcp-warning-text" });
+			quickAddSetting.descEl.createSpan({
+				text: "Requires QuickAdd plugin",
 				cls: "mcp-warning-text",
 			});
 		}
