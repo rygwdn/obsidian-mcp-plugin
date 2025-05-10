@@ -20,7 +20,9 @@
 		"typecheck": "npm run check-types && npm run check-test-types",
 		"fix": "npm run lint:fix ; npm run format",
 		"check": "npm-run-all -p lint format:check check-types check-test-types -s test",
-		"mcp:inspect": "npx @modelcontextprotocol/inspector"
+		"inspect": "npx @modelcontextprotocol/inspector",
+		"install:copy": "node scripts/install.js copy",
+		"install:link": "node scripts/install.js link"
 	},
 	"keywords": [],
 	"author": "",

@@ -1,0 +1,76 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Build plugin
+        run: npm run build
+        
+      - name: Create release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG=$(git describe --tags --abbrev=0)
+          
+          # Create a zip file with the built plugin files
+          mkdir ${{ github.event.repository.name }}
+          cp main.js manifest.json styles.css ${{ github.event.repository.name }}/
+          zip -r ${{ github.event.repository.name }}.zip ${{ github.event.repository.name }}/
+          
+          # Create release
+          gh release create "$TAG" \
+            --title="$TAG" \
+            --draft \
+            ${{ github.event.repository.name }}.zip main.js manifest.json styles.css
+
+  # This job updates a specific branch that BRAT watches for updates
+  update-brat-branch:
+    needs: build
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Build plugin
+        run: npm run build
+        
+      - name: Push to BRAT branch
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+          
+          # Create and update a BRAT-specific branch
+          git checkout -B brat
+          
+          # Add only the files needed for the plugin
+          git add -f main.js manifest.json styles.css
+          git commit -m "Update BRAT branch for ${{ github.ref_name }}"
+          git push -f origin brat
