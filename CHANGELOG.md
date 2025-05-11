@@ -3,6 +3,7 @@
 ## [Unreleased]
 - feat: Enhance QuickAdd list tool to extract and display template variables
 - fix: Update default binding host from "localhost" to "127.0.0.1" for improved compatibility
+- feat: Require secure server (HTTPS) for MCP connection
 
 ## [0.1.3] - 2025-05-10
 - feat: Add release process documentation to README

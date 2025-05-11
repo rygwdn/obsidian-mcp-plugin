@@ -300,6 +300,20 @@ export class MCPSettingTab extends PluginSettingTab {
 			return;
 		}
 
+		if (!apiSettings.secureServerEnabled) {
+			const warningEl = infoBox.createEl("div", { cls: "mcp-warning" });
+			warningEl.createEl("p", {
+				text: "⚠️ The Local REST API plugin must have 'Enable secure server' option enabled. MCP requires HTTPS for security.",
+				cls: "mcp-warning-text",
+			});
+
+			warningEl.createEl("a", {
+				text: "Configure Local REST API plugin",
+				href: "obsidian://show-plugin?id=obsidian-local-rest-api",
+			});
+			return;
+		}
+
 		const endpointUrl = `https://${apiSettings.bindingHost}:${apiSettings.port}/mcp`;
 
 		const codeContainer = infoBox.createDiv({ cls: "mcp-copyable-container" });
@@ -454,6 +468,7 @@ export function getLocalRestApiSettings(app: App) {
 			port: localRestApiPlugin.settings.port as number,
 			authToken: localRestApiPlugin.settings.apiKey as string,
 			bindingHost: (localRestApiPlugin.settings.bindingHost ?? "127.0.0.1") as string,
+			secureServerEnabled: localRestApiPlugin.settings.enableSecureServer ?? false,
 		};
 	}
 
