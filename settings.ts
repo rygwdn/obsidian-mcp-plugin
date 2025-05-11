@@ -453,7 +453,7 @@ export function getLocalRestApiSettings(app: App) {
 		return {
 			port: localRestApiPlugin.settings.port as number,
 			authToken: localRestApiPlugin.settings.apiKey as string,
-			bindingHost: (localRestApiPlugin.settings.bindingHost ?? "localhost") as string,
+			bindingHost: (localRestApiPlugin.settings.bindingHost ?? "127.0.0.1") as string,
 		};
 	}
 

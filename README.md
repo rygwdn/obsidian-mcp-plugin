@@ -70,7 +70,7 @@ The plugin settings can be found in Obsidian's settings under "MCP Plugin":
 
 Once configured, your Obsidian vault provides an MCP endpoint at:
 ```
-http://localhost:27123/mcp
+http://127.0.0.1:27123/mcp
 ```
 
 (Port may vary based on your Local REST API configuration)
