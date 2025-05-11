@@ -4,6 +4,10 @@ import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mc
 import { ReadResourceResult } from "@modelcontextprotocol/sdk/types";
 import { ToolRegistration } from "./types";
 import { DailyNotesPlugin, PeriodicNotesPlugin } from "./obsidian_types";
+import {
+	logResourceRegistration,
+	withResourceLogging
+} from "./logging";
 
 export function getDailyNotesPlugin(app: App): DailyNotesPlugin | null {
 	// Cast to unknown first, then to the specific type to avoid direct any usage
@@ -162,11 +166,18 @@ export class DailyNoteResource {
 	}
 
 	public register(server: McpServer) {
+		logResourceRegistration(this.resourceName);
+
 		server.resource(
 			this.resourceName,
 			this.template,
 			{ description: "Provides access to daily notes in the Obsidian vault" },
-			async (uri, { date }: { date: string }) => this.handler(uri, { date })
+			withResourceLogging(
+				this.resourceName,
+				async (uri: URL, { date }: { date: string }) => {
+					return await this.handler(uri, { date });
+				}
+			)
 		);
 	}
 

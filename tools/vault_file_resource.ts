@@ -2,6 +2,10 @@ import { App } from "obsidian";
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { ReadResourceResult } from "@modelcontextprotocol/sdk/types";
 import { Variables } from "@modelcontextprotocol/sdk/shared/uriTemplate";
+import {
+	logResourceRegistration,
+	withResourceLogging
+} from "./logging";
 
 export class VaultFileResource {
 	private resourceName: string;
@@ -14,11 +18,18 @@ export class VaultFileResource {
 	}
 
 	public register(server: McpServer) {
+		logResourceRegistration(this.resourceName);
+
 		server.resource(
 			this.resourceName,
 			this.template,
 			{ description: "Provides access to files in the Obsidian vault" },
-			async (uri, variables) => this.handler(uri, variables)
+			withResourceLogging(
+				this.resourceName,
+				async (uri: URL, variables: Variables) => {
+					return await this.handler(uri, variables);
+				}
+			)
 		);
 	}
 

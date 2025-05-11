@@ -4,6 +4,10 @@ import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mc
 import { ReadResourceResult } from "@modelcontextprotocol/sdk/types";
 import { Variables } from "@modelcontextprotocol/sdk/shared/uriTemplate";
 import { ToolRegistration } from "./types";
+import {
+	logResourceRegistration,
+	withResourceLogging
+} from "./logging";
 
 export function generateFileMetadata(app: App, filePath: string): string {
 	const file = app.vault.getFileByPath(filePath);
@@ -80,11 +84,18 @@ export class FileMetadataResource {
 	}
 
 	public register(server: McpServer) {
+		logResourceRegistration(this.resourceName);
+
 		server.resource(
 			this.resourceName,
 			this.template,
 			{ description: "Provides access to file metadata in the Obsidian vault" },
-			async (uri, variables) => this.handler(uri, variables)
+			withResourceLogging(
+				this.resourceName,
+				async (uri: URL, variables: Variables) => {
+					return await this.handler(uri, variables);
+				}
+			)
 		);
 	}
 

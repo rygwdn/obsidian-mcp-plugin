@@ -16,6 +16,15 @@ import { registerPrompts } from "tools/prompts";
 import { VaultFileResource } from "tools/vault_file_resource";
 import type { Request, Response } from "express";
 import { isPluginEnabled as isDataviewEnabled } from "obsidian-dataview";
+import {
+    log,
+    logError,
+    withPerformanceLogging,
+    logToolRegistration,
+    logConnection,
+    logConnectionClosed,
+    withToolLogging
+} from "tools/logging";
 
 export class ObsidianMcpServer {
 	private server: McpServer;
@@ -26,6 +35,7 @@ export class ObsidianMcpServer {
 		private manifest: { version: string; name: string },
 		private settings: MCPPluginSettings
 	) {
+		log(`Initializing MCP server v${this.manifest.version}`);
 		const vaultDescription = this.settings.vaultDescription ?? DEFAULT_SETTINGS.vaultDescription;
 
 		this.server = new McpServer(
@@ -38,7 +48,7 @@ export class ObsidianMcpServer {
 			}
 		);
 		this.server.server.onerror = (error) => {
-			console.error("MCP Server Error:", error);
+			logError("Server Error:", error);
 		};
 
 		const { enabledTools } = this.settings;
@@ -91,36 +101,60 @@ export class ObsidianMcpServer {
 		if (request.method === "GET") {
 			const transport = new SSEServerTransport("/mcp/messages", response);
 			this.transports[transport.sessionId] = transport;
+
+			logConnection("SSE", transport.sessionId, request);
+
 			response.on("close", () => {
+				logConnectionClosed("SSE", transport.sessionId);
 				delete this.transports[transport.sessionId];
 			});
+
 			await this.server.connect(transport);
 		} else if (request.method === "POST") {
 			const sessionId = request.query.sessionId as string | undefined;
 			if (!sessionId) {
+				logError("SSE POST error: No session ID provided");
 				response.status(400).send("No session ID provided");
 				return;
 			}
+
 			const transport = this.transports[sessionId];
 			if (!transport) {
+				logError(`SSE POST error: No transport found for session ID: ${sessionId}`);
 				response.status(400).send("No transport found for session ID");
 				return;
 			}
 
+			log(`SSE message received: ${sessionId}`);
 			await transport.handlePostMessage(request, response, request.body);
 		}
 	}
 
 	async handleStreamingRequest(request: Request, response: Response) {
+		log(`New streaming request received`);
+		log(`Client IP: ${request.ip || 'unknown'}, User-Agent: ${request.get('User-Agent') || 'unknown'}`);
+
 		const transport = new StreamableHTTPServerTransport({
 			sessionIdGenerator: undefined,
 			enableJsonResponse: true,
 		});
-		await transport.handleRequest(request, response, request.body);
+
+		await withPerformanceLogging(
+			"Streaming request",
+			async () => {
+				await transport.handleRequest(request, response, request.body);
+			},
+			{
+				successMessage: "Streaming request completed",
+				errorMessage: "Error handling streaming request"
+			}
+		);
 	}
 
 	public async close() {
+		log("Shutting down MCP server");
 		await this.server.close();
+		log("MCP server closed");
 	}
 
 	private registerTool(server: McpServer, toolReg: ToolRegistration) {
@@ -128,12 +162,17 @@ export class ObsidianMcpServer {
 			? `${this.settings.toolNamePrefix}_${toolReg.name}`
 			: toolReg.name;
 
+		logToolRegistration(toolName);
+
+		const wrappedToolHandler = withToolLogging(toolName, async (args: any) => {
+			return await toolReg.handler(this.app)(args);
+		});
+
 		const handler: ToolCallback = async (args) => {
 			try {
-				const data = await toolReg.handler(this.app)(args);
+				const data = await wrappedToolHandler(args);
 				return { content: [{ type: "text", text: data }] };
 			} catch (error) {
-				console.error("Error in tool:", error);
 				return {
 					isError: true,
 					content: [

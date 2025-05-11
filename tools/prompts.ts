@@ -3,6 +3,11 @@ import { z, ZodType } from "zod";
 import { McpServer, RegisteredPrompt } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { GetPromptResult } from "@modelcontextprotocol/sdk/types.js";
 import { MCPPluginSettings } from "settings";
+import {
+	log,
+	logPromptRegistration,
+	withPromptLogging
+} from "./logging";
 
 export class VaultPrompt {
 	public registration: RegisteredPrompt | undefined;
@@ -37,26 +42,36 @@ export class VaultPrompt {
 	}
 
 	public async handler(args: Record<string, string>): Promise<GetPromptResult> {
-		const frontmatterPosition = this.metadata?.frontmatterPosition?.end.offset;
-		let content = await this.app.vault.cachedRead(this.file);
-		if (frontmatterPosition) {
-			content = content.slice(frontmatterPosition).trimStart();
-		}
-		for (const key in args) {
-			content = content.replace(new RegExp(`{{${key}}}`, "g"), args[key]);
-		}
-		return {
-			messages: [{ role: "user", content: { type: "text", text: content } }],
-		};
+		return withPromptLogging(
+			this.name,
+			async () => {
+				const frontmatterPosition = this.metadata?.frontmatterPosition?.end.offset;
+				let content = await this.app.vault.cachedRead(this.file);
+				if (frontmatterPosition) {
+					content = content.slice(frontmatterPosition).trimStart();
+				}
+				for (const key in args) {
+					content = content.replace(new RegExp(`{{${key}}}`, "g"), args[key]);
+				}
+
+				return {
+					messages: [{ role: "user", content: { type: "text", text: content } }],
+				};
+			}
+		)(args);
 	}
 
 	public async register(server: McpServer) {
+		logPromptRegistration(this.name, this.description, Object.keys(this.args));
+
 		this.registration = server.prompt(this.name, this.description, this.args, async (args) => {
 			return await this.handler(args);
 		});
 	}
 
 	public update() {
+		log(`Updating prompt: ${this.name}`);
+
 		this.registration?.update({
 			description: this.description,
 			argsSchema: this.args,
@@ -73,10 +88,14 @@ export function getPrompts(app: App, settings: MCPPluginSettings) {
 
 export function registerPrompts(app: App, server: McpServer, settings: MCPPluginSettings) {
 	const prompts = getPrompts(app, settings);
+	log(`Found ${prompts.length} prompts in folder: ${settings.promptsFolder}`);
 
 	app.vault.on("modify", (file) => {
-		const prompt = prompts.find((prompt) => prompt.file.path === file.path);
-		prompt?.update();
+		if (file.path.startsWith(settings.promptsFolder)) {
+			log(`Prompt file modified: ${file.path}`);
+			const prompt = prompts.find((prompt) => prompt.file.path === file.path);
+			prompt?.update();
+		}
 	});
 
 	for (const prompt of prompts) {
