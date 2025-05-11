@@ -7,24 +7,15 @@ import { getFileContentsTool } from "tools/get_file_contents";
 import { searchTool } from "tools/search";
 import { updateContentTool } from "tools/update_content";
 import { dataviewQueryTool } from "tools/dataview_query";
-import { getDailyNoteTool, DailyNoteResource, isDailyNotesEnabled } from "tools/daily_notes";
 import { getFileMetadataTool, FileMetadataResource } from "tools/file_metadata";
 import { quickAddListTool, quickAddExecuteTool, isQuickAddEnabled } from "tools/quickadd";
 import { ToolRegistration } from "tools/types";
-import { DEFAULT_SETTINGS, MCPPluginSettings } from "./settings";
+import { DEFAULT_SETTINGS, MCPPluginSettings } from "./settings/types";
 import { registerPrompts } from "tools/prompts";
 import { VaultFileResource } from "tools/vault_file_resource";
 import type { Request, Response } from "express";
 import { isPluginEnabled as isDataviewEnabled } from "obsidian-dataview";
-import {
-    log,
-    logError,
-    withPerformanceLogging,
-    logToolRegistration,
-    logConnection,
-    logConnectionClosed,
-    withToolLogging
-} from "tools/logging";
+import { logger } from "tools/logging";
 
 export class ObsidianMcpServer {
 	private server: McpServer;
@@ -35,7 +26,7 @@ export class ObsidianMcpServer {
 		private manifest: { version: string; name: string },
 		private settings: MCPPluginSettings
 	) {
-		log(`Initializing MCP server v${this.manifest.version}`);
+		logger.log(`Initializing MCP server v${this.manifest.version}`);
 		const vaultDescription = this.settings.vaultDescription ?? DEFAULT_SETTINGS.vaultDescription;
 
 		this.server = new McpServer(
@@ -48,7 +39,7 @@ export class ObsidianMcpServer {
 			}
 		);
 		this.server.server.onerror = (error) => {
-			logError("Server Error:", error);
+			logger.logError("Server Error:", error);
 		};
 
 		const { enabledTools } = this.settings;
@@ -71,11 +62,6 @@ export class ObsidianMcpServer {
 
 		if (enabledTools.dataview_query && isDataviewEnabled(this.app)) {
 			this.registerTool(this.server, dataviewQueryTool);
-		}
-
-		if (enabledTools.daily_notes && isDailyNotesEnabled(this.app)) {
-			this.registerTool(this.server, getDailyNoteTool);
-			new DailyNoteResource(this.app, this.settings.toolNamePrefix).register(this.server);
 		}
 
 		if (this.settings.enableResources) {
@@ -102,10 +88,10 @@ export class ObsidianMcpServer {
 			const transport = new SSEServerTransport("/mcp/messages", response);
 			this.transports[transport.sessionId] = transport;
 
-			logConnection("SSE", transport.sessionId, request);
+			logger.logConnection("SSE", transport.sessionId, request);
 
 			response.on("close", () => {
-				logConnectionClosed("SSE", transport.sessionId);
+				logger.logConnectionClosed("SSE", transport.sessionId);
 				delete this.transports[transport.sessionId];
 			});
 
@@ -113,48 +99,50 @@ export class ObsidianMcpServer {
 		} else if (request.method === "POST") {
 			const sessionId = request.query.sessionId as string | undefined;
 			if (!sessionId) {
-				logError("SSE POST error: No session ID provided");
+				logger.logError("SSE POST error: No session ID provided");
 				response.status(400).send("No session ID provided");
 				return;
 			}
 
 			const transport = this.transports[sessionId];
 			if (!transport) {
-				logError(`SSE POST error: No transport found for session ID: ${sessionId}`);
+				logger.logError(`SSE POST error: No transport found for session ID: ${sessionId}`);
 				response.status(400).send("No transport found for session ID");
 				return;
 			}
 
-			log(`SSE message received: ${sessionId}`);
+			logger.log(`SSE message received: ${sessionId}`);
 			await transport.handlePostMessage(request, response, request.body);
 		}
 	}
 
 	async handleStreamingRequest(request: Request, response: Response) {
-		log(`New streaming request received`);
-		log(`Client IP: ${request.ip || 'unknown'}, User-Agent: ${request.get('User-Agent') || 'unknown'}`);
+		logger.log(`New streaming request received`);
+		logger.log(
+			`Client IP: ${request.ip || "unknown"}, User-Agent: ${request.get("User-Agent") || "unknown"}`
+		);
 
 		const transport = new StreamableHTTPServerTransport({
 			sessionIdGenerator: undefined,
 			enableJsonResponse: true,
 		});
 
-		await withPerformanceLogging(
+		await logger.withPerformanceLogging(
 			"Streaming request",
 			async () => {
 				await transport.handleRequest(request, response, request.body);
 			},
 			{
 				successMessage: "Streaming request completed",
-				errorMessage: "Error handling streaming request"
+				errorMessage: "Error handling streaming request",
 			}
 		);
 	}
 
 	public async close() {
-		log("Shutting down MCP server");
+		logger.log("Shutting down MCP server");
 		await this.server.close();
-		log("MCP server closed");
+		logger.log("MCP server closed");
 	}
 
 	private registerTool(server: McpServer, toolReg: ToolRegistration) {
@@ -162,11 +150,14 @@ export class ObsidianMcpServer {
 			? `${this.settings.toolNamePrefix}_${toolReg.name}`
 			: toolReg.name;
 
-		logToolRegistration(toolName);
+		logger.logToolRegistration(toolName);
 
-		const wrappedToolHandler = withToolLogging(toolName, async (args: any) => {
-			return await toolReg.handler(this.app)(args);
-		});
+		const wrappedToolHandler = logger.withToolLogging(
+			toolName,
+			async (args: Record<string, unknown>) => {
+				return await toolReg.handler(this.app)(args);
+			}
+		);
 
 		const handler: ToolCallback = async (args) => {
 			try {

@@ -1,10 +1,15 @@
 # Changelog
 
 ## [Unreleased]
+- refactor: Implement class-based Logger for centralized and consistent logging
+- refactor: Convert daily note utils from namespace to module exports for better code organization
+- refactor: Split settings into multiple specialized files with clear responsibilities
+- refactor: Implement global console mocking in tests for cleaner test output
 - feat: Enhance QuickAdd list tool to extract and display template variables
 - fix: Update default binding host from "localhost" to "127.0.0.1" for improved compatibility
 - feat: Require secure server (HTTPS) for MCP connection
 - feat: Add comprehensive logging for tool and resource usage with performance tracking
+- feat: Integrate daily notes functionality into file management tools via daily:// URI scheme
 
 ## [0.1.3] - 2025-05-10
 - feat: Add release process documentation to README

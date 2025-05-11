@@ -57,12 +57,18 @@ function getQuickAddChoices(app: App): QuickAddChoice[] {
 		throw new Error("QuickAdd plugin is not enabled");
 	}
 
-	const quickAddPlugin = app.plugins.plugins.quickadd as any;
+	interface QuickAddPluginWithSettings {
+		settings: {
+			choices?: QuickAddChoice[];
+		};
+	}
+
+	const quickAddPlugin = app.plugins.plugins.quickadd as QuickAddPluginWithSettings;
 	if (!quickAddPlugin.settings || !quickAddPlugin.settings.choices) {
 		throw new Error("QuickAdd settings or choices not available");
 	}
 
-	return quickAddPlugin.settings.choices as QuickAddChoice[];
+	return quickAddPlugin.settings.choices;
 }
 
 /**

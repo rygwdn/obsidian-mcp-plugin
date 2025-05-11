@@ -22,7 +22,13 @@ export default [
 			"@typescript-eslint/ban-ts-comment": "off",
 			"no-prototype-builtins": "off",
 			"@typescript-eslint/no-empty-function": "warn",
-			"@typescript-eslint/no-explicit-any": "warn", // Downgrade from error to warning
+			"@typescript-eslint/no-explicit-any": "error", // Make it an error in main codebase
+		},
+	},
+	{
+		files: ["test/**/*.ts"],
+		rules: {
+			"@typescript-eslint/no-explicit-any": "off", // Disable in test files
 		},
 	},
 ];

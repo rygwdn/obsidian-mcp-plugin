@@ -2,10 +2,7 @@ import { App } from "obsidian";
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { ReadResourceResult } from "@modelcontextprotocol/sdk/types";
 import { Variables } from "@modelcontextprotocol/sdk/shared/uriTemplate";
-import {
-	logResourceRegistration,
-	withResourceLogging
-} from "./logging";
+import { logger } from "./logging";
 
 export class VaultFileResource {
 	private resourceName: string;
@@ -18,18 +15,15 @@ export class VaultFileResource {
 	}
 
 	public register(server: McpServer) {
-		logResourceRegistration(this.resourceName);
+		logger.logResourceRegistration(this.resourceName);
 
 		server.resource(
 			this.resourceName,
 			this.template,
 			{ description: "Provides access to files in the Obsidian vault" },
-			withResourceLogging(
-				this.resourceName,
-				async (uri: URL, variables: Variables) => {
-					return await this.handler(uri, variables);
-				}
-			)
+			logger.withResourceLogging(this.resourceName, async (uri: URL, variables: Variables) => {
+				return await this.handler(uri, variables);
+			})
 		);
 	}
 
@@ -60,11 +54,7 @@ export class VaultFileResource {
 
 	public completePath(value: string) {
 		const files = this.app.vault.getMarkdownFiles();
-		console.log(
-			"completePath",
-			value,
-			files.map((file) => file.path)
-		);
+		logger.log(`completePath '${value}' found ${files.length} candidate files`);
 		return files.map((file) => file.path).filter((path) => path.startsWith(value));
 	}
 

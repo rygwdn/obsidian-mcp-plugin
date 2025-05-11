@@ -2,12 +2,8 @@ import { App, TFile } from "obsidian";
 import { z, ZodType } from "zod";
 import { McpServer, RegisteredPrompt } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { GetPromptResult } from "@modelcontextprotocol/sdk/types.js";
-import { MCPPluginSettings } from "settings";
-import {
-	log,
-	logPromptRegistration,
-	withPromptLogging
-} from "./logging";
+import { MCPPluginSettings } from "../settings/types";
+import { logger } from "./logging";
 
 export class VaultPrompt {
 	public registration: RegisteredPrompt | undefined;
@@ -42,27 +38,24 @@ export class VaultPrompt {
 	}
 
 	public async handler(args: Record<string, string>): Promise<GetPromptResult> {
-		return withPromptLogging(
-			this.name,
-			async () => {
-				const frontmatterPosition = this.metadata?.frontmatterPosition?.end.offset;
-				let content = await this.app.vault.cachedRead(this.file);
-				if (frontmatterPosition) {
-					content = content.slice(frontmatterPosition).trimStart();
-				}
-				for (const key in args) {
-					content = content.replace(new RegExp(`{{${key}}}`, "g"), args[key]);
-				}
-
-				return {
-					messages: [{ role: "user", content: { type: "text", text: content } }],
-				};
+		return logger.withPromptLogging(this.name, async () => {
+			const frontmatterPosition = this.metadata?.frontmatterPosition?.end.offset;
+			let content = await this.app.vault.cachedRead(this.file);
+			if (frontmatterPosition) {
+				content = content.slice(frontmatterPosition).trimStart();
 			}
-		)(args);
+			for (const key in args) {
+				content = content.replace(new RegExp(`{{${key}}}`, "g"), args[key]);
+			}
+
+			return {
+				messages: [{ role: "user" as const, content: { type: "text" as const, text: content } }],
+			};
+		})(args);
 	}
 
 	public async register(server: McpServer) {
-		logPromptRegistration(this.name, this.description, Object.keys(this.args));
+		logger.logPromptRegistration(this.name, this.description, Object.keys(this.args));
 
 		this.registration = server.prompt(this.name, this.description, this.args, async (args) => {
 			return await this.handler(args);
@@ -70,7 +63,7 @@ export class VaultPrompt {
 	}
 
 	public update() {
-		log(`Updating prompt: ${this.name}`);
+		logger.log(`Updating prompt: ${this.name}`);
 
 		this.registration?.update({
 			description: this.description,
@@ -88,11 +81,11 @@ export function getPrompts(app: App, settings: MCPPluginSettings) {
 
 export function registerPrompts(app: App, server: McpServer, settings: MCPPluginSettings) {
 	const prompts = getPrompts(app, settings);
-	log(`Found ${prompts.length} prompts in folder: ${settings.promptsFolder}`);
+	logger.log(`Found ${prompts.length} prompts in folder: ${settings.promptsFolder}`);
 
 	app.vault.on("modify", (file) => {
 		if (file.path.startsWith(settings.promptsFolder)) {
-			log(`Prompt file modified: ${file.path}`);
+			logger.log(`Prompt file modified: ${file.path}`);
 			const prompt = prompts.find((prompt) => prompt.file.path === file.path);
 			prompt?.update();
 		}

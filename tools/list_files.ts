@@ -1,11 +1,12 @@
 import { App, normalizePath } from "obsidian";
 import { z } from "zod";
 import { ToolRegistration } from "./types";
+import * as DailyNoteUtils from "./daily_note_utils";
 
 export const listFilesTool: ToolRegistration = {
 	name: "list_files",
 	description:
-		"Lists all files and directories in a specific Obsidian directory (relative to vault root)",
+		"Lists all files and directories in a specific Obsidian directory (relative to vault root) or daily notes",
 	annotations: {
 		title: "List Files in Vault",
 		readOnlyHint: true,
@@ -17,7 +18,9 @@ export const listFilesTool: ToolRegistration = {
 		path: z
 			.string()
 			.optional()
-			.describe("Path to list files from (relative to vault root). Defaults to root."),
+			.describe(
+				"Path to list files from (relative to vault root or 'daily://') or leave empty for root."
+			),
 		depth: z
 			.number()
 			.int()
@@ -28,6 +31,24 @@ export const listFilesTool: ToolRegistration = {
 			),
 	},
 	handler: (app: App) => async (args: { path?: string; depth?: number }) => {
+		// Special case for daily:// path
+		if (args.path === DailyNoteUtils.URI_PREFIX || args.path === "daily:") {
+			if (!DailyNoteUtils.isDailyNotesEnabled(app)) {
+				// Return empty result if daily notes are not enabled, rather than throwing an error
+				return "";
+			}
+
+			// Return the list of daily note special references
+			return DailyNoteUtils.getAvailableDailyPaths().join("\n");
+		}
+
+		// Special case for checking if the path is a daily note path
+		if (args.path && DailyNoteUtils.isDailyNotePath(args.path)) {
+			throw new Error(
+				"Cannot list files within a specific daily note. Use get_file_contents with the daily note path instead."
+			);
+		}
+
 		const dirPath = args.path ? normalizePath(args.path) : "";
 		const depth = args.depth !== undefined ? args.depth : 1;
 
@@ -68,6 +89,11 @@ export const listFilesTool: ToolRegistration = {
 
 		const files = [...processedPaths];
 		files.sort();
+
+		// If we're at the root level and daily notes are enabled, add the daily:// option
+		if (dirPath === "" && DailyNoteUtils.isDailyNotesEnabled(app)) {
+			files.push(DailyNoteUtils.URI_PREFIX);
+		}
 
 		if (files.length === 0) {
 			throw new Error("No files found in path: " + dirPath);

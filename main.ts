@@ -1,7 +1,8 @@
 import { Plugin } from "obsidian";
 import { getAPI, LocalRestApiPublicApi } from "obsidian-local-rest-api";
 import { ObsidianMcpServer } from "mcp_server";
-import { DEFAULT_SETTINGS, MCPPluginSettings, MCPSettingTab } from "./settings";
+import { DEFAULT_SETTINGS, MCPPluginSettings } from "./settings/types";
+import { MCPSettingTab } from "./settings/tab";
 import type { Response } from "express";
 
 export default class ObsidianMCPPlugin extends Plugin {

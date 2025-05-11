@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MockApp, MockFile } from "./mocks/obsidian";
 import { getPrompts, registerPrompts, VaultPrompt } from "../tools/prompts";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { DEFAULT_SETTINGS } from "../settings";
+import { DEFAULT_SETTINGS } from "../settings/types";
 
 describe("prompt tools", () => {
 	let mockApp: MockApp;

@@ -4,6 +4,15 @@ declare global {
 	}
 }
 
+declare module "obsidian" {
+	interface App {
+		plugins: {
+			enabledPlugins: Set<string>;
+			plugins: Record<string, unknown>;
+		};
+	}
+}
+
 export interface DailyNotesPluginSettings {
 	format: string;
 	folder: string;
