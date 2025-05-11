@@ -1,5 +1,8 @@
 # Changelog
 
+## [Unreleased]
+- feat: Enhance QuickAdd list tool to extract and display template variables
+
 ## [0.1.3] - 2025-05-10
 - feat: Add release process documentation to README
 - feat: Improve release workflow with automatic changelog extraction

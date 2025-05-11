@@ -10,7 +10,9 @@ interface QuickAddChoice {
 		name?: string;
 		type?: string;
 		templatePath?: string;
-		format?: string;
+		format?: {
+			format?: string;
+		};
 		folder?: string;
 		fileNameFormat?: string;
 		caption?: string;
@@ -63,6 +65,40 @@ function getQuickAddChoices(app: App): QuickAddChoice[] {
 	return quickAddPlugin.settings.choices as QuickAddChoice[];
 }
 
+/**
+ * Extracts variable names from a template string based on QuickAdd template syntax
+ * Looks for patterns like:
+ * - {{VALUE:<variable>}} or {{NAME:<variable>}}
+ * - {{VDATE:<variable>, <format>}}
+ * - {{VALUE}} or {{NAME}}
+ *
+ * @param templateString The template string to parse
+ * @returns Array of unique variable names found in the template
+ */
+function extractVariablesFromTemplate(templateString: string): string[] {
+	if (!templateString) return [];
+
+	const variables: Set<string> = new Set();
+
+	// Match {{VALUE:<variable>}} or {{NAME:<variable>}}
+	const valueRegex = /{{(?:VALUE|NAME):([^},]+)(?:,[^}]+)?}}/g;
+	let match: RegExpExecArray | null;
+
+	while ((match = valueRegex.exec(templateString)) !== null) {
+		variables.add(match[1].trim());
+	}
+
+	// Match {{VDATE:<variable>, <format>}}
+	const vdateRegex = /{{VDATE:([^},]+),[^}]+}}/g;
+	while ((match = vdateRegex.exec(templateString)) !== null) {
+		variables.add(match[1].trim());
+	}
+
+	// We don't add VALUE or NAME without variables as they're just user input
+
+	return Array.from(variables);
+}
+
 function formatChoicesAsMarkdown(choices: QuickAddChoice[]): string {
 	if (choices.length === 0) {
 		return "No QuickAdd choices found";
@@ -86,43 +122,21 @@ function formatChoicesAsMarkdown(choices: QuickAddChoice[]): string {
 		markdown += `## ${type} Choices\n\n`;
 
 		typeChoices.forEach((choice) => {
-			markdown += `### ${choice.name}\n`;
-			markdown += `- **ID**: \`${choice.id}\`\n`;
+			markdown += `- "${choice.name}"`;
 
-			if (choice.command) {
-				markdown += "- **Command**:\n";
-				Object.entries(choice.command).forEach(([key, value]) => {
-					if (value !== undefined) {
-						markdown += `  - ${key}: ${value}\n`;
-					}
-				});
-			}
+			// Extract variables from the template format
+			const templateFormat = choice.command?.format?.format;
+			const variables = extractVariablesFromTemplate(templateFormat || "");
 
-			if (choice.macros && choice.macros.length > 0) {
-				markdown += `- **Macros**: ${choice.macros.length} defined\n`;
-			}
-
-			if (choice.checkboxes && choice.checkboxes.length > 0) {
-				markdown += `- **Checkboxes**: ${choice.checkboxes.length} defined\n`;
-			}
-
-			if (choice.captureToActiveFile !== undefined) {
-				markdown += `- **Capture to Active File**: ${choice.captureToActiveFile ? "Yes" : "No"}\n`;
+			if (variables.length > 0) {
+				markdown += `:\n  variables: ${variables.join(", ")}`;
 			}
 
 			markdown += "\n";
 		});
-	});
 
-	markdown += "## Usage\n\n";
-	markdown += "To execute a choice:\n";
-	markdown += '```json\n{\n  "choice": "My Choice Name"\n}\n```\n\n';
-	markdown += "You can also pass variables to the choice:\n";
-	markdown +=
-		'```json\n{\n  "choice": "My Choice Name",\n  "variables": {\n    "title": "My Document",\n    "tags": "tag1, tag2"\n  }\n}\n```\n\n';
-	markdown += "To format a template:\n";
-	markdown +=
-		'```json\n{\n  "template": "Hello {{name}}!",\n  "variables": {\n    "name": "World"\n  }\n}\n```\n';
+		markdown += "\n";
+	});
 
 	return markdown;
 }

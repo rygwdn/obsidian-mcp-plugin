@@ -39,6 +39,10 @@ class MockQuickAddPlugin {
 					command: {
 						name: "Template command",
 						templatePath: "templates/template1.md",
+						format: {
+							format:
+								"Title: {{VALUE:title}}\nTags: {{VALUE:tags}}\nDue Date: {{VDATE:dueDate, YYYY-MM-DD}}\nContent: {{VALUE}}",
+						},
 					},
 				},
 				{
@@ -93,6 +97,10 @@ describe("quickadd tools", () => {
 					command: {
 						name: "Template command",
 						templatePath: "templates/template1.md",
+						format: {
+							format:
+								"Title: {{VALUE:title}}\nTags: {{VALUE:tags}}\nDue Date: {{VDATE:dueDate, YYYY-MM-DD}}\nContent: {{VALUE}}",
+						},
 					},
 				},
 				{
@@ -100,6 +108,15 @@ describe("quickadd tools", () => {
 					name: "Test Choice 2",
 					type: "macro",
 					macros: [{ name: "Macro 1" }, { name: "Macro 2" }],
+				},
+				{
+					id: "choice3",
+					name: "Test Choice 3",
+					type: "template",
+					command: {
+						name: "Template with no variables",
+						templatePath: "templates/template2.md",
+					},
 				},
 			],
 		};
@@ -119,56 +136,26 @@ describe("quickadd tools", () => {
 	});
 
 	describe("quickAddListTool", () => {
-		it("should list all available QuickAdd choices", async () => {
+		it("should list all available QuickAdd choices with variables", async () => {
 			const handler = quickAddListTool.handler(mockApp);
 			const result = await handler({});
 
-			expect(result).toBe(`# Available QuickAdd Choices
+			// Use inline snapshot for the entire output
+			expect(result).toMatchInlineSnapshot(`
+				"# Available QuickAdd Choices
 
-## template Choices
+				## template Choices
 
-### Test Choice 1
-- **ID**: \`choice1\`
-- **Command**:
-  - name: Template command
-  - templatePath: templates/template1.md
+				- "Test Choice 1":
+				  variables: title, tags, dueDate
+				- "Test Choice 3"
 
-## macro Choices
+				## macro Choices
 
-### Test Choice 2
-- **ID**: \`choice2\`
-- **Macros**: 2 defined
+				- "Test Choice 2"
 
-## Usage
-
-To execute a choice:
-\`\`\`json
-{
-  "choice": "My Choice Name"
-}
-\`\`\`
-
-You can also pass variables to the choice:
-\`\`\`json
-{
-  "choice": "My Choice Name",
-  "variables": {
-    "title": "My Document",
-    "tags": "tag1, tag2"
-  }
-}
-\`\`\`
-
-To format a template:
-\`\`\`json
-{
-  "template": "Hello {{name}}!",
-  "variables": {
-    "name": "World"
-  }
-}
-\`\`\`
-`);
+				"
+			`);
 		});
 
 		it("should return a message when no choices are found", async () => {
