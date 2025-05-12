@@ -11,10 +11,8 @@ export interface MCPPluginSettings {
 		search: boolean;
 		update_content: boolean;
 		dataview_query: boolean;
-		get_file_metadata: boolean;
 		quickadd: boolean;
 	};
-	enableResources: boolean;
 	enablePrompts: boolean;
 }
 
@@ -28,9 +26,7 @@ export const DEFAULT_SETTINGS: MCPPluginSettings = {
 		search: true,
 		update_content: true,
 		dataview_query: true,
-		get_file_metadata: true,
 		quickadd: true,
 	},
-	enableResources: true,
 	enablePrompts: true,
 };

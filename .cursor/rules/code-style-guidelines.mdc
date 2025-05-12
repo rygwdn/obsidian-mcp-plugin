@@ -3,6 +3,7 @@ description:
 globs:
 alwaysApply: true
 ---
+
 # Code Style Guidelines
 
 Follow these conventions for consistent code:
@@ -11,7 +12,9 @@ Follow these conventions for consistent code:
 - Avoid `any` types whenever possible
 - Follow the conventional commit format (feat:, fix:, refactor:, etc.)
 - Create meaningful tests with descriptive it() blocks
-- Use descriptive variable names and add comments for complex logic
+- Use descriptive variable names.
+- Add comments only for complex logic, non-obvious decisions, or to explain "why" something is done if not immediately clear from the code.
+- Avoid comments that merely restate what the code does, or that become outdated quickly (e.g., comments tracking interactive changes during development).
 - Favor composition over inheritance
 - Use centralized logging via the logger utility
 - For testing, prefer inline snapshots where appropriate

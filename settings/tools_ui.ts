@@ -2,25 +2,16 @@ import ObsidianMCPPlugin from "../main";
 import { createSection, createToggleSetting } from "./ui_components";
 import * as DailyNoteUtils from "../tools/daily_note_utils";
 
-export function addToolsSection(plugin: ObsidianMCPPlugin, containerEl: HTMLElement): void {
-	createSection(containerEl, "Tools");
-
-	createToggleSetting({
-		containerEl,
-		name: "Enable Resources",
-		desc: "Allow access to vault files as resources. Files in your vault can be accessed as MCP resources when enabled.",
-		getValue: () => plugin.settings.enableResources,
-		setValue: (value) => (plugin.settings.enableResources = value),
-		saveSettings: () => plugin.saveSettings(),
-	});
+export function addFeaturesSection(plugin: ObsidianMCPPlugin, containerEl: HTMLElement): void {
+	createSection(containerEl, "Features");
 
 	const isDataviewEnabled = plugin.app.plugins.enabledPlugins.has("dataview");
 	const isQuickAddEnabled = plugin.app.plugins.enabledPlugins.has("quickadd");
 
 	createToggleSetting({
 		containerEl,
-		name: "File Access Tool",
-		desc: "Access files and directories in your vault (list directories and read file contents)",
+		name: "File Access",
+		desc: "Enable reading files, listing directories, and retrieving file metadata in your vault.",
 		getValue: () => plugin.settings.enabledTools.file_access,
 		setValue: (value) => (plugin.settings.enabledTools.file_access = value),
 		saveSettings: () => plugin.saveSettings(),
@@ -28,17 +19,8 @@ export function addToolsSection(plugin: ObsidianMCPPlugin, containerEl: HTMLElem
 
 	createToggleSetting({
 		containerEl,
-		name: "Search Tool",
-		desc: "Search for text in your vault files",
-		getValue: () => plugin.settings.enabledTools.search,
-		setValue: (value) => (plugin.settings.enabledTools.search = value),
-		saveSettings: () => plugin.saveSettings(),
-	});
-
-	createToggleSetting({
-		containerEl,
-		name: "Update Content Tool",
-		desc: "Update files by appending or replacing content",
+		name: "Content Modification",
+		desc: "Enable modifying file content (e.g., appending or replacing text).",
 		getValue: () => plugin.settings.enabledTools.update_content,
 		setValue: (value) => (plugin.settings.enabledTools.update_content = value),
 		saveSettings: () => plugin.saveSettings(),
@@ -46,27 +28,27 @@ export function addToolsSection(plugin: ObsidianMCPPlugin, containerEl: HTMLElem
 
 	createToggleSetting({
 		containerEl,
-		name: "File Metadata Tool",
-		desc: "Retrieve metadata for files in your vault",
-		getValue: () => plugin.settings.enabledTools.get_file_metadata,
-		setValue: (value) => (plugin.settings.enabledTools.get_file_metadata = value),
+		name: "Vault Search",
+		desc: "Search for text in your vault files.",
+		getValue: () => plugin.settings.enabledTools.search,
+		setValue: (value) => (plugin.settings.enabledTools.search = value),
 		saveSettings: () => plugin.saveSettings(),
 	});
 
-	addDataviewToolSetting(plugin, containerEl, isDataviewEnabled);
-	addDailyNotesToolSetting(plugin, containerEl);
-	addQuickAddToolSetting(plugin, containerEl, isQuickAddEnabled);
+	addDataviewFeatureSetting(plugin, containerEl, isDataviewEnabled);
+	addDailyNotesFeatureSetting(plugin, containerEl);
+	addQuickAddFeatureSetting(plugin, containerEl, isQuickAddEnabled);
 }
 
-function addDataviewToolSetting(
+function addDataviewFeatureSetting(
 	plugin: ObsidianMCPPlugin,
 	containerEl: HTMLElement,
 	isDataviewEnabled: boolean
 ): void {
 	const dataviewSetting = createToggleSetting({
 		containerEl,
-		name: "Dataview Query Tool",
-		desc: "Execute Dataview queries in your vault",
+		name: "Dataview Integration",
+		desc: "Enable Dataview integration for executing queries.",
 		getValue: () => isDataviewEnabled && plugin.settings.enabledTools.dataview_query,
 		setValue: (value) => (plugin.settings.enabledTools.dataview_query = value),
 		saveSettings: () => plugin.saveSettings(),
@@ -75,7 +57,7 @@ function addDataviewToolSetting(
 
 	if (!isDataviewEnabled) {
 		dataviewSetting.setDesc(
-			"Execute Dataview queries in your vault (Dataview plugin is not enabled)"
+			"Enable Dataview integration for executing queries (Dataview plugin is not enabled)"
 		);
 		dataviewSetting.descEl.createSpan({ text: " — ", cls: "mcp-warning-text" });
 		dataviewSetting.descEl.createSpan({
@@ -85,39 +67,39 @@ function addDataviewToolSetting(
 	}
 }
 
-function addDailyNotesToolSetting(plugin: ObsidianMCPPlugin, containerEl: HTMLElement): void {
-	const isDailyNotesEnabled = DailyNoteUtils.isDailyNotesEnabled(plugin.app);
+function addDailyNotesFeatureSetting(plugin: ObsidianMCPPlugin, containerEl: HTMLElement): void {
+	const isDailyNotesPluginEnabled = DailyNoteUtils.isDailyNotesEnabled(plugin.app);
 	const dailyNoteSetting = createToggleSetting({
 		containerEl,
-		name: "Daily Notes Features",
-		desc: "Enable daily notes tool and resource to access daily notes in your vault",
-		getValue: () => isDailyNotesEnabled && plugin.settings.enabledTools.file_access,
+		name: "Daily Notes Integration",
+		desc: "Enable integration for accessing and managing daily notes. This feature relies on 'File System Access' being enabled if the Daily Notes plugin is active.",
+		getValue: () => isDailyNotesPluginEnabled && plugin.settings.enabledTools.file_access,
 		setValue: (value) => (plugin.settings.enabledTools.file_access = value),
 		saveSettings: () => plugin.saveSettings(),
-		disabled: !isDailyNotesEnabled,
+		disabled: !isDailyNotesPluginEnabled,
 	});
 
-	if (!isDailyNotesEnabled) {
+	if (!isDailyNotesPluginEnabled) {
 		dailyNoteSetting.setDesc(
-			"Enable daily notes tool and resource (Daily Notes plugin is not enabled)"
+			"Enable Daily Notes integration (Daily Notes or Periodic Notes plugin with daily notes configured is not enabled)"
 		);
 		dailyNoteSetting.descEl.createSpan({ text: " — ", cls: "mcp-warning-text" });
 		dailyNoteSetting.descEl.createSpan({
-			text: "Requires Daily Notes or Periodic Notes plugin",
+			text: "Requires Daily Notes or Periodic Notes plugin (for daily notes)",
 			cls: "mcp-warning-text",
 		});
 	}
 }
 
-function addQuickAddToolSetting(
+function addQuickAddFeatureSetting(
 	plugin: ObsidianMCPPlugin,
 	containerEl: HTMLElement,
 	isQuickAddEnabled: boolean
 ): void {
 	const quickAddSetting = createToggleSetting({
 		containerEl,
-		name: "QuickAdd Tool",
-		desc: "Execute and list QuickAdd choices",
+		name: "QuickAdd Integration",
+		desc: "Enable QuickAdd integration for executing and listing choices.",
 		getValue: () => isQuickAddEnabled && plugin.settings.enabledTools.quickadd,
 		setValue: (value) => (plugin.settings.enabledTools.quickadd = value),
 		saveSettings: () => plugin.saveSettings(),
@@ -125,7 +107,7 @@ function addQuickAddToolSetting(
 	});
 
 	if (!isQuickAddEnabled) {
-		quickAddSetting.setDesc("Execute and list QuickAdd choices (QuickAdd plugin is not enabled)");
+		quickAddSetting.setDesc("Enable QuickAdd integration (QuickAdd plugin is not enabled)");
 		quickAddSetting.descEl.createSpan({ text: " — ", cls: "mcp-warning-text" });
 		quickAddSetting.descEl.createSpan({
 			text: "Requires QuickAdd plugin",

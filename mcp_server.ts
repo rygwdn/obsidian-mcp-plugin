@@ -63,11 +63,8 @@ ${vaultStructure}`,
 			this.registerTool(this.server, dataviewQueryTool);
 		}
 
-		if (this.settings.enableResources) {
+		if (enabledTools.file_access) {
 			new VaultFileResource(this.app).register(this.server);
-		}
-
-		if (enabledTools.get_file_metadata) {
 			new FileMetadataResource(this.app, this.settings.toolNamePrefix).register(this.server);
 			this.registerTool(this.server, getFileMetadataTool);
 		}

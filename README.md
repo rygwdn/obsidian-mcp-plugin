@@ -61,10 +61,9 @@ The plugin is not yet available in the Obsidian Community Plugins directory. You
 
 The plugin settings can be found in Obsidian's settings under "MCP Plugin":
 
-- **Enable Resources**: Allows accessing vault files as MCP resources
 - **Enable Prompts**: Loads prompts from the configured prompts folder
 - **Prompts Location**: Path where prompt files are stored (default: `prompts`)
-- **Tool-specific settings**: Enable/disable individual tools
+- **Feature-specific settings**: Enable/disable individual features (e.g., File Access, Vault Search, Content Modification).
 
 ## MCP Endpoint
 
@@ -78,8 +77,10 @@ https://127.0.0.1:27123/mcp
 ## Available Tools
 
 ### File Management
+
+When the "File Access" feature is enabled, you can retrieve file metadata (frontmatter, tags, headings) in addition to the tools listed below.
+
 - `get_contents`: Gets the content of a file or directory from the vault, including daily notes. Accepts URIs like `file://path/to/file.md`, `file://directory/`, and `file://daily:today`.
-- `get_file_metadata`: Retrieves metadata for a specified file including frontmatter, tags, and headings.
 - `update_content`: Updates file content through append or targeted replacement operations.
 
 ### Search and Query

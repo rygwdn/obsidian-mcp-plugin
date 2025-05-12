@@ -1,6 +1,4 @@
 import { App, PluginSettingTab } from "obsidian";
-import { MCPPluginSettings } from "./types";
-import { getLocalRestApiSettings } from "./local_rest_api";
 import ObsidianMCPPlugin from "../main";
 import {
 	createSection,
@@ -10,7 +8,7 @@ import {
 } from "./ui_components";
 import { createConnectionInfoSection } from "./connection_ui";
 import { createPromptsInstructions } from "./prompts_ui";
-import { addToolsSection } from "./tools_ui";
+import { addFeaturesSection } from "./tools_ui";
 
 export class MCPSettingTab extends PluginSettingTab {
 	plugin: ObsidianMCPPlugin;
@@ -42,7 +40,7 @@ export class MCPSettingTab extends PluginSettingTab {
 
 		this.addBasicSettings();
 		this.addPromptsSettings();
-		addToolsSection(this.plugin, containerEl);
+		addFeaturesSection(this.plugin, containerEl);
 		this.addAdvancedSection();
 	}
 
