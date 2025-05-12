@@ -165,7 +165,9 @@ describe("VaultFileResource", () => {
 
 		it("should throw an error for non-existent files", async () => {
 			const handlerCall = resource.handler(new URL("file:///non-existent.md"));
-			await expect(handlerCall).rejects.toThrowErrorMatchingInlineSnapshot(`[Error: Not found: non-existent.md]`);
+			await expect(handlerCall).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Not found: non-existent.md]`
+			);
 		});
 
 		it("should handle directory listing", async () => {
