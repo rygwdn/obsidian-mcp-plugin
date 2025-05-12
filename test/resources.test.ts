@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { VaultFileResource } from "../tools/vault_file_resource";
 import { MockApp } from "./mocks/obsidian";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { getContentsTool } from "../tools/get_contents";
 
 describe("VaultFileResource", () => {
 	let mockApp: MockApp;
@@ -19,24 +20,32 @@ describe("VaultFileResource", () => {
 			"readme.txt": "This is not a markdown file",
 		});
 
+		// Set up daily note files
+		mockApp.setFiles({
+			"daily_notes/2023-01-01.md": "Daily note content for 2023-01-01"
+		});
+
+		// Set up the mockApp to enable daily notes plugin
+		mockApp.internalPlugins.plugins["daily-notes"] = {
+			enabled: true,
+			instance: {
+				options: {
+					format: "YYYY-MM-DD",
+					folder: "daily_notes"
+				}
+			}
+		};
+
 		resource = new VaultFileResource(mockApp);
 	});
 
 	describe("constructor", () => {
-		it("should initialize with default prefix", () => {
+		it("should initialize correctly", () => {
 			const resource = new VaultFileResource(mockApp);
-			// Instead of checking properties directly, check the name
-			expect(resource.template).toBeDefined();
+			console.log(resource["app"]);
+			expect.soft(resource.template).toBeDefined();
 			const resourceName = resource["resourceName"]; // Access private property
-			expect(resourceName).toBe("vault-file");
-		});
-
-		it("should initialize with custom prefix", () => {
-			const resource = new VaultFileResource(mockApp, "custom");
-			// Instead of checking properties directly, check the name
-			expect(resource.template).toBeDefined();
-			const resourceName = resource["resourceName"]; // Access private property
-			expect(resourceName).toBe("custom-file");
+			expect(resourceName).toBe("file");
 		});
 	});
 
@@ -49,9 +58,12 @@ describe("VaultFileResource", () => {
 			resource.register(mockServer as unknown as McpServer);
 
 			expect(mockServer.resource).toHaveBeenCalledWith(
-				"vault-file",
+				"file",
 				expect.any(Object),
-				{ description: "Provides access to files in the Obsidian vault" },
+				{
+					description:
+						"Provides access to files and directories in the Obsidian vault, including daily notes",
+				},
 				expect.any(Function)
 			);
 		});
@@ -65,8 +77,6 @@ describe("VaultFileResource", () => {
 			expect(template.constructor.name).toContain("ResourceTemplate");
 		});
 
-		// These tests need to be modified since we can't directly access the private methods in ResourceTemplate
-		// Instead, test the behavior through the public interface
 		it("should use list method when initialized", () => {
 			// Verify the resource is created correctly - we can't directly test .list()
 			// since it's actually inside a ResourceTemplate
@@ -75,7 +85,7 @@ describe("VaultFileResource", () => {
 
 			// Instead, test the list method directly since that's what the template would call
 			const listResult = resource.list();
-			expect(listResult.resources).toHaveLength(3);
+			expect(listResult.resources).toHaveLength(4); // 3 markdown files + daily notes dir
 		});
 
 		it("should use completePath in template", () => {
@@ -88,12 +98,14 @@ describe("VaultFileResource", () => {
 	describe("list", () => {
 		it("should return a list of markdown files as resources", () => {
 			const result = resource.list();
-			expect(result.resources).toHaveLength(3); // Only markdown files
+
+			// 3 regular markdown files + daily notes resources
+			expect(result.resources.length).toBeGreaterThan(3);
 
 			// Verify each resource has the correct properties
 			result.resources.forEach((resource) => {
 				expect(resource.name).toBeDefined();
-				expect(resource.uri).toContain("vault-file:///");
+				expect(resource.uri).toContain("file://");
 				expect(resource.mimeType).toBe("text/markdown");
 			});
 
@@ -103,6 +115,15 @@ describe("VaultFileResource", () => {
 			expect(fileNames).toContain("test2.md");
 			expect(fileNames).toContain("folder/test3.md");
 			expect(fileNames).not.toContain("readme.txt");
+		});
+
+		it("should include daily note resources when enabled", () => {
+			const result = resource.list();
+
+			// Should include the daily: resource
+			const dailyResource = result.resources.find((r) => r.name === "daily:");
+			expect(dailyResource).toBeDefined();
+			expect(dailyResource?.uri).toBe("file://daily:");
 		});
 	});
 
@@ -124,30 +145,179 @@ describe("VaultFileResource", () => {
 			const result = resource.completePath("nonexistent");
 			expect(result).toHaveLength(0);
 		});
+
+		it("should use daily note completions for daily: paths", () => {
+			const completions = resource.completePath("daily:");
+			expect(completions).toContain("daily:today");
+			expect(completions).toContain("daily:yesterday");
+			expect(completions).toContain("daily:tomorrow");
+		});
 	});
 
 	describe("handler", () => {
 		it("should return file contents for a valid path", async () => {
-			const result = await resource.handler(new URL("vault-file:///test1.md"), {
+			const result = await resource.handler(new URL("file://test1.md"), {
 				path: "test1.md",
 			});
 
 			expect(result.contents).toHaveLength(1);
 			expect(result.contents[0].text).toBe("Test file 1 contents");
-			expect(result.contents[0].uri).toBe("vault-file:///test1.md");
+			expect(result.contents[0].uri).toBe("file://test1.md");
 			expect(result.contents[0].mimeType).toBe("text/markdown");
 		});
 
 		it("should throw an error for non-existent files", async () => {
-			await expect(
-				resource.handler(new URL("vault-file:///non-existent.md"), { path: "non-existent.md" })
-			).rejects.toThrow("File not found: non-existent.md");
+			const handler = resource.handler(new URL("file://non-existent.md"), {
+				path: "non-existent.md",
+			});
+
+			// Should throw when no files are found in the directory
+			await expect(handler).rejects.toThrow("No files found in path");
 		});
 
-		it("should throw an error for invalid path type", async () => {
-			await expect(
-				resource.handler(new URL("vault-file:///test1.md"), { path: ["test1.md", "test2.md"] })
-			).rejects.toThrow("Invalid path");
+		it("should handle directory listing", async () => {
+			const result = await resource.handler(new URL("file://folder?depth=0"), {
+				path: "folder",
+				depth: "0",
+			});
+
+			expect(result.contents).toHaveLength(1);
+			expect(result.contents[0].mimeType).toBe("text/directory");
+			expect(result.contents[0].text).toContain("test3.md");
+		});
+
+		it("should handle daily note directory", async () => {
+			const result = await resource.handler(new URL("file://daily:"), {
+				path: "daily:",
+			});
+
+			expect(result.contents).toHaveLength(1);
+			expect(result.contents[0].mimeType).toBe("text/directory");
+			expect(result.contents[0].text).toContain("daily:today");
+		});
+
+		it("should handle daily note path", async () => {
+			// Setup daily note for today
+			const today = window.moment().format("YYYY-MM-DD");
+			mockApp.setFiles({
+				[`daily_notes/${today}.md`]: "Today's daily note content"
+			});
+
+			const result = await resource.handler(new URL("file://daily:today"), {
+				path: "daily:today",
+			});
+
+			expect(result.contents).toHaveLength(1);
+			expect(result.contents[0].mimeType).toBe("text/markdown");
+			expect(result.contents[0].text).toBe("Today's daily note content");
+		});
+
+		it("should throw error for missing daily note when create=false", async () => {
+			// Don't set up the file for tomorrow, so it will be missing
+			const handler = resource.handler(new URL("file://daily:tomorrow"), {
+				path: "daily:tomorrow",
+			});
+
+			await expect(handler).rejects.toThrow("Daily note not found");
+		});
+	});
+});
+
+describe("getContentsTool", () => {
+	let mockApp: MockApp;
+	let handler: (args: Record<string, unknown>) => Promise<string>;
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		mockApp = new MockApp();
+
+		// Set up files
+		mockApp.setFiles({
+			"test1.md": "Test file 1 contents",
+			"test2.md": "Test file 2 contents",
+			"folder/test3.md": "Test file 3 contents",
+			"readme.txt": "This is not a markdown file",
+		});
+
+		// Set up daily note files
+		mockApp.setFiles({
+			"daily_notes/2023-01-01.md": "Daily note content for 2023-01-01"
+		});
+
+		// Set up the mockApp to enable daily notes plugin
+		mockApp.internalPlugins.plugins["daily-notes"] = {
+			enabled: true,
+			instance: {
+				options: {
+					format: "YYYY-MM-DD",
+					folder: "daily_notes"
+				}
+			}
+		};
+
+		// Initialize the handler
+		handler = getContentsTool.handler(mockApp);
+	});
+
+	describe("file content retrieval", () => {
+		it("should retrieve file contents using URI", async () => {
+			const result = await handler({ uri: "file://test1.md" });
+			expect(result).toBe("Test file 1 contents");
+		});
+
+		it("should handle query parameters", async () => {
+			// Create test file with longer content to test offsets
+			mockApp.setFiles({
+				"test_offsets.md": "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+			});
+
+			// Test with offset parameters
+			const result = await handler({
+				uri: "file://test_offsets.md",
+				startOffset: 5,
+				endOffset: 15
+			});
+
+			// Should return characters 5-14 (0-indexed)
+			expect(result).toBe("56789ABCDE");
+		});
+	});
+
+	describe("directory listing", () => {
+		it("should retrieve directory listing", async () => {
+			const result = await handler({ uri: "file://folder" });
+			expect(result).toBe("test3.md");
+		});
+	});
+
+	describe("daily note handling", () => {
+		it("should handle daily note paths", async () => {
+			// Setup daily note for today
+			const today = window.moment().format("YYYY-MM-DD");
+			mockApp.setFiles({
+				[`daily_notes/${today}.md`]: "Today's daily note content"
+			});
+
+			const result = await handler({ uri: "file://daily:today" });
+			expect(result).toBe("Today's daily note content");
+		});
+
+		it("should handle daily note directory", async () => {
+			const result = await handler({ uri: "file://daily:" });
+			// Should contain the standard daily note aliases
+			expect(result).toContain("daily:today");
+			expect(result).toContain("daily:yesterday");
+			expect(result).toContain("daily:tomorrow");
+		});
+	});
+
+	describe("error handling", () => {
+		it("should throw error for missing URI parameter", async () => {
+			await expect(handler({})).rejects.toThrow("URI parameter is required");
+		});
+
+		it("should throw error for invalid URI format", async () => {
+			await expect(handler({ uri: "invalid-uri" })).rejects.toThrow("Invalid URI format");
 		});
 	});
 });

@@ -1,9 +1,7 @@
-import { App } from "obsidian";
+import { App, TFolder } from "obsidian";
 import { McpServer, ToolCallback } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
-import { listFilesTool } from "tools/list_files";
-import { getFileContentsTool } from "tools/get_file_contents";
 import { searchTool } from "tools/search";
 import { updateContentTool } from "tools/update_content";
 import { dataviewQueryTool } from "tools/dataview_query";
@@ -13,6 +11,7 @@ import { ToolRegistration } from "tools/types";
 import { DEFAULT_SETTINGS, MCPPluginSettings } from "./settings/types";
 import { registerPrompts } from "tools/prompts";
 import { VaultFileResource } from "tools/vault_file_resource";
+import { getContentsTool } from "tools/get_contents";
 import type { Request, Response } from "express";
 import { isPluginEnabled as isDataviewEnabled } from "obsidian-dataview";
 import { logger } from "tools/logging";
@@ -28,6 +27,7 @@ export class ObsidianMcpServer {
 	) {
 		logger.log(`Initializing MCP server v${this.manifest.version}`);
 		const vaultDescription = this.settings.vaultDescription ?? DEFAULT_SETTINGS.vaultDescription;
+		const vaultStructure = this.getVaultStructure();
 
 		this.server = new McpServer(
 			{
@@ -35,7 +35,10 @@ export class ObsidianMcpServer {
 				version: this.manifest.version,
 			},
 			{
-				instructions: vaultDescription,
+				instructions: `${vaultDescription}
+
+Vault Structure:
+${vaultStructure}`,
 			}
 		);
 		this.server.server.onerror = (error) => {
@@ -44,12 +47,8 @@ export class ObsidianMcpServer {
 
 		const { enabledTools } = this.settings;
 
-		if (enabledTools.list_files) {
-			this.registerTool(this.server, listFilesTool);
-		}
-
-		if (enabledTools.get_file_contents) {
-			this.registerTool(this.server, getFileContentsTool);
+		if (enabledTools.file_access) {
+			this.registerTool(this.server, getContentsTool);
 		}
 
 		if (enabledTools.search) {
@@ -65,7 +64,7 @@ export class ObsidianMcpServer {
 		}
 
 		if (this.settings.enableResources) {
-			new VaultFileResource(this.app, this.settings.toolNamePrefix).register(this.server);
+			new VaultFileResource(this.app).register(this.server);
 		}
 
 		if (enabledTools.get_file_metadata) {
@@ -81,6 +80,35 @@ export class ObsidianMcpServer {
 		if (this.settings.enablePrompts) {
 			registerPrompts(this.app, this.server, this.settings);
 		}
+	}
+
+	/**
+	 * Generates a formatted string representing the first two layers of directories in the vault
+	 */
+	private getVaultStructure(): string {
+		const rootFolder = this.app.vault.getRoot();
+		let structure = "";
+
+		// Get all folders in the vault
+		const allFolders = this.app.vault
+			.getAllLoadedFiles()
+			.filter((file): file is TFolder => file instanceof TFolder)
+			.sort((a, b) => a.path.localeCompare(b.path));
+
+		// Process root level folders first
+		const rootFolders = allFolders.filter((folder) => folder.parent === rootFolder);
+
+		for (const folder of rootFolders) {
+			structure += `- ${folder.path}\n`;
+
+			// Add second level folders
+			const subFolders = allFolders.filter((f) => f.parent === folder);
+			for (const subFolder of subFolders) {
+				structure += `  - ${subFolder.path}\n`;
+			}
+		}
+
+		return structure || "No directories found in vault.";
 	}
 
 	async handleSseRequest(request: Request, response: Response) {

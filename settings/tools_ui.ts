@@ -1,4 +1,3 @@
-import { App } from "obsidian";
 import ObsidianMCPPlugin from "../main";
 import { createSection, createToggleSetting } from "./ui_components";
 import * as DailyNoteUtils from "../tools/daily_note_utils";
@@ -20,19 +19,10 @@ export function addToolsSection(plugin: ObsidianMCPPlugin, containerEl: HTMLElem
 
 	createToggleSetting({
 		containerEl,
-		name: "List Files Tool",
-		desc: "List files and directories in your vault",
-		getValue: () => plugin.settings.enabledTools.list_files,
-		setValue: (value) => (plugin.settings.enabledTools.list_files = value),
-		saveSettings: () => plugin.saveSettings(),
-	});
-
-	createToggleSetting({
-		containerEl,
-		name: "Get File Contents Tool",
-		desc: "Read contents of files in your vault",
-		getValue: () => plugin.settings.enabledTools.get_file_contents,
-		setValue: (value) => (plugin.settings.enabledTools.get_file_contents = value),
+		name: "File Access Tool",
+		desc: "Access files and directories in your vault (list directories and read file contents)",
+		getValue: () => plugin.settings.enabledTools.file_access,
+		setValue: (value) => (plugin.settings.enabledTools.file_access = value),
 		saveSettings: () => plugin.saveSettings(),
 	});
 
@@ -101,8 +91,8 @@ function addDailyNotesToolSetting(plugin: ObsidianMCPPlugin, containerEl: HTMLEl
 		containerEl,
 		name: "Daily Notes Features",
 		desc: "Enable daily notes tool and resource to access daily notes in your vault",
-		getValue: () => isDailyNotesEnabled && plugin.settings.enabledTools.daily_notes,
-		setValue: (value) => (plugin.settings.enabledTools.daily_notes = value),
+		getValue: () => isDailyNotesEnabled && plugin.settings.enabledTools.file_access,
+		setValue: (value) => (plugin.settings.enabledTools.file_access = value),
 		saveSettings: () => plugin.saveSettings(),
 		disabled: !isDailyNotesEnabled,
 	});

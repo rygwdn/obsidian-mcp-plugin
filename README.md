@@ -78,8 +78,7 @@ https://127.0.0.1:27123/mcp
 ## Available Tools
 
 ### File Management
-- `list_files`: Lists files and folders in a specified directory.
-- `get_file_contents`: Retrieves the content of any file in the vault.
+- `get_contents`: Gets the content of a file or directory from the vault, including daily notes. Accepts URIs like `file://path/to/file.md`, `file://directory/`, and `file://daily:today`.
 - `get_file_metadata`: Retrieves metadata for a specified file including frontmatter, tags, and headings.
 - `update_content`: Updates file content through append or targeted replacement operations.
 
@@ -87,19 +86,14 @@ https://127.0.0.1:27123/mcp
 - `search`: Searches across vault files with exact or fuzzy matching.
 - `dataview_query`: Executes a Dataview query and returns formatted results.
 
-### Daily Notes
-- `get_daily_note`: Retrieves or creates daily notes for specified dates.
-
 ### QuickAdd
 - `quickadd_list`: Lists all available QuickAdd choices.
 - `quickadd_execute`: Executes a QuickAdd choice or formats a template.
 
-
 ## Resources
 
-- `vault-file`: Provides direct access to any file in the vault.
+- `file`: Provides direct access to any file or directory in the vault with URL format `file://{path}` and daily notes via `file://daily:{date}`. Supports convenient daily note aliases like `file://daily:today`, `file://daily:yesterday`, and `file://daily:tomorrow`.
 - `vault-metadata`: Offers structured metadata for vault files.
-- `vault-daily-note`: Provides access to daily notes by date.
 
 ## Using Prompts
 
