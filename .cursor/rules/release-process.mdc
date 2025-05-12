@@ -8,9 +8,10 @@ alwaysApply: false
 Follow these steps to properly release a new version of the MCP plugin:
 
 ## Pre-Release Checklist
-1. Ensure all tests pass: `npm run check`
-2. Ensure all changes have been committed to the repository
-3. Update [CHANGELOG.md](mdc:CHANGELOG.md) with the new version:
+- Ensure all tests pass: `npm run check`
+- Ensure all changes have been committed to the repository
+- Review the non-test diff since the last release
+- Update [CHANGELOG.md](mdc:CHANGELOG.md) with the new version:
    ```markdown
    ## [x.y.z] - YYYY-MM-DD
    - feat: New feature description
@@ -19,24 +20,15 @@ Follow these steps to properly release a new version of the MCP plugin:
    ```
 
 ## Version Bump
-Run the version bump script to update version references:
-```bash
-npm run version
-```
-
-This script:
-- Updates the version in [manifest.json](mdc:manifest.json)
-- Updates [versions.json](mdc:versions.json) with the new version
-- Automatically stages these files for commit (`git add manifest.json versions.json`)
-
-## Final Checks
-Always rerun checks before completing the release:
-```bash
-npm run check
-```
+- Update the version number in the package.json
+- Run the version bump script to update version references `npm run version`
+  This script:
+  - Updates the version in [manifest.json](mdc:manifest.json)
+  - Updates [versions.json](mdc:versions.json) with the new version
+- Run a final check: `npm run check`
+- Commit all the changes `git commit -a -m 'release: prepare x.y.z release'`
 
 ## Tag and Push
-Create and push a git tag for the release:
 ```bash
 git tag x.y.z
 git push origin x.y.z
@@ -48,19 +40,15 @@ After pushing the tag, GitHub Actions will:
 - Build the plugin
 
 ## Final Steps
-1. Wait for GitHub workflows to complete:
+- Wait for GitHub workflows to complete:
    ```bash
-   gh workflow view release --web
+   # Get the run IDs for the latest release
+   gh run list -c $(git rev-parse x.y.z)
+   # Wait for the run to complete
+   gh run watch {CI run id}
+   gh run watch {release run id}
    ```
-2. Check the workflow status:
-   ```bash
-   gh run list --workflow=release.yml
-   ```
-3. Once completed, get the release URL:
+- Once completed, view the release URL so the user can update and publish it:
    ```bash
    gh release view x.y.z --web
    ```
-4. Review the draft release on GitHub
-5. Make any necessary adjustments to the release notes
-6. Publish the release
-7. Update community announcements as needed
