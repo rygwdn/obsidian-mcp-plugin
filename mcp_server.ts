@@ -10,7 +10,7 @@ import { quickAddListTool, quickAddExecuteTool, isQuickAddEnabled } from "tools/
 import { ToolRegistration } from "tools/types";
 import { DEFAULT_SETTINGS, MCPPluginSettings } from "./settings/types";
 import { registerPrompts } from "tools/prompts";
-import { VaultFileResource } from "tools/vault_file_resource";
+import { VaultDailyNoteResource, VaultFileResource } from "tools/vault_file_resource";
 import { getContentsTool } from "tools/get_contents";
 import type { Request, Response } from "express";
 import { isPluginEnabled as isDataviewEnabled } from "obsidian-dataview";
@@ -48,7 +48,11 @@ ${vaultStructure}`,
 		const { enabledTools } = this.settings;
 
 		if (enabledTools.file_access) {
+			new VaultFileResource(this.app).register(this.server);
+			new VaultDailyNoteResource(this.app).register(this.server);
+			new FileMetadataResource(this.app).register(this.server);
 			this.registerTool(this.server, getContentsTool);
+			this.registerTool(this.server, getFileMetadataTool);
 		}
 
 		if (enabledTools.search) {
@@ -61,12 +65,6 @@ ${vaultStructure}`,
 
 		if (enabledTools.dataview_query && isDataviewEnabled(this.app)) {
 			this.registerTool(this.server, dataviewQueryTool);
-		}
-
-		if (enabledTools.file_access) {
-			new VaultFileResource(this.app).register(this.server);
-			new FileMetadataResource(this.app, this.settings.toolNamePrefix).register(this.server);
-			this.registerTool(this.server, getFileMetadataTool);
 		}
 
 		if (isQuickAddEnabled(this.app) && enabledTools.quickadd) {

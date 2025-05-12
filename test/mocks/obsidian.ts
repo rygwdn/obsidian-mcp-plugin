@@ -215,14 +215,9 @@ class MockVault implements Obsidian.Vault {
 	getAllLoadedFiles = vi.fn(() => Array.from(this.files.values()).filter((f) => !f.isFolder));
 	modify = vi.fn(async (file: Obsidian.TFile, data: string) => {
 		(file as MockFile).contents = data;
-		this.files.set(file.path, new MockFile(file.path, data, false));
 	});
 	append = vi.fn(async (file: Obsidian.TFile, data: string) => {
 		(file as MockFile).contents += data;
-		const existingData = this.files.get(file.path);
-		if (existingData) {
-			this.files.set(file.path, new MockFile(file.path, existingData.contents + data, false));
-		}
 	});
 }
 

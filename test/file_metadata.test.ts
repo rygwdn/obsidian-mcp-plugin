@@ -170,18 +170,9 @@ describe("File metadata functionality", () => {
 		});
 
 		describe("constructor", () => {
-			it("should initialize with default prefix", () => {
+			it("should initialize correctly", () => {
 				const resource = new FileMetadataResource(mockApp);
 				expect(resource.template).toBeDefined();
-				const resourceName = resource["resourceName"]; // Access private property
-				expect(resourceName).toBe("vault-metadata");
-			});
-
-			it("should initialize with custom prefix", () => {
-				const resource = new FileMetadataResource(mockApp, "custom");
-				expect(resource.template).toBeDefined();
-				const resourceName = resource["resourceName"];
-				expect(resourceName).toBe("custom-metadata");
 			});
 		});
 
@@ -194,7 +185,7 @@ describe("File metadata functionality", () => {
 				resource.register(mockServer as unknown as McpServer);
 
 				expect(mockServer.resource).toHaveBeenCalledWith(
-					"vault-metadata",
+					"metadata",
 					expect.any(Object),
 					{ description: "Provides access to file metadata in the Obsidian vault" },
 					expect.any(Function)
@@ -231,12 +222,12 @@ describe("File metadata functionality", () => {
 
 		describe("handler", () => {
 			it("should return metadata for a valid file", async () => {
-				const result = await resource.handler(new URL("vault-metadata:///with-frontmatter.md"), {
+				const result = await resource.handler(new URL("metadata:///with-frontmatter.md"), {
 					path: "with-frontmatter.md",
 				});
 
 				expect(result.contents).toHaveLength(1);
-				expect(result.contents[0].uri).toBe("vault-metadata:///with-frontmatter.md");
+				expect(result.contents[0].uri).toBe("metadata:///with-frontmatter.md");
 				expect(result.contents[0].mimeType).toBe("text/markdown");
 
 				expect(result.contents[0].text).toMatchInlineSnapshot(`
@@ -266,7 +257,7 @@ describe("File metadata functionality", () => {
 
 			it("should throw an error for an invalid path format", async () => {
 				await expect(
-					resource.handler(new URL("vault-metadata:///path"), {
+					resource.handler(new URL("metadata:///path"), {
 						path: ["invalid", "array"] as unknown as string,
 					})
 				).rejects.toThrow("Invalid path:");
@@ -274,7 +265,7 @@ describe("File metadata functionality", () => {
 
 			it("should throw an error for a non-existent file", async () => {
 				await expect(
-					resource.handler(new URL("vault-metadata:///nonexistent.md"), { path: "nonexistent.md" })
+					resource.handler(new URL("metadata:///nonexistent.md"), { path: "nonexistent.md" })
 				).rejects.toThrow("File not found: nonexistent.md");
 			});
 		});

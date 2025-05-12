@@ -71,30 +71,23 @@ export const getFileMetadataTool: ToolRegistration = {
 };
 
 export class FileMetadataResource {
-	private resourceName: string;
-
-	constructor(
-		private app: App,
-		prefix: string = "vault"
-	) {
-		this.resourceName = `${prefix}-metadata`;
-	}
+	constructor(private app: App) {}
 
 	public register(server: McpServer) {
-		logger.logResourceRegistration(this.resourceName);
+		logger.logResourceRegistration("metadata");
 
 		server.resource(
-			this.resourceName,
+			"metadata",
 			this.template,
 			{ description: "Provides access to file metadata in the Obsidian vault" },
-			logger.withResourceLogging(this.resourceName, async (uri: URL, variables: Variables) => {
+			logger.withResourceLogging("metadata", async (uri: URL, variables: Variables) => {
 				return await this.handler(uri, variables);
 			})
 		);
 	}
 
 	public get template() {
-		const uriTemplate = `${this.resourceName}:///{+path}`;
+		const uriTemplate = `metadata:///{+path}`;
 		return new ResourceTemplate(uriTemplate, {
 			list: async () => {
 				return this.list();
@@ -112,7 +105,7 @@ export class FileMetadataResource {
 		return {
 			resources: files.map((file) => ({
 				name: file.path,
-				uri: `${this.resourceName}:///${file.path}`,
+				uri: `metadata:///${file.path}`,
 				mimeType: "text/markdown",
 			})),
 		};
