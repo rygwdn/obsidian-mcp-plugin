@@ -14,14 +14,21 @@ export function isDailyNotesEnabled(app: App): boolean {
 export async function resolvePath(app: App, uri: URL): Promise<string> {
 	let path = uri.pathname;
 	if (uri.host) {
-		// Handle file://path and file:///path urls - they're easy to confuse
-		path = `${uri.host}/${path}`;
+		throw new Error(
+			"Unexpected hostname in URL: " +
+				uri.host +
+				". You probably missed a leading slash in your URI path: " +
+				uri.toString()
+		);
 	}
-	path = path.replace(/^\/|\/$/g, "");
+	path = path.replace(/^\/*|\/*$/g, "");
 
 	if (uri.protocol.startsWith("daily")) {
 		assertDailyNotePluginEnabled(app);
 		const date = parseDate(path, app);
+		if (!date.isValid()) {
+			throw new Error("Invalid date: " + path);
+		}
 		path = getDailyNotePath(app, date);
 	}
 

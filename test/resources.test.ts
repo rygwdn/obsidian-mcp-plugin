@@ -155,9 +155,7 @@ describe("VaultFileResource", () => {
 
 	describe("handler", () => {
 		it("should return file contents for a valid path", async () => {
-			const result = await resource.handler(new URL("file:///test1.md"), {
-				path: "test1.md",
-			});
+			const result = await resource.handler(new URL("file:///test1.md"));
 
 			expect(result.contents).toHaveLength(1);
 			expect(result.contents[0].text).toBe("Test file 1 contents");
@@ -166,12 +164,8 @@ describe("VaultFileResource", () => {
 		});
 
 		it("should throw an error for non-existent files", async () => {
-			const handlerCall = resource.handler(new URL("file:///non-existent.md"), {
-				path: "non-existent.md",
-			});
-			await expect(handlerCall).rejects.toThrow(
-				/File not found: non-existent.md|No files found in path/
-			);
+			const handlerCall = resource.handler(new URL("file:///non-existent.md"));
+			await expect(handlerCall).rejects.toThrowErrorMatchingInlineSnapshot(`[Error: Not found: non-existent.md]`);
 		});
 
 		it("should handle directory listing", async () => {
@@ -266,7 +260,7 @@ describe("VaultDailyNoteResource", () => {
 			for (const alias of aliases) {
 				const resource = result.resources.find((r) => r.name === alias);
 				expect(resource).toBeDefined();
-				expect(resource?.uri).toBe(`daily://${alias}`);
+				expect(resource?.uri).toBe(`daily:///${alias}`);
 				expect(resource?.mimeType).toBe("text/markdown");
 			}
 		});
@@ -288,11 +282,11 @@ describe("VaultDailyNoteResource", () => {
 
 	describe("handler", () => {
 		it("should return daily note content for today", async () => {
-			const result = await resource.handler(new URL("daily://today"), { path: "today" });
+			const result = await resource.handler(new URL("daily:///today"));
 
 			expect(result.contents).toHaveLength(1);
 			expect(result.contents[0].text).toBe("Daily note content for today");
-			expect(result.contents[0].uri).toBe("daily://today");
+			expect(result.contents[0].uri).toBe("daily:///today");
 			expect(result.contents[0].mimeType).toBe("text/markdown");
 		});
 
@@ -300,9 +294,7 @@ describe("VaultDailyNoteResource", () => {
 			mockApp.internalPlugins.plugins["daily-notes"].enabled = false;
 			mockApp.plugins.plugins["periodic-notes"] = null as any;
 
-			const handlerCall = resource.handler(new URL("daily://today"), {
-				path: "today",
-			});
+			const handlerCall = resource.handler(new URL("daily:///today"));
 
 			await expect(handlerCall).rejects.toThrow(
 				"Cannot access daily notes: No daily notes plugin is enabled"
@@ -392,7 +384,7 @@ describe("getContentsTool", () => {
 
 	describe("daily note handling", () => {
 		it("should handle daily note paths", async () => {
-			const result = await handler({ uri: "daily://today" });
+			const result = await handler({ uri: "daily:///today" });
 			expect(result).toBe("Daily note content for today");
 		});
 
@@ -403,10 +395,8 @@ describe("getContentsTool", () => {
 			const errorHandler = getContentsTool.handler(mockApp);
 
 			await expect(
-				errorHandler({ uri: "daily://today" })
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: No files found in path: daily_notes/2023-05-09.md]`
-			);
+				errorHandler({ uri: "daily:///today" })
+			).rejects.toThrowErrorMatchingInlineSnapshot(`[Error: Not found: daily_notes/2023-05-09.md]`);
 		});
 	});
 });

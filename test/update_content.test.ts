@@ -200,7 +200,7 @@ describe("update_content tool", () => {
 			it("should append content to today's daily note", async () => {
 				const handler = updateContentTool.handler(mockApp);
 				const result = await handler({
-					uri: "daily://today",
+					uri: "daily:///today",
 					mode: "append",
 					content: "New content appended.",
 				});
@@ -220,7 +220,7 @@ describe("update_content tool", () => {
 				const handler = updateContentTool.handler(mockApp);
 				await expect(
 					handler({
-						uri: "daily://today",
+						uri: "daily:///today",
 						mode: "append",
 						content: "New content.",
 					})
@@ -233,7 +233,7 @@ describe("update_content tool", () => {
 
 				const handler = updateContentTool.handler(mockApp);
 				const result = await handler({
-					uri: "daily://today",
+					uri: "daily:///today",
 					mode: "append",
 					content: "New daily note content.",
 					create_if_missing: true,
@@ -255,7 +255,7 @@ describe("update_content tool", () => {
 				const handler = updateContentTool.handler(mockApp);
 				await expect(
 					handler({
-						uri: "daily://today",
+						uri: "daily:///today",
 						mode: "append",
 						content: "New content.",
 					})
@@ -267,7 +267,7 @@ describe("update_content tool", () => {
 			it("should replace content in today's daily note", async () => {
 				const handler = updateContentTool.handler(mockApp);
 				const result = await handler({
-					uri: "daily://today",
+					uri: "daily:///today",
 					mode: "replace",
 					find: "This is today's note content.",
 					content: "This content has been replaced.",
@@ -285,7 +285,7 @@ describe("update_content tool", () => {
 				const handler = updateContentTool.handler(mockApp);
 				await expect(
 					handler({
-						uri: "daily://today",
+						uri: "daily:///today",
 						mode: "replace",
 						content: "Replacement content.",
 					})
@@ -296,7 +296,7 @@ describe("update_content tool", () => {
 				const handler = updateContentTool.handler(mockApp);
 				await expect(
 					handler({
-						uri: "daily://today",
+						uri: "daily:///today",
 						mode: "replace",
 						find: "nonexistent content",
 						content: "new content",
@@ -317,7 +317,7 @@ describe("update_content tool", () => {
 				const handler = updateContentTool.handler(mockApp);
 				await expect(
 					handler({
-						uri: "daily://today",
+						uri: "daily:///today",
 						mode: "replace",
 						find: "duplicate content",
 						content: "new content",

@@ -18,7 +18,7 @@ export const updateContentTool: ToolRegistration = {
 		uri: z
 			.string()
 			.describe(
-				"URI to the file or directory (e.g., file://path/to/file.md, daily://today, daily://yesterday, daily://tomorrow)"
+				"URI to the file or directory (e.g., file:///path/to/file.md, daily:///today, daily:///yesterday, daily:///tomorrow)"
 			),
 		mode: z
 			.enum(["append", "replace"])

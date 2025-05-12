@@ -2,7 +2,6 @@ import { App } from "obsidian";
 import { z } from "zod";
 import { ToolRegistration } from "./types";
 import { VaultDailyNoteResource, VaultFileResource } from "./vault_file_resource";
-import { Variables } from "@modelcontextprotocol/sdk/shared/uriTemplate";
 
 export const getContentsTool: ToolRegistration = {
 	name: "get_contents",
@@ -18,7 +17,7 @@ export const getContentsTool: ToolRegistration = {
 		uri: z
 			.string()
 			.describe(
-				"URI to the file or directory (e.g., file://path/to/file.md, daily://today, daily://yesterday, daily://tomorrow)"
+				"URI to the file or directory (e.g., file:///path/to/file.md, daily:///today, daily:///yesterday, daily:///tomorrow)"
 			),
 		depth: z
 			.number()
@@ -37,26 +36,25 @@ export const getContentsTool: ToolRegistration = {
 	handler:
 		(app: App) =>
 		async (args: Record<string, string | number>): Promise<string> => {
-			const uri = args.uri as string;
-			if (!uri) {
+			if (!args.uri) {
 				throw new Error("URI parameter is required");
 			}
+
+			// Convert file:// and daily:// to file:/// and daily:///
+			const uri = (args.uri as string).replace(/^(file|daily):\/\/([^/])/, "$1:///$2");
 
 			const resource = uri.startsWith("daily://")
 				? new VaultDailyNoteResource(app)
 				: new VaultFileResource(app);
 
-			const variables: Variables = {};
 			const url = new URL(uri);
-
 			["depth", "startOffset", "endOffset"].forEach((key) => {
 				if (args[key] !== undefined) {
 					url.searchParams.set(key, String(args[key]));
-					variables[key] = String(args[key]);
 				}
 			});
 
-			const result = await resource.handler(url, variables);
+			const result = await resource.handler(url);
 			if (typeof result.contents?.[0]?.text !== "string") {
 				throw new Error(`No text found for URI: ${uri}`);
 			}
