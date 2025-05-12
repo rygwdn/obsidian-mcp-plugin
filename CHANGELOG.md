@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.1.5] - 2025-05-12
+
+- feat: Add supergateway connection option and refactor UI code
+- chore: Publish package to npm to reserve the name
+- chore: Update package.json with repository information and keywords
+
 ## [0.1.4] - 2025-05-11
 
 - refactor: Implement class-based Logger for centralized and consistent logging
