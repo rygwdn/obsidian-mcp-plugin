@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+
+## [0.1.4] - 2025-05-11
 - refactor: Implement class-based Logger for centralized and consistent logging
 - refactor: Convert daily note utils from namespace to module exports for better code organization
 - refactor: Split settings into multiple specialized files with clear responsibilities
@@ -10,6 +12,9 @@
 - feat: Require secure server (HTTPS) for MCP connection
 - feat: Add comprehensive logging for tool and resource usage with performance tracking
 - feat: Integrate daily notes functionality into file management tools via daily:// URI scheme
+- docs: Improve code style guidelines with clearer commenting instructions
+- refactor: Reorganize settings UI with more descriptive feature names
+- refactor: Consolidate file access settings and remove redundant options
 
 ## [0.1.3] - 2025-05-10
 - feat: Add release process documentation to README
