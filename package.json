@@ -19,7 +19,9 @@
 		"test:coverage": "vitest run --coverage",
 		"typecheck": "npm run check-types && npm run check-test-types",
 		"fix": "npm run lint:fix ; npm run format",
-		"check": "npm-run-all -p lint format:check check-types check-test-types -s test",
+		"markdownlint": "markdownlint-cli2 --config .markdownlint.json \"**/*.md\" \"!node_modules/**/*.md\"",
+		"markdownlint:fix": "markdownlint-cli2 --config .markdownlint.json --fix \"**/*.md\" \"!node_modules/**/*.md\"",
+		"check": "npm-run-all -p lint format:check check-types check-test-types markdownlint -s test",
 		"inspect": "npx @modelcontextprotocol/inspector",
 		"install:copy": "npm run build && node scripts/install.js copy",
 		"install:link": "npm run build && node scripts/install.js link"
@@ -46,6 +48,7 @@
 		"esbuild": "^0.25.4",
 		"eslint-config-prettier": "^10.1.3",
 		"eslint-plugin-prettier": "^5.4.0",
+		"markdownlint-cli2": "^0.18.0",
 		"npm-run-all": "^4.1.5",
 		"obsidian": "latest",
 		"obsidian-dataview": "^0.5.68",
