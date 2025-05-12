@@ -1,122 +1,66 @@
 # Obsidian MCP Plugin
 
-Integrates the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) with Obsidian, allowing AI assistants to interact with your vault through the [Obsidian Local REST API](https://github.com/coddingtonbear/obsidian-local-rest-api) using standardized tools and resources.
+Integrates the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) with Obsidian, enabling AI assistants to interact with your vault via the [Obsidian Local REST API](https://github.com/coddingtonbear/obsidian-local-rest-api). This plugin uses standardized tools and resources for seamless AI collaboration.
 
-## Why This Plugin?
+> [!IMPORTANT]
+> The [Obsidian Local REST API](https://github.com/coddingtonbear/obsidian-local-rest-api) plugin is **required** for this plugin to function. Please ensure it is installed and enabled in your Obsidian vault.
 
-This plugin offers several unique advantages:
+## Key Features and Benefits
 
-- **Direct Integration** - Works natively within Obsidian as a plugin
-- **Streamlined Architecture** - No external server or application required
-- **Flexible Connectivity** - Supports both SSE and Streamable HTTP transports
-- **Native Experience** - Configurable through the standard Obsidian settings UI
-- **Comprehensive Implementation** - Includes tools, resources, and prompt management in one solution
+This plugin offers a native and streamlined Model Context Protocol (MCP) experience directly within Obsidian, eliminating the need for external servers or applications.
 
-## Features
-
-- Provides a complete MCP implementation via the Obsidian Local REST API
-- Tools for file manipulation, searching, and querying
-- Resource-based access to vault files and daily notes
-- Integration with Dataview, Daily Notes, and QuickAdd plugins
-- Built-in prompt management system
-
-## Prerequisites
-
-- [Obsidian](https://obsidian.md/)
-- [Obsidian Local REST API](https://github.com/coddingtonbear/obsidian-local-rest-api) plugin
-- Optional Dependencies:
-  - [Dataview](https://github.com/blacksmithgu/obsidian-dataview) plugin (for dataview_query)
-  - Daily Notes (core plugin) or [Periodic Notes](https://github.com/liamcain/obsidian-periodic-notes) (for daily note tools)
-  - [QuickAdd](https://github.com/chhoumann/quickadd) (for quickadd tools)
+- **Native Obsidian Integration**: Operates as a standard Obsidian plugin for a seamless user experience.
+- **Flexible Connectivity**: Supports both SSE and Streamable HTTP transports for versatile communication.
+- **User-Friendly Configuration**: Manage all settings through the standard Obsidian interface.
+- **Comprehensive Toolset**:
+    - Complete MCP server functionality via the Obsidian Local REST API.
+    - Tools for file management (read, list, metadata), vault search, and querying.
+    - Resource-based access to vault files and daily notes.
+    - Built-in prompt management system.
+- **Plugin Integrations**:
+    - **Dataview**: Execute Dataview queries (requires Dataview plugin).
+    - **Daily Notes**: Interact with daily notes (requires Daily Notes or Periodic Notes plugin).
+    - **QuickAdd**: Trigger QuickAdd actions and list choices (requires QuickAdd plugin).
 
 ## Installation
 
-The plugin is not yet available in the Obsidian Community Plugins directory. You can install it using:
+This plugin is not yet in the Obsidian Community Plugins directory. Install it via BRAT (Beta Reviewers Auto-update Tester):
 
-### BRAT (Beta Reviewers Auto-update Tester)
+1.  Install [BRAT](https://github.com/TfTHacker/obsidian42-brat) from Obsidian Community Plugins.
+2.  In BRAT settings, add beta plugin: `rygwdn/obsidian-mcp-plugin`.
+3.  Enable the plugin in Obsidian settings.
+5.  Your Obsidian vault will now provide an MCP endpoint at something like `https://127.0.0.1:27123/mcp`. The specific endpoint and example configurations are viewable in the plugin settings.
 
-1. Install [BRAT](https://github.com/TfTHacker/obsidian42-brat) from Obsidian Community Plugins
-2. In BRAT settings, add the beta plugin: `rygwdn/obsidian-mcp-plugin`
-3. Enable the plugin in Obsidian settings
+## Available Functionality
 
-### Manual Installation
+This plugin offers a range of functionalities that can be enabled or disabled through the settings:
 
-1. Clone the repository or download the latest release
-2. Build the project:
-   ```bash
-   npm install
-   npm run build
-   ```
-3. Install to your vault:
-   ```bash
-   # Copy required files to your vault
-   npm run install:copy -- /path/to/your/vault
+- **File Access**: Allows AI assistants to read files, list directories, and retrieve file metadata within your vault. This is fundamental for many interactions that require understanding the content and structure of your notes.
+- **Content Modification**: Grants AI assistants the ability to modify file content. This includes actions like appending text to existing notes, replacing sections of text, or creating new content based on instructions.
+- **Vault Search**: Enables AI assistants to perform text-based searches across all files in your vault. This is useful for finding specific information or patterns within your notes.
+- **Dataview Integration**: If you have the Dataview plugin installed and enabled, this feature allows AI assistants to execute Dataview queries. This can be powerful for querying and summarizing structured data within your notes (requires [Dataview plugin](https://github.com/blacksmithgu/obsidian-dataview)).
+- **Daily Notes Integration**: Provides specialized tools for interacting with daily notes. This requires either the core Daily Notes plugin or the [Periodic Notes plugin](https://github.com/liamcain/obsidian-periodic-notes) (configured for daily notes) to be active. It simplifies tasks like creating, retrieving, or updating daily entries.
+- **QuickAdd Integration**: If you use the QuickAdd plugin, this feature allows AI assistants to trigger QuickAdd actions and list available choices. This can automate workflows and content creation processes defined in QuickAdd (requires [QuickAdd plugin](https://github.com/chhoumann/quickadd)).
 
-   # Or for development, create symbolic links:
-   npm run install:link -- /path/to/your/vault
-   ```
-4. Enable the plugin in Obsidian settings
-
-## Configuration
-
-The plugin settings can be found in Obsidian's settings under "MCP Plugin":
-
-- **Enable Prompts**: Loads prompts from the configured prompts folder
-- **Prompts Location**: Path where prompt files are stored (default: `prompts`)
-- **Feature-specific settings**: Enable/disable individual features (e.g., File Access, Vault Search, Content Modification).
-
-## MCP Endpoint
-
-Once configured, your Obsidian vault provides an MCP endpoint at:
-```
-https://127.0.0.1:27123/mcp
-```
-
-(Port may vary based on your Local REST API configuration)
-
-## Available Tools
-
-### File Management
-
-When the "File Access" feature is enabled, you can retrieve file metadata (frontmatter, tags, headings) in addition to the tools listed below.
-
-- `get_contents`: Gets the content of a file or directory from the vault, including daily notes. Accepts URIs like `file://path/to/file.md`, `file://directory/`, and `file://daily:today`.
-- `update_content`: Updates file content through append or targeted replacement operations.
-
-### Search and Query
-- `search`: Searches across vault files with exact or fuzzy matching.
-- `dataview_query`: Executes a Dataview query and returns formatted results.
-
-### QuickAdd
-- `quickadd_list`: Lists all available QuickAdd choices.
-- `quickadd_execute`: Executes a QuickAdd choice or formats a template.
-
-## Resources
-
-- `file`: Provides direct access to any file or directory in the vault with URL format `file://{path}` and daily notes via `file://daily:{date}`. Supports convenient daily note aliases like `file://daily:today`, `file://daily:yesterday`, and `file://daily:tomorrow`.
-- `vault-metadata`: Offers structured metadata for vault files.
+Each of these features can be toggled in the plugin's settings, allowing you to customize the level of access and capability granted to connected AI assistants.
 
 ## Using Prompts
 
-The plugin includes a simple yet powerful prompt management system:
+The plugin features a simple prompt management system:
 
-1. Create a markdown file in your configured prompts folder (default: `prompts/`)
-2. Add optional frontmatter with:
-   ```yaml
-   ---
-   description: "Brief description of what this prompt does"
-   args:
-     - "variable1"
-     - "variable2"
-   ---
-   ```
-3. Write your prompt in the body of the file, using `{{variable1}}` and `{{variable2}}` as placeholders
+1.  Create a Markdown file in your prompts folder (default: `prompts/`).
+2.  **Define Metadata (Optional)**: Add YAML frontmatter to the top of the file. The following fields are supported:
+    *   `name`: (string) A human-readable name for the prompt.
+    *   `description`: (string) A brief description of what the prompt does.
+    *   `args`: (array of strings) A list of variable names that your prompt will use.
+3.  Write your prompt in the file body, using `{{variable1}}` for placeholders.
 
-Prompts are automatically registered with the MCP server and can be accessed by AI assistants. When a prompt is modified in Obsidian, it's automatically updated in the MCP server without requiring a restart.
+Prompts are automatically registered and updated with the MCP server. AI assistants can access them.
 
-Example prompt file:
+**Example Prompt (`prompts/analyze_topic.md`):**
 ```markdown
 ---
+name: "Topic Analysis"
 description: "Create an analysis of a topic"
 args:
   - "topic"
@@ -128,41 +72,26 @@ Include historical context, current relevance, and future implications.
 
 ## Development
 
-```bash
-# Development with hot reload
-npm run dev
+Key commands:
 
-# Build for production
-npm run build
-
-# Check code (types, lint, tests)
-npm run check
-
-# Install to vault for testing (symlinks entire directory)
-npm run install:link -- /path/to/your/vault
-```
+- `npm run dev`: Development with hot reload.
+- `npm run build`: Build for production.
+- `npm run check`: Type check, lint, and test.
+- `npm run install:link -- /path/to/your/vault`: Install to vault for testing (symlinks).
 
 ## Release Process
 
-```bash
-# 1. Update CHANGELOG.md with format: ## [x.y.z] - YYYY-MM-DD
-# 2. Bump version
-npm run version
+1.  Update `CHANGELOG.md` (e.g., `## [x.y.z] - YYYY-MM-DD`).
+2.  Bump version: `npm run version`.
+3.  Tag and push: `git tag x.y.z && git push origin x.y.z`.
 
-# 3. Tag and push
-git tag x.y.z
-git push origin x.y.z
-```
-
-GitHub Actions will create a draft release with notes from the changelog.
+*GitHub Actions will draft a release from the changelog.*
 
 ## Related Projects
 
-Here are some other projects in the MCP ecosystem:
-
-- [mcp-obsidian](https://github.com/MarkusPfundstein/mcp-obsidian): External MCP server that communicates with Obsidian's Local REST API
-- [obsidian-mcp](https://github.com/StevenStavrakis/obsidian-mcp): Filesystem-based MCP server for Obsidian
-- [Model Context Protocol](https://modelcontextprotocol.io/): Official MCP protocol documentation
+- [mcp-obsidian](https://github.com/MarkusPfundstein/mcp-obsidian): External MCP server for Obsidian.
+- [obsidian-mcp](https://github.com/StevenStavrakis/obsidian-mcp): Filesystem-based MCP server.
+- [Model Context Protocol](https://modelcontextprotocol.io/): Official MCP documentation.
 
 ## License
 
