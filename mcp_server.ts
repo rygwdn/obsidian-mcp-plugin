@@ -18,7 +18,7 @@ import { logger } from "tools/logging";
 
 export class ObsidianMcpServer {
 	private server: McpServer;
-	private transports: Record<string, SSEServerTransport> = {};
+	private sseTransports: Record<string, SSEServerTransport> = {};
 
 	constructor(
 		private app: App,
@@ -110,14 +110,14 @@ ${vaultStructure}`,
 
 	async handleSseRequest(request: Request, response: Response) {
 		if (request.method === "GET") {
-			const transport = new SSEServerTransport("/mcp/messages", response);
-			this.transports[transport.sessionId] = transport;
+			const transport = new SSEServerTransport("/messages", response);
+			this.sseTransports[transport.sessionId] = transport;
 
 			logger.logConnection("SSE", transport.sessionId, request);
 
 			response.on("close", () => {
 				logger.logConnectionClosed("SSE", transport.sessionId);
-				delete this.transports[transport.sessionId];
+				delete this.sseTransports[transport.sessionId];
 			});
 
 			await this.server.connect(transport);
@@ -129,7 +129,7 @@ ${vaultStructure}`,
 				return;
 			}
 
-			const transport = this.transports[sessionId];
+			const transport = this.sseTransports[sessionId];
 			if (!transport) {
 				logger.logError(`SSE POST error: No transport found for session ID: ${sessionId}`);
 				response.status(400).send("No transport found for session ID");

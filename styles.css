@@ -29,6 +29,21 @@ available in the app when your plugin is enabled.
 	font-size: calc(var(--font-ui-large) * 1.2);
 }
 
+.mcp-copyable-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.mcp-copyable-row .mcp-copyable-inline-label {
+	flex-shrink: 0;
+	min-width: 6.25em;
+}
+
+.mcp-copyable-row .mcp-copyable-code {
+	flex-grow: 1;
+}
+
 /* Info boxes for documentation */
 .mcp-info-box {
 	background-color: var(--background-secondary);

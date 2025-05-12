@@ -34,7 +34,7 @@ export default class ObsidianMCPPlugin extends Plugin {
 			}
 		});
 
-		this.api.addRoute("/mcp").get(async (request, response) => {
+		this.api.addRoute("/messages").post(async (request, response) => {
 			try {
 				await this.server.handleSseRequest(request, response);
 			} catch (error) {
@@ -42,7 +42,7 @@ export default class ObsidianMCPPlugin extends Plugin {
 			}
 		});
 
-		this.api.addRoute("/mcp/messages").post(async (request, response) => {
+		this.api.addRoute("/sse").get(async (request, response) => {
 			try {
 				await this.server.handleSseRequest(request, response);
 			} catch (error) {

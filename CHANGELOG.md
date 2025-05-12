@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- feat: Add separate SSE endpoints (/sse and /messages) for backward compatibility
+- feat: Configure /mcp endpoint to use HTTP streaming exclusively
+- feat: Update connection UI to clearly differentiate between streaming HTTP and SSE options
+
 ## [0.1.5] - 2025-05-12
 
 - feat: Add supergateway connection option and refactor UI code

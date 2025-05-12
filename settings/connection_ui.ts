@@ -15,15 +15,14 @@ export function createConnectionInfoSection(app: App, containerEl: HTMLElement):
 		return;
 	}
 
-	const endpointUrl = `https://${apiSettings.bindingHost}:${apiSettings.port}/mcp`;
-	const vaultNameForCommand = app.vault.getName().replace(/\s+/g, "");
+	const streamingEndpointUrl = `https://${apiSettings.bindingHost}:${apiSettings.port}/mcp`;
+	const sseEndpointUrl = `https://${apiSettings.bindingHost}:${apiSettings.port}/sse`;
 
-	displayBasicConnectionInfo(infoBox, endpointUrl, apiSettings);
+	displayBasicConnectionInfo(infoBox, streamingEndpointUrl, sseEndpointUrl, apiSettings);
 
 	const detailsEl = infoBox.createEl("details", { cls: "mcp-collapsible" });
-	addClaudeCommand(detailsEl, vaultNameForCommand, endpointUrl, apiSettings);
-	addStandardMcpConfig(detailsEl, endpointUrl, apiSettings);
-	addSupergatewayConfig(detailsEl, vaultNameForCommand, endpointUrl, apiSettings);
+	addConnectionConfigs(detailsEl, streamingEndpointUrl, sseEndpointUrl, apiSettings);
+	addSupergatewayConfig(detailsEl, sseEndpointUrl, apiSettings);
 }
 
 function createSecureServerWarning(container: HTMLElement): void {
@@ -41,79 +40,81 @@ function createSecureServerWarning(container: HTMLElement): void {
 
 function displayBasicConnectionInfo(
 	container: HTMLElement,
-	endpointUrl: string,
+	streamingEndpointUrl: string,
+	sseEndpointUrl: string,
 	apiSettings: LocalRestApiSettings
 ): void {
-	const codeContainer = container.createDiv({ cls: "mcp-copyable-container" });
-	createCopyableCode(codeContainer, endpointUrl);
+	const streamingRow = container.createDiv({ cls: "mcp-copyable-row" });
+	streamingRow.createEl("span", {
+		text: "HTTP URL",
+		cls: "mcp-copyable-inline-label",
+	});
+	createCopyableCode(streamingRow, streamingEndpointUrl);
+
+	const sseRow = container.createDiv({ cls: "mcp-copyable-row" });
+	sseRow.createEl("span", { text: "SSE URL", cls: "mcp-copyable-inline-label" });
+	createCopyableCode(sseRow, sseEndpointUrl);
+
 	if (apiSettings.authToken) {
-		createCopyableCode(codeContainer, `Authorization: Bearer ${apiSettings.authToken}`);
+		createCopyableCode(container, `Authorization: Bearer ${apiSettings.authToken}`);
 	}
 }
 
-function addClaudeCommand(
+function addConnectionConfigs(
 	container: HTMLElement,
-	vaultName: string,
-	endpointUrl: string,
+	streamingEndpointUrl: string,
+	sseEndpointUrl: string,
 	apiSettings: LocalRestApiSettings
 ): void {
-	const claudeCommand = `claude mcp add -H 'Authorization: Bearer ${apiSettings.authToken}' -t sse ${vaultName} ${endpointUrl}`;
-
-	const commandContainer = container.createDiv({ cls: "mcp-copyable-container" });
-	commandContainer
-		.createDiv({ cls: "mcp-copyable-label" })
-		.createEl("span", { text: "Claude MCP Command" });
-	createCopyableCode(commandContainer, claudeCommand);
-}
-
-function addStandardMcpConfig(
-	container: HTMLElement,
-	endpointUrl: string,
-	apiSettings: LocalRestApiSettings
-): void {
-	const mcpConfigJson = {
-		type: "sse",
-		url: endpointUrl,
+	const streamingConfigJson = {
+		type: "streamableHttp",
+		url: streamingEndpointUrl,
 		headers: apiSettings.authToken ? { Authorization: `Bearer ${apiSettings.authToken}` } : {},
 	};
 
-	const jsonContainer = container.createDiv({ cls: "mcp-copyable-container" });
-	jsonContainer
+	container
 		.createDiv({ cls: "mcp-copyable-label" })
-		.createEl("span", { text: "MCP JSON Configuration" });
-	createCopyableCode(jsonContainer, JSON.stringify(mcpConfigJson, null, 2));
+		.createEl("span", { text: "Streaming HTTP Configuration" });
+	createCopyableCode(container, JSON.stringify(streamingConfigJson, null, 2));
+
+	const sseConfigJson = {
+		type: "sse",
+		url: sseEndpointUrl,
+		headers: apiSettings.authToken ? { Authorization: `Bearer ${apiSettings.authToken}` } : {},
+	};
+
+	container
+		.createDiv({ cls: "mcp-copyable-label" })
+		.createEl("span", { text: "SSE Configuration" });
+	createCopyableCode(container, JSON.stringify(sseConfigJson, null, 2));
 }
 
 function addSupergatewayConfig(
 	container: HTMLElement,
-	vaultName: string,
-	endpointUrl: string,
+	sseEndpointUrl: string,
 	apiSettings: LocalRestApiSettings
 ): void {
 	const supergatewayJson = {
-		[`${vaultName}`]: {
-			type: "stdio",
-			command: "npx",
-			args: [
-				"-y",
-				"supergateway",
-				"--sse",
-				endpointUrl,
-				...(apiSettings.authToken ? ["--oauth2Bearer", apiSettings.authToken] : []),
-			],
-			env: {
-				NODE_TLS_REJECT_UNAUTHORIZED: "0",
-			},
+		type: "stdio",
+		command: "npx",
+		args: [
+			"-y",
+			"supergateway",
+			"--sse",
+			sseEndpointUrl,
+			...(apiSettings.authToken ? ["--oauth2Bearer", apiSettings.authToken] : []),
+		],
+		env: {
+			NODE_TLS_REJECT_UNAUTHORIZED: "0",
 		},
 	};
 
-	const supergatewayContainer = container.createDiv({ cls: "mcp-copyable-container" });
-	supergatewayContainer
+	container
 		.createDiv({ cls: "mcp-copyable-label" })
-		.createEl("span", { text: "Use supergateway to connect with STDIO" });
-	createCopyableCode(supergatewayContainer, JSON.stringify(supergatewayJson, null, 2));
+		.createEl("span", { text: "STDIO Configuration (using Supergateway)" });
+	createCopyableCode(container, JSON.stringify(supergatewayJson, null, 2));
 
-	const linkEl = supergatewayContainer.createEl("a", {
+	const linkEl = container.createEl("a", {
 		text: "Learn more about supergateway",
 		href: "https://github.com/supercorp-ai/supergateway",
 	});

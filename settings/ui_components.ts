@@ -134,7 +134,7 @@ export function createRequiredPluginWarning(
 	}
 }
 
-export function createCopyableCode(container: HTMLElement, code: string): void {
+export function createCopyableCode(container: HTMLElement, code: string): HTMLElement {
 	const codeBlock = container.createEl("pre", { cls: "mcp-copyable-code" });
 	codeBlock.createEl("code", { text: code });
 	const copyButton = codeBlock.createEl("button", { cls: "mcp-copy-button", text: "📋" });
@@ -149,4 +149,6 @@ export function createCopyableCode(container: HTMLElement, code: string): void {
 			}, 2000);
 		});
 	});
+
+	return codeBlock;
 }
