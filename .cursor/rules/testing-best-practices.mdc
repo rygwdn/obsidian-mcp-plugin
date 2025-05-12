@@ -1,0 +1,13 @@
+---
+description:
+globs: test/**
+alwaysApply: false
+---
+# Testing Best Practices
+
+Tests should use real implementations instead of mocks whenever possible. The [test/resources.test.ts](mdc:test/resources.test.ts) file serves as a good example of this approach.
+
+Key testing principles:
+- Set up test environment with realistic data
+- Use MockApp to simulate Obsidian's API
+- Avoid vi.mock() for any of the code under test

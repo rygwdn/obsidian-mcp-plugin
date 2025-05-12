@@ -1,0 +1,24 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+# MCP Plugin Architecture
+
+This plugin follows a structured architecture for tools and resources:
+
+## Tools
+- Tools are defined in the [tools/](mdc:tools) directory
+- Each tool follows a registration pattern with name, description, and handler
+- Tools should use the logger from [tools/logging.ts](mdc:tools/logging.ts)
+- Tools for file access should use VaultFileResource
+
+## Resources
+- Resources provide standardized access to Obsidian data
+- The [tools/vault_file_resource.ts](mdc:tools/vault_file_resource.ts) provides the foundation for file access
+- Resources must be registered with the MCP server
+- Resources should handle daily notes through [tools/daily_note_utils.ts](mdc:tools/daily_note_utils.ts)
+
+## Daily Notes Support
+- Daily notes follow the special scheme: `file://daily:<date>`
+- Support aliases like "today", "yesterday", "tomorrow"

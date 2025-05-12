@@ -1,0 +1,21 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+Follow these best practices when working with Git in this project:
+
+- NEVER execute Git commands without explicit user permission
+- Always propose Git commands to the user before running them
+- Always disable the pager when using Git in scripts or automation:
+  ```bash
+  git --no-pager <command>
+  ```
+- Use non-interactive commands when running in scripts or automation:
+  ```bash
+  git commit -m "message" # Instead of git commit
+  git merge --no-edit branch-name # Instead of interactive merge
+  git rebase -i HEAD~3 # Avoid when in automation
+  ```
+- Ensure all checks pass before merging
+- Reference the [commit message format](mdc:.cursor/rules/commit-message-format.mdc) for proper commit messages

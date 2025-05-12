@@ -1,0 +1,19 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+# Code Style Guidelines
+
+Follow these conventions for consistent code:
+
+- Use TypeScript with proper typing throughout
+- Avoid `any` types whenever possible
+- Follow the conventional commit format (feat:, fix:, refactor:, etc.)
+- Create meaningful tests with descriptive it() blocks
+- Use descriptive variable names and add comments for complex logic
+- Favor composition over inheritance
+- Use centralized logging via the logger utility
+- For testing, prefer inline snapshots where appropriate
+
+See [CLAUDE.md](mdc:CLAUDE.md) for additional style guidelines.
