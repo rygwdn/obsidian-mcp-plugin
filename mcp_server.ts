@@ -15,6 +15,7 @@ import { getContentsTool } from "tools/get_contents";
 import type { Request, Response } from "express";
 import { isPluginEnabled as isDataviewEnabled } from "obsidian-dataview";
 import { logger } from "tools/logging";
+import { InitializeRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 
 export class ObsidianMcpServer {
 	private server: McpServer;
@@ -30,17 +31,12 @@ export class ObsidianMcpServer {
 		const vaultStructure = this.getVaultStructure();
 
 		this.server = new McpServer(
-			{
-				name: this.manifest.name,
-				version: this.manifest.version,
-			},
-			{
-				instructions: `${vaultDescription}
-
-Vault Structure:
-${vaultStructure}`,
-			}
+			{ name: this.manifest.name, version: this.manifest.version },
+			{ instructions: `${vaultDescription}\n\nVault Structure:\n${vaultStructure}` }
 		);
+
+		this.patchSseVersion();
+
 		this.server.server.onerror = (error) => {
 			logger.logError("Server Error:", error);
 		};
@@ -77,26 +73,30 @@ ${vaultStructure}`,
 		}
 	}
 
-	/**
-	 * Generates a formatted string representing the first two layers of directories in the vault
-	 */
+	private patchSseVersion() {
+		// Modify the server to always respond with the older protocol version for SSE connections to improve compatibility with older clients
+		this.server.server.setRequestHandler(InitializeRequestSchema, async (request, extra) => {
+			const response = await this.server.server["_oninitialize"](request);
+			if (extra.sessionId && this.sseTransports[extra.sessionId]) {
+				response.protocolVersion = "2024-11-05";
+			}
+			return response;
+		});
+	}
+
 	private getVaultStructure(): string {
 		const rootFolder = this.app.vault.getRoot();
 		let structure = "";
 
-		// Get all folders in the vault
 		const allFolders = this.app.vault
 			.getAllLoadedFiles()
 			.filter((file): file is TFolder => file instanceof TFolder)
 			.sort((a, b) => a.path.localeCompare(b.path));
 
-		// Process root level folders first
 		const rootFolders = allFolders.filter((folder) => folder.parent === rootFolder);
 
 		for (const folder of rootFolders) {
 			structure += `- ${folder.path}\n`;
-
-			// Add second level folders
 			const subFolders = allFolders.filter((f) => f.parent === folder);
 			for (const subFolder of subFolders) {
 				structure += `  - ${subFolder.path}\n`;
