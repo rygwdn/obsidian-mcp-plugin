@@ -4,6 +4,10 @@
 	"description": "Provides a Model Context Protocol (MCP) endpoint via Obsidian Local REST API",
 	"type": "module",
 	"main": "main.js",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/rygwdn/obsidian-mcp-plugin.git"
+	},
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
@@ -26,9 +30,19 @@
 		"install:copy": "npm run build && node scripts/install.js copy",
 		"install:link": "npm run build && node scripts/install.js link"
 	},
-	"keywords": [],
-	"author": "",
+	"keywords": [
+		"obsidian",
+		"mcp",
+		"model-context-protocol",
+		"ai",
+		"plugin",
+		"local-rest-api"
+	],
+	"author": "Ryan Wooden <rygwdn@gmail.com>",
 	"license": "MIT",
+	"publishConfig": {
+		"access": "public"
+	},
 	"devDependencies": {
 		"@eslint/js": "^9.26.0",
 		"@types/commander": "^2.12.0",
