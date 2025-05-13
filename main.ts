@@ -4,6 +4,7 @@ import { ObsidianMcpServer } from "mcp_server";
 import { DEFAULT_SETTINGS, MCPPluginSettings } from "./settings/types";
 import { MCPSettingTab } from "./settings/tab";
 import type { Response } from "express";
+import { logger } from "./tools/logging";
 
 export default class ObsidianMCPPlugin extends Plugin {
 	private api: LocalRestApiPublicApi;
@@ -53,6 +54,7 @@ export default class ObsidianMCPPlugin extends Plugin {
 
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		logger.getVerboseSetting = () => this.settings.verboseLogging;
 	}
 
 	async saveSettings() {

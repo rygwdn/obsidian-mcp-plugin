@@ -14,6 +14,7 @@ export interface MCPPluginSettings {
 		quickadd: boolean;
 	};
 	enablePrompts: boolean;
+	verboseLogging: boolean;
 }
 
 export const DEFAULT_SETTINGS: MCPPluginSettings = {
@@ -29,4 +30,5 @@ export const DEFAULT_SETTINGS: MCPPluginSettings = {
 		quickadd: true,
 	},
 	enablePrompts: true,
+	verboseLogging: false,
 };

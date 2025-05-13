@@ -31,8 +31,8 @@ Review:
 - [x] Prefer Vault API over Adapter API for file operations
 - [ ] Implement Vault Editor API for content modification
 - [x] Avoid hardcoded styling (use CSS classes and variables)
-- [ ] Add a settings toggle for logging verbosity - current implementation is too verbose by default
-- [ ] Minimize console logging - move most logging behind the verbosity setting
+- [x] Add a settings toggle for logging verbosity - current implementation is too verbose by default
+- [x] Minimize console logging - move most logging behind the verbosity setting
 
 ## MCP-Specific Requirements
 

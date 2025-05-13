@@ -86,5 +86,14 @@ export class MCPSettingTab extends PluginSettingTab {
 			setValue: (value) => (this.plugin.settings.toolNamePrefix = value),
 			saveSettings: () => this.plugin.saveSettings(),
 		});
+
+		createToggleSetting({
+			containerEl: this.containerEl,
+			name: "Verbose Logging",
+			desc: "Enable detailed logging in console (useful for debugging, but can be noisy)",
+			getValue: () => this.plugin.settings.verboseLogging,
+			setValue: (value) => (this.plugin.settings.verboseLogging = value),
+			saveSettings: () => this.plugin.saveSettings(),
+		});
 	}
 }

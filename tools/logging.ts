@@ -1,11 +1,22 @@
 export class Logger {
 	private prefix: string;
+	public getVerboseSetting: (() => boolean) | null = null;
 
 	constructor(prefix: string = "[MCP]") {
 		this.prefix = prefix;
 	}
 
+	private get isVerbose(): boolean {
+		return this.getVerboseSetting?.() ?? false;
+	}
+
 	log(message: string, ...args: unknown[]): void {
+		if (this.isVerbose) {
+			console.log(`${this.prefix} ${message}`, ...args);
+		}
+	}
+
+	logImportant(message: string, ...args: unknown[]): void {
 		console.log(`${this.prefix} ${message}`, ...args);
 	}
 
