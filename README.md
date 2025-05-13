@@ -48,27 +48,44 @@ This plugin offers a range of functionalities that can be enabled or disabled th
 
 - **File Access**: Allows AI assistants to read files, list directories, and retrieve file metadata
   within your vault. This is fundamental for many interactions that require understanding the
-  content and structure of your notes.
+  content and structure of your notes. *Security impact: Exposes vault content to connected systems.*
+
 - **Content Modification**: Grants AI assistants the ability to modify file content. This includes
   actions like appending text to existing notes, replacing sections of text, or creating new content
-  based on instructions.
+  based on instructions. *Security impact: HIGH - enables direct changes to your vault content.*
+
 - **Vault Search**: Enables AI assistants to perform text-based searches across all files in your
   vault. This is useful for finding specific information or patterns within your notes.
+  *Security impact: Makes all content discoverable through search queries.*
+
 - **Dataview Integration**: If you have the Dataview plugin installed and enabled, this feature
   allows AI assistants to execute Dataview queries. This can be powerful for querying and
   summarizing structured data within your notes (requires
   [Dataview plugin](https://github.com/blacksmithgu/obsidian-dataview)).
+  *Security impact: Can expose aggregated data from your entire vault.*
+
 - **Daily Notes Integration**: Provides specialized tools for interacting with daily notes. This
   requires either the core Daily Notes plugin or the
   [Periodic Notes plugin](https://github.com/liamcain/obsidian-periodic-notes) (configured for daily
   notes) to be active. It simplifies tasks like creating, retrieving, or updating daily entries.
+
 - **QuickAdd Integration**: If you use the QuickAdd plugin, this feature allows AI assistants to
   trigger QuickAdd actions and list available choices. This can automate workflows and content
   creation processes defined in QuickAdd (requires
   [QuickAdd plugin](https://github.com/chhoumann/quickadd)).
+  *Security impact: Can execute predefined commands with potentially broad effects.*
+
+- **Logging Verbosity**: Controls the detail level of console logging. By default, logging is minimal to reduce noise,
+  but you can enable "Verbose Logging" in Advanced settings for debugging or monitoring AI interactions.
 
 Each of these features can be toggled in the plugin's settings, allowing you to customize the level
 of access and capability granted to connected AI assistants.
+
+> [!CAUTION]
+> Content modification permissions allow AI assistants to make direct changes to your vault files.
+> Enable this permission only when needed and review any changes carefully.
+
+For comprehensive information on security, permissions, and privacy considerations, please review the [SECURITY.md](SECURITY.md) document.
 
 ## Using Prompts
 

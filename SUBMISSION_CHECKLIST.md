@@ -39,19 +39,22 @@ Review:
 Due to the nature of this plugin, special attention must be given to:
 
 - [x] Clearly document dependency on Local REST API plugin (already noted prominently in README)
-- [ ] Add a dedicated security section to README that covers:
-  - [ ] Network security implications of exposing vault content via API
-  - [ ] Authentication mechanisms and how to secure the connection
-  - [ ] Recommended practices for safeguarding sensitive information
-  - [ ] Risks of enabling content modification for external tools
-- [ ] Explicitly document the permissions model in settings:
-  - [ ] Explain what each permission allows access to
-  - [ ] Add warning notes about content modification capabilities
-  - [ ] Provide guidance on selecting appropriate permissions
-- [ ] Add a data privacy statement to explain:
-  - [ ] What data leaves the vault
-  - [ ] How data is transmitted
-  - [ ] Whether any data is stored externally
+- [x] Add a dedicated security section to README that covers:
+  - [x] Network security implications of exposing vault content via API
+  - [x] Authentication mechanisms and how to secure the connection
+  - [x] Recommended practices for safeguarding sensitive information
+  - [x] Risks of enabling content modification for external tools
+- [x] Explicitly document the permissions model in settings:
+  - [x] Explain what each permission allows access to
+  - [x] Add warning notes about content modification capabilities
+  - [x] Provide guidance on selecting appropriate permissions
+- [x] Add a data privacy statement to explain:
+  - [x] What data leaves the vault
+  - [x] How data is transmitted
+  - [x] Whether any data is stored externally
+- [ ] add file permissions
+  - [ ] per-file with metadata (allow/block)
+  - [ ] per-directory with settings UI (allow/block)
 
 ## UI/UX Guidelines
 
@@ -100,7 +103,7 @@ Since this plugin:
 4. Uses network connectivity
 
 These aspects must be clearly documented in:
-- [ ] README.md
+- [x] README.md
 - [ ] Pull request submission
 - [ ] Settings panel explanations
 
