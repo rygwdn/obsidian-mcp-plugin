@@ -114,10 +114,9 @@ function addSupergatewayConfig(
 		.createEl("span", { text: "STDIO Configuration (using Supergateway)" });
 	createCopyableCode(container, JSON.stringify(supergatewayJson, null, 2));
 
-	const linkEl = container.createEl("a", {
+	container.createEl("a", {
 		text: "Learn more about supergateway",
 		href: "https://github.com/supercorp-ai/supergateway",
+		cls: "mcp-link"
 	});
-	linkEl.style.display = "block";
-	linkEl.style.marginTop = "5px";
 }

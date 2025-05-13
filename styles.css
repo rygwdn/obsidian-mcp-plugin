@@ -160,6 +160,11 @@ available in the app when your plugin is enabled.
 	position: relative;
 }
 
+.mcp-link {
+	display: block;
+	margin-top: 5px;
+}
+
 /* Authentication notice styles */
 .mcp-auth-notice {
 	background-color: rgba(255, 196, 0, 0.1);

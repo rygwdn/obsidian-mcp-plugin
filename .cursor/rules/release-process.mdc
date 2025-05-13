@@ -5,7 +5,7 @@ alwaysApply: false
 ---
 # Release Process
 
-Follow these steps to properly release a new version of the MCP plugin:
+Follow these steps to properly release a new version of the MCP plugin for Obsidian submission:
 
 ## Pre-Release Checklist
 - Ensure all tests pass: `npm run check`
@@ -38,6 +38,16 @@ git push origin x.y.z
 After pushing the tag, GitHub Actions will:
 - Create a draft release with notes from the CHANGELOG
 - Build the plugin
+- Upload the required files as binary attachments to the release:
+  - main.js
+  - manifest.json
+  - styles.css (if used by the plugin)
+
+## IMPORTANT: Obsidian Plugin Requirements
+For Obsidian plugin directory submission, the release MUST have:
+1. The tag version (x.y.z) MUST exactly match the version in manifest.json
+2. The main.js, manifest.json, and styles.css (if applicable) files MUST be uploaded as binary attachments
+3. After review, the draft release must be published
 
 ## Final Steps
 - Wait for GitHub workflows to complete:
@@ -48,7 +58,8 @@ After pushing the tag, GitHub Actions will:
    gh run watch {CI run id}
    gh run watch {release run id}
    ```
-- Once completed, view the release URL so the user can update and publish it:
+- View and publish the release:
    ```bash
    gh release view x.y.z --web
    ```
+- After publishing the release, verify that all required files are attached to the release
