@@ -14,39 +14,53 @@ Review:
 
 ## Plugin Release Requirements
 
-- [ ] Update manifest.json with proper semantic version
-- [ ] Update versions.json file with compatibility information
-- [ ] Create GitHub release with tag matching exact version number
-- [ ] Update release documentation to follow release requirements - review the documents outlined above for details
-- [ ] Upload required files as binary attachments to the release:
-  - [ ] main.js
-  - [ ] manifest.json
-  - [ ] styles.css (if applicable)
+- [x] Update manifest.json with proper semantic version
+- [x] Update versions.json file with compatibility information
+- [X] Release process for Obsidian submission:
+  - [X] Create a GitHub release with tag matching EXACTLY the version in manifest.json (e.g., "0.2.0")
+  - [X] Verify that the GitHub Actions workflow uploads these files as binary attachments:
+    - [X] main.js
+    - [X] manifest.json
+    - [X] styles.css (if used by the plugin)
+  - [X] Ensure the draft release is published after review
 
 ## Technical Requirements
 
-- [ ] Use `this.app` instead of global `app` or `window.app`
-- [ ] Avoid using `innerHTML`, `outerHTML`, and `insertAdjacentHTML`
-- [ ] Prefer Vault API over Adapter API for file operations
-- [ ] Avoid hardcoded styling (use CSS classes and variables)
-- [ ] Minimize console logging
+- [x] Use `this.app` instead of global `app` or `window.app`
+- [x] Avoid using `innerHTML`, `outerHTML`, and `insertAdjacentHTML`
+- [x] Prefer Vault API over Adapter API for file operations
+- [ ] Implement Vault Editor API for content modification
+- [x] Avoid hardcoded styling (use CSS classes and variables)
+- [ ] Add a settings toggle for logging verbosity - current implementation is too verbose by default
+- [ ] Minimize console logging - move most logging behind the verbosity setting
 
 ## MCP-Specific Requirements
 
 Due to the nature of this plugin, special attention must be given to:
 
-- [ ] Clearly document dependency on Local REST API plugin
-- [ ] Document network permissions and explain why they're needed
-- [ ] Detail all vault access permissions and why they're needed
-- [ ] Add security section to README to explain implications
-- [ ] Document which file access patterns are used
+- [x] Clearly document dependency on Local REST API plugin (already noted prominently in README)
+- [ ] Add a dedicated security section to README that covers:
+  - [ ] Network security implications of exposing vault content via API
+  - [ ] Authentication mechanisms and how to secure the connection
+  - [ ] Recommended practices for safeguarding sensitive information
+  - [ ] Risks of enabling content modification for external tools
+- [ ] Explicitly document the permissions model in settings:
+  - [ ] Explain what each permission allows access to
+  - [ ] Add warning notes about content modification capabilities
+  - [ ] Provide guidance on selecting appropriate permissions
+- [ ] Add a data privacy statement to explain:
+  - [ ] What data leaves the vault
+  - [ ] How data is transmitted
+  - [ ] Whether any data is stored externally
 
 ## UI/UX Guidelines
 
-- [ ] Use sentence case for UI elements
-- [ ] Avoid using "settings" in settings headings
-- [ ] Use `setHeading()` for setting headers in settings
-- [ ] Follow Obsidian UI patterns for settings
+- [x] Use sentence case for UI elements (correctly implemented)
+- [x] Avoid using "settings" in settings headings (only one "Basic Settings" heading should be renamed)
+- [x] Use appropriate heading elements (using createEl("h1"/"h2") in a clean way)
+- [ ] Fix hardcoded styles in connection_ui.ts (lines 121-122) to use CSS classes
+- [ ] Add warning labels for all permissions that allow content modification
+- [ ] Use standard Obsidian styling for collapsible sections
 
 ## Pull Request Submission Process
 
