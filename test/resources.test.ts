@@ -48,12 +48,12 @@ describe("VaultFileResource", () => {
 			},
 		};
 
-		resource = new VaultFileResource(mockApp);
+		resource = new VaultFileResource(mockApp, mockApp.settings);
 	});
 
 	describe("constructor", () => {
 		it("should initialize correctly", () => {
-			const resource = new VaultFileResource(mockApp);
+			const resource = new VaultFileResource(mockApp, mockApp.settings);
 			expect.soft(resource.template).toBeDefined();
 			const resourceName = resource["resourceName"]; // Access protected property for test validation
 			expect(resourceName).toBe("file");
@@ -92,7 +92,7 @@ describe("VaultFileResource", () => {
 		it("should use list method when initialized", () => {
 			// Verify the resource is created correctly - we can't directly test .list()
 			// since it's actually inside a ResourceTemplate
-			const resource = new VaultFileResource(mockApp);
+			const resource = new VaultFileResource(mockApp, mockApp.settings);
 			expect(resource).toBeDefined();
 
 			// Instead, test the list method directly since that's what the template would call
@@ -219,12 +219,12 @@ describe("VaultDailyNoteResource", () => {
 			},
 		};
 
-		resource = new VaultDailyNoteResource(mockApp);
+		resource = new VaultDailyNoteResource(mockApp, mockApp.settings);
 	});
 
 	describe("constructor", () => {
 		it("should initialize correctly", () => {
-			const resource = new VaultDailyNoteResource(mockApp);
+			const resource = new VaultDailyNoteResource(mockApp, mockApp.settings);
 			expect.soft(resource.template).toBeDefined();
 			const resourceName = resource["resourceName"]; // Access protected property for test validation
 			expect(resourceName).toBe("daily");
@@ -346,7 +346,7 @@ describe("getContentsTool", () => {
 			},
 		};
 
-		handler = getContentsTool.handler(mockApp);
+		handler = getContentsTool.handler(mockApp, mockApp.settings);
 	});
 
 	describe("error handling", () => {
@@ -394,7 +394,7 @@ describe("getContentsTool", () => {
 			vi.clearAllMocks();
 
 			mockApp.mockFiles.clear();
-			const errorHandler = getContentsTool.handler(mockApp);
+			const errorHandler = getContentsTool.handler(mockApp, mockApp.settings);
 
 			await expect(
 				errorHandler({ uri: "daily:///today" })

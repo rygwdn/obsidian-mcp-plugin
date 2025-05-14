@@ -68,7 +68,7 @@ describe("update_content tool", () => {
 	describe("regular file handling", () => {
 		describe("append mode", () => {
 			it("should append content to an existing file", async () => {
-				const handler = updateContentTool.handler(mockApp);
+				const handler = updateContentTool.handler(mockApp, mockApp.settings);
 				const result = await handler({
 					uri: "file:///test.md",
 					mode: "append",
@@ -84,7 +84,7 @@ describe("update_content tool", () => {
 					"test.md": "Content without newline",
 				});
 
-				const handler = updateContentTool.handler(mockApp);
+				const handler = updateContentTool.handler(mockApp, mockApp.settings);
 				await handler({
 					uri: "file:///test.md",
 					mode: "append",
@@ -98,8 +98,7 @@ describe("update_content tool", () => {
 			});
 
 			it("should throw an error if the file doesn't exist and create_if_missing is false", async () => {
-				const handler = updateContentTool.handler(mockApp);
-
+				const handler = updateContentTool.handler(mockApp, mockApp.settings);
 				await expect(
 					handler({
 						uri: "file:///nonexistent.md",
@@ -110,7 +109,7 @@ describe("update_content tool", () => {
 			});
 
 			it("should create a new file if it doesn't exist and create_if_missing is true", async () => {
-				const handler = updateContentTool.handler(mockApp);
+				const handler = updateContentTool.handler(mockApp, mockApp.settings);
 				const result = await handler({
 					uri: "file:///new_file.md",
 					mode: "append",
@@ -118,14 +117,19 @@ describe("update_content tool", () => {
 					create_if_missing: true,
 				});
 
-				expect(mockApp.vault.create).toHaveBeenCalledWith("new_file.md", "New file content");
 				expect(result).toContain("Content appended successfully to new_file.md");
+
+				const file = mockApp.mockVault.files.get("new_file.md");
+				expect(file?.contents).toMatchInlineSnapshot(`
+					"
+					New file content"
+				`);
 			});
 		});
 
 		describe("replace mode", () => {
 			it("should replace content in a file", async () => {
-				const handler = updateContentTool.handler(mockApp);
+				const handler = updateContentTool.handler(mockApp, mockApp.settings);
 				const result = await handler({
 					uri: "file:///replace.md",
 					mode: "replace",
@@ -141,7 +145,7 @@ describe("update_content tool", () => {
 			});
 
 			it("should throw an error when the find parameter is not provided", async () => {
-				const handler = updateContentTool.handler(mockApp);
+				const handler = updateContentTool.handler(mockApp, mockApp.settings);
 
 				await expect(
 					handler({
@@ -153,7 +157,7 @@ describe("update_content tool", () => {
 			});
 
 			it("should throw an error when content to find is not in the file", async () => {
-				const handler = updateContentTool.handler(mockApp);
+				const handler = updateContentTool.handler(mockApp, mockApp.settings);
 
 				await expect(
 					handler({
@@ -166,7 +170,7 @@ describe("update_content tool", () => {
 			});
 
 			it("should throw an error when there are multiple matches", async () => {
-				const handler = updateContentTool.handler(mockApp);
+				const handler = updateContentTool.handler(mockApp, mockApp.settings);
 
 				await expect(
 					handler({
@@ -179,7 +183,7 @@ describe("update_content tool", () => {
 			});
 
 			it("should work with empty replacement string", async () => {
-				const handler = updateContentTool.handler(mockApp);
+				const handler = updateContentTool.handler(mockApp, mockApp.settings);
 				const result = await handler({
 					uri: "file:///replace.md",
 					mode: "replace",
@@ -198,7 +202,7 @@ describe("update_content tool", () => {
 	describe("daily:// URI handling", () => {
 		describe("append mode", () => {
 			it("should append content to today's daily note", async () => {
-				const handler = updateContentTool.handler(mockApp);
+				const handler = updateContentTool.handler(mockApp, mockApp.settings);
 				const result = await handler({
 					uri: "daily:///today",
 					mode: "append",
@@ -214,10 +218,9 @@ describe("update_content tool", () => {
 			});
 
 			it("should throw error when daily note doesn't exist and create_if_missing is false", async () => {
-				// Remove today's note
 				mockApp.mockVault.files.delete("daily/2023-05-09.md");
 
-				const handler = updateContentTool.handler(mockApp);
+				const handler = updateContentTool.handler(mockApp, mockApp.settings);
 				await expect(
 					handler({
 						uri: "daily:///today",
@@ -231,7 +234,7 @@ describe("update_content tool", () => {
 				// Remove today's note
 				mockApp.mockVault.files.delete("daily/2023-05-09.md");
 
-				const handler = updateContentTool.handler(mockApp);
+				const handler = updateContentTool.handler(mockApp, mockApp.settings);
 				const result = await handler({
 					uri: "daily:///today",
 					mode: "append",
@@ -252,7 +255,7 @@ describe("update_content tool", () => {
 				mockApp.internalPlugins.plugins["daily-notes"].enabled = false;
 				mockApp.plugins.plugins["periodic-notes"] = null as any;
 
-				const handler = updateContentTool.handler(mockApp);
+				const handler = updateContentTool.handler(mockApp, mockApp.settings);
 				await expect(
 					handler({
 						uri: "daily:///today",
@@ -265,7 +268,7 @@ describe("update_content tool", () => {
 
 		describe("replace mode", () => {
 			it("should replace content in today's daily note", async () => {
-				const handler = updateContentTool.handler(mockApp);
+				const handler = updateContentTool.handler(mockApp, mockApp.settings);
 				const result = await handler({
 					uri: "daily:///today",
 					mode: "replace",
@@ -282,7 +285,7 @@ describe("update_content tool", () => {
 			});
 
 			it("should throw error when using replace mode without find parameter", async () => {
-				const handler = updateContentTool.handler(mockApp);
+				const handler = updateContentTool.handler(mockApp, mockApp.settings);
 				await expect(
 					handler({
 						uri: "daily:///today",
@@ -293,7 +296,7 @@ describe("update_content tool", () => {
 			});
 
 			it("should throw error when content to find is not in the daily note", async () => {
-				const handler = updateContentTool.handler(mockApp);
+				const handler = updateContentTool.handler(mockApp, mockApp.settings);
 				await expect(
 					handler({
 						uri: "daily:///today",
@@ -314,7 +317,7 @@ describe("update_content tool", () => {
 					)
 				);
 
-				const handler = updateContentTool.handler(mockApp);
+				const handler = updateContentTool.handler(mockApp, mockApp.settings);
 				await expect(
 					handler({
 						uri: "daily:///today",

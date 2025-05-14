@@ -1,11 +1,13 @@
 # Obsidian MCP Plugin Submission Checklist
 
-This document outlines all required steps to submit the MCP API Plugin to the official Obsidian community plugin directory.
+This document outlines all required steps to submit the MCP API Plugin to the official Obsidian
+community plugin directory.
 
 Review:
-- https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines ([raw](https://raw.githubusercontent.com/obsidianmd/obsidian-developer-docs/a2bac2adce51d9aa056dbe8eac161bdb5a29cefb/en/Plugins/Releasing/Plugin%20guidelines.md))
-- https://docs.obsidian.md/Plugins/Releasing/Submit+your+plugin ([raw](https://raw.githubusercontent.com/obsidianmd/obsidian-developer-docs/a2bac2adce51d9aa056dbe8eac161bdb5a29cefb/en/Plugins/Releasing/Submit%20your%20plugin.md))
-- https://github.com/obsidianmd/obsidian-releases/blob/master/.github/PULL_REQUEST_TEMPLATE/plugin.md
+
+- [Plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines) ([raw](https://raw.githubusercontent.com/obsidianmd/obsidian-developer-docs/a2bac2adce51d9aa056dbe8eac161bdb5a29cefb/en/Plugins/Releasing/Plugin%20guidelines.md))
+- [Submit your plugin](https://docs.obsidian.md/Plugins/Releasing/Submit+your+plugin) ([raw](https://raw.githubusercontent.com/obsidianmd/obsidian-developer-docs/a2bac2adce51d9aa056dbe8eac161bdb5a29cefb/en/Plugins/Releasing/Submit%20your%20plugin.md))
+- [PR Template](https://github.com/obsidianmd/obsidian-releases/blob/master/.github/PULL_REQUEST_TEMPLATE/plugin.md)
 
 ## Repository Requirements
 
@@ -71,6 +73,7 @@ Once all requirements are met:
 
 1. Fork the [obsidian-releases repository](https://github.com/obsidianmd/obsidian-releases)
 2. Add the plugin to community-plugins.json:
+
    ```json
    {
      "id": "obsidian-mcp-plugin",
@@ -81,6 +84,7 @@ Once all requirements are met:
      "branch": "main"
    }
    ```
+
 3. Create a pull request with title: "Add plugin: MCP API for Obsidian"
 4. Complete all items in the PR template checklist:
    - [ ] The GitHub repository name matches the plugin ID
@@ -97,12 +101,14 @@ Once all requirements are met:
 ## Special Considerations
 
 Since this plugin:
+
 1. Depends on another plugin (Obsidian Local REST API)
 2. Creates a server endpoint
 3. Allows external access to vault contents
 4. Uses network connectivity
 
 These aspects must be clearly documented in:
+
 - [x] README.md
 - [ ] Pull request submission
 - [ ] Settings panel explanations

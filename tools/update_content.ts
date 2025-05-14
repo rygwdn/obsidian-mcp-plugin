@@ -2,6 +2,8 @@ import { App, TFile } from "obsidian";
 import { z } from "zod";
 import { ToolRegistration } from "./types";
 import { resolvePath } from "./daily_note_utils";
+import { getAccessibleFile } from "./permissions";
+import { MCPPluginSettings } from "../settings/types";
 
 export const updateContentTool: ToolRegistration = {
 	name: "update_content",
@@ -36,7 +38,7 @@ export const updateContentTool: ToolRegistration = {
 			),
 	},
 	handler:
-		(app: App) =>
+		(app: App, settings: MCPPluginSettings) =>
 		async (args: {
 			uri: string;
 			mode: "append" | "replace";
@@ -45,13 +47,12 @@ export const updateContentTool: ToolRegistration = {
 			create_if_missing?: boolean;
 		}) => {
 			const resolved = await resolvePath(app, new URL(args.uri));
-			let file = app.vault.getFileByPath(resolved);
-
-			if (args.create_if_missing && !file) {
-				file = await app.vault.create(resolved, args.content);
-			} else if (!file) {
-				throw new Error(`File not found: ${resolved}`);
-			}
+			const file = await getAccessibleFile(
+				resolved,
+				args.create_if_missing ? "create" : "write",
+				app,
+				settings
+			);
 
 			const fileContent = await app.vault.read(file);
 

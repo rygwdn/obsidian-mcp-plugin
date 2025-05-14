@@ -1,6 +1,7 @@
 import { vi } from "vitest";
 import yaml from "yaml";
 import type * as Obsidian from "obsidian/obsidian.d.ts";
+import { DEFAULT_SETTINGS, MCPPluginSettings } from "../../settings/types";
 
 export class MockFile implements Obsidian.TFile, Obsidian.TFolder {
 	parent: null = null;
@@ -257,21 +258,45 @@ export class MockApp implements Obsidian.App {
 	}
 
 	vault: Obsidian.Vault = this.mockVault as unknown as Obsidian.Vault;
-	plugins = {
-		enabledPlugins: new Set<string>(),
-		plugins: {
-			"periodic-notes": {
-				settings: {
-					daily: {
-						format: "YYYY-MM-DD",
-						folder: "daily",
-						template: "",
+	settings: MCPPluginSettings;
+	plugins: {
+		enabledPlugins: Set<string>;
+		plugins: Record<string, any>;
+		getPlugin: (id: string) => any;
+	};
+
+	constructor(customSettings?: Partial<MCPPluginSettings>) {
+		this.settings = {
+			...DEFAULT_SETTINGS,
+			directoryPermissions: {
+				mode: "blocklist",
+				directories: ["blocked-dir"],
+			},
+			...customSettings,
+		};
+
+		this.plugins = {
+			enabledPlugins: new Set<string>(),
+			plugins: {
+				"periodic-notes": {
+					settings: {
+						daily: {
+							format: "YYYY-MM-DD",
+							folder: "daily",
+							template: "",
+						},
 					},
 				},
+				quickadd: {} as any, // Will be set by tests when needed
+				"obsidian-mcp-plugin": {
+					settings: this.settings,
+				},
 			},
-			quickadd: {} as any, // Will be set by tests when needed
-		},
-	};
+			getPlugin: function (id: string) {
+				return this.plugins[id];
+			},
+		};
+	}
 	internalPlugins = {
 		plugins: {
 			"daily-notes": {

@@ -18,7 +18,7 @@ describe("search tool", () => {
 	});
 
 	it("should return matching markdown files for a query", async () => {
-		const handler = searchTool.handler(mockApp);
+		const handler = searchTool.handler(mockApp, mockApp.settings);
 		const result = await handler({
 			query: "apple",
 			limit: 100,
@@ -37,7 +37,7 @@ describe("search tool", () => {
 	});
 
 	it("should throw an error when no results are found", async () => {
-		const handler = searchTool.handler(mockApp);
+		const handler = searchTool.handler(mockApp, mockApp.settings);
 		await expect(
 			handler({
 				query: "nonexistent",
@@ -48,7 +48,7 @@ describe("search tool", () => {
 	});
 
 	it("should be case-insensitive", async () => {
-		const handler = searchTool.handler(mockApp);
+		const handler = searchTool.handler(mockApp, mockApp.settings);
 		const result = await handler({
 			query: "APPLE",
 			limit: 100,
@@ -62,7 +62,7 @@ describe("search tool", () => {
 	});
 
 	it("should respect the limit parameter", async () => {
-		const handler = searchTool.handler(mockApp);
+		const handler = searchTool.handler(mockApp, mockApp.settings);
 		const result = await handler({
 			query: "apple",
 			limit: 1,
@@ -78,7 +78,7 @@ describe("search tool", () => {
 	});
 
 	it("should filter by folder when specified", async () => {
-		const handler = searchTool.handler(mockApp);
+		const handler = searchTool.handler(mockApp, mockApp.settings);
 		const result = await handler({
 			query: "apple",
 			limit: 100,
@@ -96,7 +96,7 @@ describe("search tool", () => {
 		// Instead of trying to spy on the mocked functions, let's test behavior
 
 		// We'll use different mock data for fuzzy search to verify it was used
-		const handler = searchTool.handler(mockApp);
+		const handler = searchTool.handler(mockApp, mockApp.settings);
 
 		// Run with fuzzy=false (simple search)
 		const result1 = await handler({
@@ -118,7 +118,7 @@ describe("search tool", () => {
 	});
 
 	it("should format match results with context", async () => {
-		const handler = searchTool.handler(mockApp);
+		const handler = searchTool.handler(mockApp, mockApp.settings);
 		const result = await handler({
 			query: "apple",
 			limit: 100,

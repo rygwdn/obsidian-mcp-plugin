@@ -26,6 +26,123 @@ export default [
 		},
 	},
 	{
+		files: ["**/*.ts"],
+		ignores: ["tools/permissions.ts"],
+		rules: {
+			"no-restricted-properties": [
+				"error",
+				{
+					object: "app.vault",
+					property: "getFileByPath",
+					message:
+						"Direct vault access not allowed! Use getAccessibleFile() from permissions.ts instead.",
+				},
+				{
+					object: "this.app.vault",
+					property: "getFileByPath",
+					message:
+						"Direct vault access not allowed! Use getAccessibleFile() from permissions.ts instead.",
+				},
+				{
+					object: "app.vault",
+					property: "getMarkdownFiles",
+					message:
+						"Direct vault access not allowed! Use getAccessibleMarkdownFiles() from permissions.ts instead.",
+				},
+				{
+					object: "this.app.vault",
+					property: "getMarkdownFiles",
+					message:
+						"Direct vault access not allowed! Use getAccessibleMarkdownFiles() from permissions.ts instead.",
+				},
+				{
+					object: "app.vault",
+					property: "getFiles",
+					message:
+						"Direct vault access not allowed! Use getAccessibleFiles() from permissions.ts instead.",
+				},
+				{
+					object: "this.app.vault",
+					property: "getFiles",
+					message:
+						"Direct vault access not allowed! Use getAccessibleFiles() from permissions.ts instead.",
+				},
+				{
+					object: "app.vault",
+					property: "create",
+					message:
+						"Direct vault access not allowed! Use getAccessibleFile() with 'create' permission from permissions.ts instead.",
+				},
+				{
+					object: "this.app.vault",
+					property: "create",
+					message:
+						"Direct vault access not allowed! Use getAccessibleFile() with 'create' permission from permissions.ts instead.",
+				},
+				{
+					object: "app.vault",
+					property: "modify",
+					message:
+						"Direct vault access not allowed! Use getAccessibleFile() with 'write' permission before modifying files.",
+				},
+				{
+					object: "this.app.vault",
+					property: "modify",
+					message:
+						"Direct vault access not allowed! Use getAccessibleFile() with 'write' permission before modifying files.",
+				},
+				{
+					object: "app.vault",
+					property: "read",
+					message:
+						"Direct vault access not allowed! Use getAccessibleFile() with 'read' permission before reading files.",
+				},
+				{
+					object: "this.app.vault",
+					property: "read",
+					message:
+						"Direct vault access not allowed! Use getAccessibleFile() with 'read' permission before reading files.",
+				},
+				{
+					object: "app.vault",
+					property: "cachedRead",
+					message:
+						"Direct vault access not allowed! Use getAccessibleFile() with 'read' permission before reading files.",
+				},
+				{
+					object: "this.app.vault",
+					property: "cachedRead",
+					message:
+						"Direct vault access not allowed! Use getAccessibleFile() with 'read' permission before reading files.",
+				},
+				{
+					object: "app.vault",
+					property: "append",
+					message:
+						"Direct vault access not allowed! Use getAccessibleFile() with 'write' permission before appending to files.",
+				},
+				{
+					object: "this.app.vault",
+					property: "append",
+					message:
+						"Direct vault access not allowed! Use getAccessibleFile() with 'write' permission before appending to files.",
+				},
+				{
+					object: "app.vault",
+					property: "delete",
+					message:
+						"Direct vault access not allowed! Use getAccessibleFile() with 'write' permission before deleting files.",
+				},
+				{
+					object: "this.app.vault",
+					property: "delete",
+					message:
+						"Direct vault access not allowed! Use getAccessibleFile() with 'write' permission before deleting files.",
+				},
+			],
+		},
+	},
+	{
 		files: ["test/**/*.ts"],
 		rules: {
 			"@typescript-eslint/no-explicit-any": "off", // Disable in test files

@@ -44,9 +44,9 @@ export class ObsidianMcpServer {
 		const { enabledTools } = this.settings;
 
 		if (enabledTools.file_access) {
-			new VaultFileResource(this.app).register(this.server);
-			new VaultDailyNoteResource(this.app).register(this.server);
-			new FileMetadataResource(this.app).register(this.server);
+			new VaultFileResource(this.app, this.settings).register(this.server);
+			new VaultDailyNoteResource(this.app, this.settings).register(this.server);
+			new FileMetadataResource(this.app, this.settings).register(this.server);
 			this.registerTool(this.server, getContentsTool);
 			this.registerTool(this.server, getFileMetadataTool);
 		}
@@ -178,7 +178,7 @@ export class ObsidianMcpServer {
 		const wrappedToolHandler = logger.withToolLogging(
 			toolName,
 			async (args: Record<string, unknown>) => {
-				return await toolReg.handler(this.app)(args);
+				return await toolReg.handler(this.app, this.settings)(args);
 			}
 		);
 

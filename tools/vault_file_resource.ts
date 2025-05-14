@@ -1,9 +1,11 @@
-import { App, TFile } from "obsidian";
+import { App } from "obsidian";
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { ReadResourceResult } from "@modelcontextprotocol/sdk/types";
 import { UriTemplate, Variables } from "@modelcontextprotocol/sdk/shared/uriTemplate.js";
 import { logger } from "./logging";
 import { ALIASES, resolvePath } from "./daily_note_utils";
+import { getAccessibleFile, getAccessibleMarkdownFiles } from "./permissions";
+import { MCPPluginSettings } from "../settings/types";
 
 class SimpleUriTemplate extends UriTemplate {
 	constructor(
@@ -26,7 +28,10 @@ export class VaultFileResource {
 	protected resourceName: string;
 	protected description: string;
 
-	constructor(protected app: App) {
+	constructor(
+		protected app: App,
+		protected settings: MCPPluginSettings
+	) {
 		this.resourceName = "file";
 		this.description = "Provides access to files and directories in the Obsidian vault";
 	}
@@ -59,7 +64,7 @@ export class VaultFileResource {
 	}
 
 	public list() {
-		const files = this.app.vault.getMarkdownFiles();
+		const files = getAccessibleMarkdownFiles(this.app, this.settings, "read");
 
 		const resources = files.map((file) => ({
 			name: file.path,
@@ -71,7 +76,7 @@ export class VaultFileResource {
 	}
 
 	public completePath(value: string) {
-		const files = this.app.vault.getMarkdownFiles();
+		const files = getAccessibleMarkdownFiles(this.app, this.settings, "read");
 		logger.log(`completePath '${value}' found ${files.length} candidate files`);
 		return files.map((file) => file.path).filter((path) => path.startsWith(value));
 	}
@@ -94,16 +99,18 @@ export class VaultFileResource {
 			? parseInt(uri.searchParams.get("endOffset") as string)
 			: undefined;
 
-		const file = this.app.vault.getFileByPath(pathVar) as TFile | null;
+		const exists = Boolean(this.app.vault.getFileByPath(pathVar));
 
-		if (file) {
+		if (exists) {
+			const file = await getAccessibleFile(pathVar, "read", this.app, this.settings);
 			const content = await this.app.vault.cachedRead(file);
 			const slicedContent = content.slice(startOffset, endOffset);
-
 			return createResourceResult(uri.toString(), slicedContent);
 		}
 
-		const allFilePaths = this.app.vault.getFiles().map((f) => f.path);
+		const allFilePaths = getAccessibleMarkdownFiles(this.app, this.settings, "read").map(
+			(f) => f.path
+		);
 		const files = processDirectoryPaths(allFilePaths, pathVar === "/" ? "" : pathVar, depth);
 
 		if (files.length === 0) {
@@ -115,8 +122,8 @@ export class VaultFileResource {
 }
 
 export class VaultDailyNoteResource extends VaultFileResource {
-	constructor(app: App) {
-		super(app);
+	constructor(app: App, settings: MCPPluginSettings) {
+		super(app, settings);
 		this.resourceName = "daily";
 		this.description = "Provides access to daily notes in the Obsidian vault";
 	}

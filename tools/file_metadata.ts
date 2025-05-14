@@ -5,12 +5,15 @@ import { ReadResourceResult } from "@modelcontextprotocol/sdk/types";
 import { Variables } from "@modelcontextprotocol/sdk/shared/uriTemplate";
 import { ToolRegistration } from "./types";
 import { logger } from "./logging";
+import { getAccessibleFile, getAccessibleMarkdownFiles } from "./permissions";
+import { MCPPluginSettings } from "../settings/types";
 
-export function generateFileMetadata(app: App, filePath: string): string {
-	const file = app.vault.getFileByPath(filePath);
-	if (!file) {
-		throw new Error(`File not found: ${filePath}`);
-	}
+export async function generateFileMetadata(
+	app: App,
+	filePath: string,
+	settings: MCPPluginSettings
+): Promise<string> {
+	const file = await getAccessibleFile(filePath, "read", app, settings);
 
 	const fileCache = app.metadataCache.getFileCache(file);
 	if (!fileCache) {
@@ -64,14 +67,17 @@ export const getFileMetadataTool: ToolRegistration = {
 	schema: {
 		path: z.string().describe("Path to the file to get metadata for"),
 	},
-	handler: (app: App) => async (args: Record<string, unknown>) => {
+	handler: (app: App, settings: MCPPluginSettings) => async (args: Record<string, unknown>) => {
 		const path = args.path as string;
-		return generateFileMetadata(app, path);
+		return await generateFileMetadata(app, path, settings);
 	},
 };
 
 export class FileMetadataResource {
-	constructor(private app: App) {}
+	constructor(
+		private app: App,
+		private settings: MCPPluginSettings
+	) {}
 
 	public register(server: McpServer) {
 		logger.logResourceRegistration("metadata");
@@ -101,7 +107,7 @@ export class FileMetadataResource {
 	}
 
 	public list() {
-		const files = this.app.vault.getMarkdownFiles();
+		const files = getAccessibleMarkdownFiles(this.app, this.settings, "read");
 		return {
 			resources: files.map((file) => ({
 				name: file.path,
@@ -112,7 +118,7 @@ export class FileMetadataResource {
 	}
 
 	public completePath(value: string) {
-		const files = this.app.vault.getMarkdownFiles();
+		const files = getAccessibleMarkdownFiles(this.app, this.settings, "read");
 		return files.map((file) => file.path).filter((path) => path.startsWith(value));
 	}
 
@@ -126,7 +132,7 @@ export class FileMetadataResource {
 			contents: [
 				{
 					uri: uri.toString(),
-					text: generateFileMetadata(this.app, filePath),
+					text: await generateFileMetadata(this.app, filePath, this.settings),
 					mimeType: "text/markdown",
 				},
 			],

@@ -117,6 +117,6 @@ function addSupergatewayConfig(
 	container.createEl("a", {
 		text: "Learn more about supergateway",
 		href: "https://github.com/supercorp-ai/supergateway",
-		cls: "mcp-link"
+		cls: "mcp-link",
 	});
 }

@@ -75,8 +75,8 @@ This plugin offers a range of functionalities that can be enabled or disabled th
   [QuickAdd plugin](https://github.com/chhoumann/quickadd)).
   *Security impact: Can execute predefined commands with potentially broad effects.*
 
-- **Logging Verbosity**: Controls the detail level of console logging. By default, logging is minimal to reduce noise,
-  but you can enable "Verbose Logging" in Advanced settings for debugging or monitoring AI interactions.
+- **Logging Verbosity**: Controls console logging detail level. By default, logging is minimal, but you
+  can enable "Verbose Logging" in Advanced settings for debugging.
 
 Each of these features can be toggled in the plugin's settings, allowing you to customize the level
 of access and capability granted to connected AI assistants.
@@ -85,7 +85,8 @@ of access and capability granted to connected AI assistants.
 > Content modification permissions allow AI assistants to make direct changes to your vault files.
 > Enable this permission only when needed and review any changes carefully.
 
-For comprehensive information on security, permissions, and privacy considerations, please review the [SECURITY.md](SECURITY.md) document.
+For comprehensive information on security, permissions, and privacy considerations, please review the
+[SECURITY.md](SECURITY.md) document.
 
 ## Using Prompts
 
@@ -131,7 +132,7 @@ Key commands:
 2. Bump version: `npm run version`.
 3. Tag and push: `git tag x.y.z && git push origin x.y.z`.
 
-_GitHub Actions will draft a release from the changelog._
+*GitHub Actions will draft a release from the changelog.*
 
 ## Related Projects
 

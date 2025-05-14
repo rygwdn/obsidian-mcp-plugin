@@ -15,6 +15,10 @@ export interface MCPPluginSettings {
 	};
 	enablePrompts: boolean;
 	verboseLogging: boolean;
+	directoryPermissions: {
+		mode: "allowlist" | "blocklist";
+		directories: string[];
+	};
 }
 
 export const DEFAULT_SETTINGS: MCPPluginSettings = {
@@ -23,7 +27,7 @@ export const DEFAULT_SETTINGS: MCPPluginSettings = {
 	vaultDescription:
 		"This vault contains personal notes on various topics including work projects, research, and daily journals. It's organized with folders for each major area and uses tags for cross-referencing.",
 	enabledTools: {
-		file_access: true, // Combined setting for file listing and content access
+		file_access: true,
 		search: true,
 		update_content: true,
 		dataview_query: true,
@@ -31,4 +35,8 @@ export const DEFAULT_SETTINGS: MCPPluginSettings = {
 	},
 	enablePrompts: true,
 	verboseLogging: false,
+	directoryPermissions: {
+		mode: "blocklist",
+		directories: [],
+	},
 };

@@ -44,8 +44,8 @@ describe("File metadata functionality", () => {
 	});
 
 	describe("generateFileMetadata function", () => {
-		it("should return basic metadata for a simple file", () => {
-			const result = generateFileMetadata(mockApp, "simple.md");
+		it("should return basic metadata for a simple file", async () => {
+			const result = await generateFileMetadata(mockApp, "simple.md", mockApp.settings);
 
 			expect(result).toMatchInlineSnapshot(`
 				"# File Metadata: simple.md
@@ -61,8 +61,8 @@ describe("File metadata functionality", () => {
 			`);
 		});
 
-		it("should include frontmatter and tags in metadata", () => {
-			const result = generateFileMetadata(mockApp, "with-frontmatter.md");
+		it("should include frontmatter and tags in metadata", async () => {
+			const result = await generateFileMetadata(mockApp, "with-frontmatter.md", mockApp.settings);
 
 			expect(result).toMatchInlineSnapshot(`
 				"# File Metadata: with-frontmatter.md
@@ -89,8 +89,8 @@ describe("File metadata functionality", () => {
 			`);
 		});
 
-		it("should include headings with proper formatting", () => {
-			const result = generateFileMetadata(mockApp, "with-headings.md");
+		it("should include headings with proper formatting", async () => {
+			const result = await generateFileMetadata(mockApp, "with-headings.md", mockApp.settings);
 
 			expect(result).toMatchInlineSnapshot(`
 				"# File Metadata: with-headings.md
@@ -108,10 +108,10 @@ describe("File metadata functionality", () => {
 			`);
 		});
 
-		it("should throw an error for a non-existent file", () => {
-			expect(() => generateFileMetadata(mockApp, "nonexistent.md")).toThrow(
-				"File not found: nonexistent.md"
-			);
+		it("should throw an error for a non-existent file", async () => {
+			await expect(
+				generateFileMetadata(mockApp, "nonexistent.md", mockApp.settings)
+			).rejects.toThrow("File not found: nonexistent.md");
 		});
 	});
 
@@ -125,7 +125,7 @@ describe("File metadata functionality", () => {
 		});
 
 		it("should return metadata for an existing file", async () => {
-			const handler = getFileMetadataTool.handler(mockApp);
+			const handler = getFileMetadataTool.handler(mockApp, mockApp.settings);
 			const result = await handler({ path: "with-frontmatter.md" });
 
 			expect(result).toMatchInlineSnapshot(`
@@ -154,7 +154,7 @@ describe("File metadata functionality", () => {
 		});
 
 		it("should throw an error for a non-existent file", async () => {
-			const handler = getFileMetadataTool.handler(mockApp);
+			const handler = getFileMetadataTool.handler(mockApp, mockApp.settings);
 
 			await expect(handler({ path: "nonexistent.md" })).rejects.toThrow(
 				"File not found: nonexistent.md"
@@ -166,12 +166,12 @@ describe("File metadata functionality", () => {
 		let resource: FileMetadataResource;
 
 		beforeEach(() => {
-			resource = new FileMetadataResource(mockApp);
+			resource = new FileMetadataResource(mockApp, mockApp.settings);
 		});
 
 		describe("constructor", () => {
 			it("should initialize correctly", () => {
-				const resource = new FileMetadataResource(mockApp);
+				const resource = new FileMetadataResource(mockApp, mockApp.settings);
 				expect(resource.template).toBeDefined();
 			});
 		});

@@ -21,7 +21,6 @@ describe("dataview_query tool", () => {
 		vi.clearAllMocks();
 		mockApp = new MockApp();
 
-		// Set up mock files
 		mockApp.setFiles({
 			"file1.md": "---\ntags: [tag1, tag2]\ndate: 2023-01-01\n---\nContent 1",
 			"file2.md": "---\ntags: [tag3]\ndate: 2023-01-02\n---\nContent 2",
@@ -30,7 +29,7 @@ describe("dataview_query tool", () => {
 	});
 
 	it("should return markdown results for a successful query", async () => {
-		const handler = dataviewQueryTool.handler(mockApp);
+		const handler = dataviewQueryTool.handler(mockApp, mockApp.settings);
 		const result = await handler({ query: "LIST FROM #tag1" });
 
 		expect(mockDataviewApi.queryMarkdown).toHaveBeenCalledWith("LIST FROM #tag1");
@@ -39,14 +38,14 @@ describe("dataview_query tool", () => {
 
 	it("should throw an error when query execution fails", async () => {
 		mockDataviewApi.queryMarkdown.mockResolvedValue(mockFailedResult);
-		const handler = dataviewQueryTool.handler(mockApp);
+		const handler = dataviewQueryTool.handler(mockApp, mockApp.settings);
 
 		await expect(handler({ query: "INVALID QUERY" })).rejects.toThrow(/Invalid query syntax/);
 	});
 
 	it("should throw an error when Dataview plugin is not enabled", async () => {
 		isPluginEnabled.mockReturnValue(false);
-		const handler = dataviewQueryTool.handler(mockApp);
+		const handler = dataviewQueryTool.handler(mockApp, mockApp.settings);
 
 		await expect(handler({ query: "LIST FROM #tag1" })).rejects.toThrow(
 			/Dataview plugin is not enabled/
@@ -57,7 +56,7 @@ describe("dataview_query tool", () => {
 		isPluginEnabled.mockReturnValue(true);
 		getAPI.mockReturnValue(undefined);
 
-		const handler = dataviewQueryTool.handler(mockApp);
+		const handler = dataviewQueryTool.handler(mockApp, mockApp.settings);
 
 		await expect(handler({ query: "LIST FROM #tag1" })).rejects.toThrow(
 			/Dataview API is not available/

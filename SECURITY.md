@@ -1,17 +1,20 @@
 # Security, Privacy and Permissions
 
-This document provides detailed information about security implications, permissions, and data privacy considerations when using the Obsidian MCP Plugin.
+This document provides detailed information about security implications, permissions, and data privacy
+considerations when using the Obsidian MCP Plugin.
 
 ## Security Considerations
 
-This plugin provides external systems with access to your Obsidian vault contents through the Local REST API plugin. Please review the following security implications carefully before use.
+This plugin provides external systems with access to your Obsidian vault contents through the Local REST
+API plugin. Please review the security implications carefully before use.
 
 ### Network Security
 
 - The MCP endpoint is exposed via the Local REST API plugin on your local machine
 - By default, connections are only accepted from localhost (127.0.0.1)
 - The Local REST API uses HTTPS with a self-signed certificate by default for all communications
-- External connections require explicit configuration in the Local REST API plugin settings, which you should only enable if you fully understand the security implications
+- External connections require explicit configuration in the Local REST API plugin settings, which you
+  should only enable if you fully understand the security implications
 
 ### Authentication
 
@@ -111,8 +114,10 @@ The MCP plugin provides access to vault files based on the Local REST API's perm
   - The local MCP server (this plugin)
   - Your AI assistant application (Claude, GPT, etc.)
 - All data transmission is handled via HTTPS through the Local REST API plugin
-- All communications stay on your local network unless you've explicitly configured the Local REST API plugin for external access
-- The Local REST API plugin uses self-signed certificates by default which provides encryption but not server verification
+- All communications stay on your local network unless you've explicitly configured the Local REST API
+  plugin for external access
+- The Local REST API plugin uses self-signed certificates by default which provides encryption but not
+  server verification
 
 ### External Services
 
@@ -142,6 +147,7 @@ The plugin includes a configurable logging system that can help you monitor and 
   - Resource access patterns become visible
 
 **Security monitoring with logs:**
+
 - Enable verbose logging temporarily when:
   - Investigating suspicious activity
   - Auditing AI assistant interactions with sensitive content

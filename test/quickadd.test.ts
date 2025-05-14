@@ -137,7 +137,7 @@ describe("quickadd tools", () => {
 
 	describe("quickAddListTool", () => {
 		it("should list all available QuickAdd choices with variables", async () => {
-			const handler = quickAddListTool.handler(mockApp);
+			const handler = quickAddListTool.handler(mockApp, mockApp.settings);
 			const result = await handler({});
 
 			// Use inline snapshot for the entire output
@@ -162,7 +162,7 @@ describe("quickadd tools", () => {
 			mockQuickAdd.api.getChoices.mockReturnValueOnce([]);
 			mockApp.plugins.plugins.quickadd.settings.choices = [];
 
-			const handler = quickAddListTool.handler(mockApp);
+			const handler = quickAddListTool.handler(mockApp, mockApp.settings);
 			const result = await handler({});
 
 			expect(result).toBe("No QuickAdd choices found");
@@ -171,7 +171,7 @@ describe("quickadd tools", () => {
 		it("should throw an error if QuickAdd plugin is not enabled", async () => {
 			delete mockApp.plugins.plugins.quickadd;
 
-			const handler = quickAddListTool.handler(mockApp);
+			const handler = quickAddListTool.handler(mockApp, mockApp.settings);
 
 			await expect(handler({})).rejects.toThrow("QuickAdd plugin is not enabled");
 		});
@@ -179,7 +179,7 @@ describe("quickadd tools", () => {
 		it("should throw an error if the API is not available", async () => {
 			mockApp.plugins.plugins.quickadd = {};
 
-			const handler = quickAddListTool.handler(mockApp);
+			const handler = quickAddListTool.handler(mockApp, mockApp.settings);
 
 			await expect(handler({})).rejects.toThrow("QuickAdd settings or choices not available");
 		});
@@ -188,7 +188,7 @@ describe("quickadd tools", () => {
 	describe("quickAddExecuteTool", () => {
 		describe("choice mode", () => {
 			it("should execute a choice by ID", async () => {
-				const handler = quickAddExecuteTool.handler(mockApp);
+				const handler = quickAddExecuteTool.handler(mockApp, mockApp.settings);
 				const result = await handler({
 					choice: "choice1",
 				});
@@ -198,7 +198,7 @@ describe("quickadd tools", () => {
 			});
 
 			it("should execute a choice by name", async () => {
-				const handler = quickAddExecuteTool.handler(mockApp);
+				const handler = quickAddExecuteTool.handler(mockApp, mockApp.settings);
 				const result = await handler({
 					choice: "Test Choice 2",
 				});
@@ -208,7 +208,7 @@ describe("quickadd tools", () => {
 			});
 
 			it("should pass variables to the choice execution", async () => {
-				const handler = quickAddExecuteTool.handler(mockApp);
+				const handler = quickAddExecuteTool.handler(mockApp, mockApp.settings);
 				const variables = {
 					title: "Test Title",
 					content: "Test Content",
@@ -224,7 +224,7 @@ describe("quickadd tools", () => {
 			});
 
 			it("should throw an error if the choice is not found", async () => {
-				const handler = quickAddExecuteTool.handler(mockApp);
+				const handler = quickAddExecuteTool.handler(mockApp, mockApp.settings);
 
 				await expect(
 					handler({
@@ -239,7 +239,7 @@ describe("quickadd tools", () => {
 				const errorMessage = "Error executing choice";
 				mockQuickAdd.api.executeChoice.mockRejectedValueOnce(new Error(errorMessage));
 
-				const handler = quickAddExecuteTool.handler(mockApp);
+				const handler = quickAddExecuteTool.handler(mockApp, mockApp.settings);
 
 				await expect(
 					handler({
@@ -251,7 +251,7 @@ describe("quickadd tools", () => {
 
 		describe("template mode", () => {
 			it("should format a template with variables", async () => {
-				const handler = quickAddExecuteTool.handler(mockApp);
+				const handler = quickAddExecuteTool.handler(mockApp, mockApp.settings);
 				const template = "Hello {{name}}!";
 				const variables = { name: "World" };
 
@@ -265,7 +265,7 @@ describe("quickadd tools", () => {
 			});
 
 			it("should format a complex template with multiple variables", async () => {
-				const handler = quickAddExecuteTool.handler(mockApp);
+				const handler = quickAddExecuteTool.handler(mockApp, mockApp.settings);
 				const template = "# {{title}}\n\nCreated by: {{author}}\nDate: {{date}}";
 				const variables = {
 					title: "My Document",
@@ -283,7 +283,7 @@ describe("quickadd tools", () => {
 			});
 
 			it("should support variables of different types", async () => {
-				const handler = quickAddExecuteTool.handler(mockApp);
+				const handler = quickAddExecuteTool.handler(mockApp, mockApp.settings);
 				const template = "Count: {{count}}\nActive: {{active}}";
 				const variables = {
 					count: 42,
@@ -303,7 +303,7 @@ describe("quickadd tools", () => {
 				const errorMessage = "Error formatting template";
 				mockQuickAdd.api.format.mockRejectedValueOnce(new Error(errorMessage));
 
-				const handler = quickAddExecuteTool.handler(mockApp);
+				const handler = quickAddExecuteTool.handler(mockApp, mockApp.settings);
 
 				await expect(
 					handler({
@@ -315,7 +315,7 @@ describe("quickadd tools", () => {
 
 		describe("error handling", () => {
 			it("should throw an error if neither choice nor template is provided", async () => {
-				const handler = quickAddExecuteTool.handler(mockApp);
+				const handler = quickAddExecuteTool.handler(mockApp, mockApp.settings);
 
 				await expect(handler({})).rejects.toThrow(
 					"You must provide exactly one of 'choice' or 'template' parameters"
@@ -323,7 +323,7 @@ describe("quickadd tools", () => {
 			});
 
 			it("should throw an error if both choice and template are provided", async () => {
-				const handler = quickAddExecuteTool.handler(mockApp);
+				const handler = quickAddExecuteTool.handler(mockApp, mockApp.settings);
 
 				await expect(
 					handler({
@@ -336,7 +336,7 @@ describe("quickadd tools", () => {
 			it("should throw an error if QuickAdd plugin is not enabled", async () => {
 				delete mockApp.plugins.plugins.quickadd;
 
-				const handler = quickAddExecuteTool.handler(mockApp);
+				const handler = quickAddExecuteTool.handler(mockApp, mockApp.settings);
 
 				await expect(
 					handler({
@@ -349,7 +349,7 @@ describe("quickadd tools", () => {
 				// Remove the API from the mock
 				mockApp.plugins.plugins.quickadd = {};
 
-				const handler = quickAddExecuteTool.handler(mockApp);
+				const handler = quickAddExecuteTool.handler(mockApp, mockApp.settings);
 
 				await expect(
 					handler({

@@ -4,11 +4,13 @@ import {
 	createSection,
 	createTextAreaSetting,
 	createTextSetting,
+	createToggleSetting,
 	createRequiredPluginWarning,
 } from "./ui_components";
 import { createConnectionInfoSection } from "./connection_ui";
 import { createPromptsInstructions } from "./prompts_ui";
 import { addFeaturesSection } from "./tools_ui";
+import { createDirectoryPermissionsSection } from "./directory_permissions_ui";
 
 export class MCPSettingTab extends PluginSettingTab {
 	plugin: ObsidianMCPPlugin;
@@ -41,6 +43,7 @@ export class MCPSettingTab extends PluginSettingTab {
 		this.addBasicSettings();
 		this.addPromptsSettings();
 		addFeaturesSection(this.plugin, containerEl);
+		createDirectoryPermissionsSection(this.plugin, containerEl);
 		this.addAdvancedSection();
 	}
 
