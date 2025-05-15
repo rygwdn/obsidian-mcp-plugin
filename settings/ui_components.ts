@@ -104,12 +104,24 @@ export function createSection(containerEl: HTMLElement, title: string): void {
 	containerEl.createEl("h2", { text: title, cls: "mcp-settings-heading" });
 }
 
-export function createInfoBox(containerEl: HTMLElement, title?: string): HTMLElement {
-	const infoDiv = containerEl.createDiv({ cls: "mcp-info-box" });
-	if (title) {
-		infoDiv.createEl("h4", { text: title });
-	}
-	return infoDiv;
+export function createCollapsibleDetailsSection(
+	parentElement: HTMLElement,
+	summaryText: string,
+	detailsClass?: string,
+	summaryClass?: string
+): HTMLDetailsElement {
+	const detailsEl = parentElement.createEl("details", {
+		cls: detailsClass ?? "mcp-collapsible",
+	});
+	detailsEl.createEl("summary", {
+		text: summaryText,
+		cls: summaryClass ?? "mcp-collapsible-summary",
+	});
+	return detailsEl;
+}
+
+export function createInfoBox(containerEl: HTMLElement): HTMLElement {
+	return containerEl.createDiv({ cls: "mcp-info-box" });
 }
 
 export function createRequiredPluginWarning(
@@ -137,18 +149,47 @@ export function createRequiredPluginWarning(
 export function createCopyableCode(container: HTMLElement, code: string): HTMLElement {
 	const codeBlock = container.createEl("pre", { cls: "mcp-copyable-code" });
 	codeBlock.createEl("code", { text: code });
-	const copyButton = codeBlock.createEl("button", { cls: "mcp-copy-button", text: "📋" });
 
-	copyButton.addEventListener("click", (e) => {
-		e.preventDefault();
-		navigator.clipboard.writeText(code).then(() => {
-			const originalText = copyButton.textContent;
-			copyButton.textContent = "Copied!";
-			setTimeout(() => {
-				copyButton.textContent = originalText;
-			}, 2000);
-		});
+	const copyButton = createMcpButton(codeBlock, {
+		text: "📋",
+		additionalClasses: "mcp-copy-button",
+		onClick: (e) => {
+			e.preventDefault();
+			navigator.clipboard.writeText(code).then(() => {
+				copyButton.setText("Copied!");
+				setTimeout(() => {
+					copyButton.setText("📋");
+				}, 2000);
+			});
+		},
 	});
 
 	return codeBlock;
+}
+
+export interface McpButtonOptions {
+	text?: string;
+	onClick: (event: MouseEvent) => void;
+	additionalClasses?: string | string[];
+}
+
+export function createMcpButton(
+	parentElement: HTMLElement,
+	options: McpButtonOptions
+): HTMLButtonElement {
+	const button = parentElement.createEl("button");
+
+	button.addClass("mcp-button");
+	button.setText(options.text ?? "");
+	button.addEventListener("click", options.onClick);
+
+	if (options.additionalClasses) {
+		if (Array.isArray(options.additionalClasses)) {
+			button.addClasses(options.additionalClasses);
+		} else {
+			button.addClass(options.additionalClasses);
+		}
+	}
+
+	return button;
 }

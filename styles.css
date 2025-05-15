@@ -1,38 +1,19 @@
-/*
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
-*/
-
-/* Warning for missing required plugins */
 .mcp-warning {
-	background-color: rgba(255, 0, 0, 0.1);
-	border-left: 3px solid #ff5555;
-	padding: 10px;
-	margin-bottom: 15px;
-	border-radius: 4px;
+	background-color: var(--background-modifier-error, rgba(var(--color-red-rgb), 0.1));
+	padding: var(--size-4-2);
+	margin-bottom: var(--size-4-4);
+	border-radius: var(--radius-s);
 }
 
 .mcp-warning-text {
-	color: #ff5555;
-	font-weight: bold;
-}
-
-/* Settings styles */
-.mcp-settings-container h2.mcp-settings-heading {
-	margin-top: 30px;
-	margin-bottom: 20px;
-	padding-bottom: 5px;
-	font-size: var(--font-ui-large);
-}
-
-.mcp-settings-container h1 {
-	font-size: calc(var(--font-ui-large) * 1.2);
+	color: var(--text-error);
+	font-weight: var(--font-weight-bold);
 }
 
 .mcp-copyable-row {
 	display: flex;
 	align-items: center;
-	gap: 10px;
+	gap: var(--size-4-2);
 }
 
 .mcp-copyable-row .mcp-copyable-inline-label {
@@ -44,47 +25,54 @@ available in the app when your plugin is enabled.
 	flex-grow: 1;
 }
 
-/* Info boxes for documentation */
+.mcp-copyable-label {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: var(--size-4-1);
+	font-weight: var(--font-weight-semibold);
+}
+
+.mcp-copy-button {
+	font-size: var(--font-ui-smaller);
+	padding: var(--size-4-1) var(--size-4-1);
+	position: absolute;
+	top: var(--size-4-1);
+	right: var(--size-4-1);
+}
+
+.mcp-copyable-code {
+	background-color: var(--background-primary);
+	padding: var(--size-4-2);
+	border-radius: var(--radius-s);
+	border: var(--border-width) solid var(--background-modifier-border);
+	margin: 0;
+	overflow-y: hidden;
+	overflow-x: auto;
+	font-family: var(--font-monospace);
+	font-size: var(--font-ui-smaller);
+	line-height: 1.5;
+	white-space: pre-wrap;
+	position: relative;
+}
+
 .mcp-info-box {
 	background-color: var(--background-secondary);
 	border-left: 3px solid var(--interactive-accent);
-	padding: 10px 15px;
-	margin: 15px 0;
-	border-radius: 4px;
-}
-
-.mcp-info-box h4 {
-	margin-top: 0;
-	margin-bottom: 8px;
-	color: var(--text-normal);
-}
-
-.mcp-info-box ul {
-	margin-top: 8px;
-	margin-bottom: 8px;
-	padding-left: 20px;
+	padding: var(--size-4-2) var(--size-4-4);
+	margin: var(--size-4-4) 0;
+	border-radius: var(--radius-s);
 }
 
 .mcp-info-box pre {
-	background-color: var(--background-primary);
-	padding: 8px;
-	border-radius: 4px;
+	padding: var(--size-4-2);
 	overflow-x: auto;
-	margin-top: 8px;
-	margin-bottom: 8px;
-}
-
-/* Collapsible sections */
-.mcp-collapsible {
-	margin: 10px 0 20px 0;
-	border-radius: 4px;
+	margin: var(--size-4-2) 0;
 }
 
 .mcp-collapsible-summary {
 	cursor: pointer;
 	color: var(--text-muted);
-	font-size: 0.9em;
-	margin-bottom: 8px;
 }
 
 .mcp-collapsible-summary:hover {
@@ -92,90 +80,186 @@ available in the app when your plugin is enabled.
 	text-decoration: underline;
 }
 
-/* Remove default details marker */
-.mcp-collapsible > summary::-webkit-details-marker {
-	display: none;
+.mcp-directory-rules-list {
+	display: grid;
+	grid-template-columns: var(--size-4-8) 1fr auto auto;
+	margin: 1rem 0;
+	border: var(--border-width) solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
 }
 
-/* Custom marker */
-.mcp-collapsible > summary::before {
-	content: "⮞";
-	color: var(--text-muted);
-	display: inline-block;
-	margin-right: 8px;
-	transition: transform 0.2s;
+.mcp-directory-row {
+	display: contents;
 }
 
-.mcp-collapsible[open] > summary::before {
-	transform: rotate(90deg);
-}
-
-.mcp-collapsible .mcp-info-box {
-	margin-top: 8px;
-	margin-left: 0;
-}
-
-/* Copyable code styles */
-.mcp-copyable-container {
-	margin: 15px 0;
-}
-
-.mcp-copyable-label {
+.mcp-directory-row > * {
+	padding: 0.5rem;
+	border-bottom: var(--border-width) solid var(--background-modifier-border);
+	min-height: var(--size-4-10);
 	display: flex;
-	justify-content: space-between;
 	align-items: center;
-	margin-bottom: 5px;
-	font-weight: 600;
+	justify-content: center;
+	height: 100%;
 }
 
-.mcp-copy-button {
-	font-size: 12px;
-	padding: 2px 8px;
-	border-radius: 4px;
-	background-color: var(--interactive-normal);
-	color: var(--text-normal);
-	cursor: pointer;
-	transition: background-color 0.2s;
-	border: 1px solid var(--background-modifier-border);
-	position: absolute;
-	top: 5px;
-	right: 5px;
+.mcp-directory-row.dragging > * {
+	opacity: 0.5;
 }
 
-.mcp-copy-button:hover {
-	background-color: var(--interactive-hover);
+.mcp-drag-handle {
+	cursor: grab;
+	color: var(--text-muted);
 }
 
-.mcp-copyable-code {
-	background-color: var(--background-primary);
-	padding: 10px;
-	border-radius: 4px;
-	border: 1px solid var(--background-modifier-border);
-	margin: 0;
-	overflow-x: auto;
+.mcp-directory-path {
 	font-family: var(--font-monospace);
-	font-size: 0.85em;
-	line-height: 1.5;
-	white-space: pre-wrap;
-	position: relative;
+	font-size: var(--font-ui-small);
+	justify-content: start;
 }
 
-.mcp-link {
-	display: block;
-	margin-top: 5px;
+.mcp-empty-rules-message {
+	font-style: italic;
+	color: var(--text-muted);
 }
 
-/* Authentication notice styles */
-.mcp-auth-notice {
-	background-color: rgba(255, 196, 0, 0.1);
-	border-left: 3px solid #ffc400;
-	padding: 10px 15px;
-	margin: 15px 0;
-	border-radius: 4px;
+.mcp-add-directory-container {
+	margin: 1rem 0;
+	text-align: center;
 }
 
-.mcp-notice-text {
-	font-weight: 600;
-	color: #d49b00;
-	margin-bottom: 8px;
+.mcp-examples-container {
+	margin-top: 1rem;
+	padding-top: 0.75rem;
+	border-top: var(--border-width) solid var(--background-modifier-border);
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 1rem;
+}
+
+.mcp-examples-heading {
+	margin: 0 0 0.5rem 0;
+	grid-column: 1 / -1;
+}
+
+.mcp-compact-examples .mcp-allowed-heading,
+.mcp-compact-examples .mcp-blocked-heading {
+	margin: 0;
+}
+
+.mcp-allowed-files,
+.mcp-blocked-files {
+	flex: 1;
+}
+
+.mcp-allowed-heading {
+	color: var(--color-green);
+}
+
+.mcp-blocked-heading {
+	color: var(--color-red);
+}
+
+.mcp-file-list {
+	margin: 0.25rem 0 0.25rem 0.25rem;
+	padding: 0;
+}
+
+.mcp-file-list li {
+	white-space: nowrap;
+	overflow: hidden;
+}
+
+.mcp-file-path-truncate {
+	display: inline-block;
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.mcp-toggle-button.mcp-allowed {
+	background-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+.mcp-toggle-button.mcp-blocked {
+	background-color: var(--text-error);
+	color: var(--text-inverse);
+}
+
+.mcp-directory-rules-title {
+	margin-top: 1.5rem;
+	margin-bottom: 0.75rem;
+}
+
+/* Directory tree modal styles */
+.mcp-directory-modal-header {
+	padding-bottom: 1rem;
+	border-bottom: var(--border-width) solid var(--background-modifier-border);
+	margin-bottom: 1rem;
+}
+
+.mcp-directory-modal-header h2 {
+	margin: 0 0 0.5rem 0;
+}
+
+.mcp-directory-breadcrumbs {
+	font-family: var(--font-monospace);
+	font-size: var(--font-ui-small);
+	margin-bottom: 1rem;
+	padding: 0.5rem;
+	background-color: var(--background-secondary);
+	border-radius: var(--radius-s);
+}
+
+.mcp-breadcrumb-link {
+	color: var(--text-accent);
+	cursor: pointer;
+}
+
+.mcp-breadcrumb-link:hover {
+	text-decoration: underline;
+}
+
+.mcp-breadcrumb-current {
+	font-weight: var(--font-bold, bold);
+	color: var(--text-normal);
+}
+
+.mcp-folder-list {
+	max-height: 20rem;
+	overflow-y: auto;
+	margin-bottom: 1rem;
+	border: var(--border-width) solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+}
+
+.mcp-folder-item {
+	display: flex;
+	align-items: center;
+	padding: 0.5rem;
+	border-bottom: var(--border-width) solid var(--background-modifier-border);
+	gap: 0.5rem;
+}
+
+.mcp-folder-name {
+	flex-grow: 1;
+	font-family: var(--font-monospace);
+	font-size: var(--font-ui-small);
+}
+
+.mcp-empty-folders-message {
+	padding: 1rem;
+	font-style: italic;
+	color: var(--text-muted);
+	text-align: center;
+}
+
+.mcp-directory-modal-buttons {
+	display: flex;
+	justify-content: flex-end;
+	gap: 0.5rem;
+	margin-top: 1rem;
+	padding-top: 1rem;
+	border-top: var(--border-width) solid var(--background-modifier-border);
 }

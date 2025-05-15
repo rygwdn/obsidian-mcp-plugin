@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- feat: Enhance directory permissions system with reorderable rules list
+- feat: Implement first-match-wins order for directory access rules
+- style: Update CSS to use Obsidian CSS variables for better theme compatibility
+
 ## [0.2.0] - 2025-05-12
 
 - feat: Add separate SSE endpoints (/sse and /messages) for backward compatibility

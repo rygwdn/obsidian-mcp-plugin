@@ -2,6 +2,11 @@
  * Settings type definitions for the MCP Plugin
  */
 
+export interface DirectoryRule {
+	path: string;
+	allowed: boolean;
+}
+
 export interface MCPPluginSettings {
 	promptsFolder: string;
 	toolNamePrefix: string;
@@ -16,8 +21,8 @@ export interface MCPPluginSettings {
 	enablePrompts: boolean;
 	verboseLogging: boolean;
 	directoryPermissions: {
-		mode: "allowlist" | "blocklist";
-		directories: string[];
+		rules: DirectoryRule[];
+		rootPermission: boolean;
 	};
 }
 
@@ -36,7 +41,7 @@ export const DEFAULT_SETTINGS: MCPPluginSettings = {
 	enablePrompts: true,
 	verboseLogging: false,
 	directoryPermissions: {
-		mode: "blocklist",
-		directories: [],
+		rules: [],
+		rootPermission: true,
 	},
 };

@@ -268,11 +268,17 @@ export class MockApp implements Obsidian.App {
 	constructor(customSettings?: Partial<MCPPluginSettings>) {
 		this.settings = {
 			...DEFAULT_SETTINGS,
-			directoryPermissions: {
-				mode: "blocklist",
-				directories: ["blocked-dir"],
-			},
 			...customSettings,
+			directoryPermissions: {
+				rules: [
+					{
+						path: "blocked-dir",
+						allowed: false,
+					},
+				],
+				rootPermission: true,
+				...customSettings?.directoryPermissions,
+			},
 		};
 
 		this.plugins = {

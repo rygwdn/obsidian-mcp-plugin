@@ -76,15 +76,13 @@ export function isFileModifiable(app: App, file: TFile, settings: MCPPluginSetti
 }
 
 export function isDirectoryAccessible(dirPath: string, settings: MCPPluginSettings): boolean {
-	const normalizedPath = dirPath === "/" ? "" : dirPath;
-	const { mode, directories } = settings.directoryPermissions;
+	const { rules, rootPermission } = settings.directoryPermissions;
 
-	const isInList = directories.some((dir) => {
-		if (normalizedPath === dir) return true;
-		if (normalizedPath.startsWith(dir + "/")) return true;
+	for (const rule of rules) {
+		if (dirPath === rule.path || dirPath.startsWith(rule.path + "/")) {
+			return rule.allowed;
+		}
+	}
 
-		return false;
-	});
-
-	return mode === "allowlist" ? isInList : !isInList;
+	return rootPermission;
 }

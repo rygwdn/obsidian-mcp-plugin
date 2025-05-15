@@ -1,7 +1,7 @@
-import { createSection } from "./ui_components";
+import { createCollapsibleDetailsSection } from "./ui_components";
 
 export function createPromptsInstructions(containerEl: HTMLElement): void {
-	const detailsEl = containerEl.createEl("details", { cls: "mcp-collapsible" });
+	const detailsEl = createCollapsibleDetailsSection(containerEl, "Prompt Instructions & Examples");
 
 	const promptsInfoDiv = detailsEl.createDiv({ cls: "mcp-info-box" });
 

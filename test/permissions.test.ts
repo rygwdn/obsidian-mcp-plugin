@@ -16,12 +16,7 @@ describe("Permissions functionality", () => {
 		vi.setSystemTime("2025-02-02");
 
 		vi.clearAllMocks();
-		mockApp = new MockApp({
-			directoryPermissions: {
-				mode: "blocklist",
-				directories: ["blocked-dir", "another-blocked-dir"],
-			},
-		});
+		mockApp = new MockApp();
 
 		// Setup test files with different permissions
 		mockApp.setFiles({
@@ -116,48 +111,132 @@ describe("Permissions functionality", () => {
 	});
 
 	describe("isDirectoryAccessible", () => {
-		it("should allow access to normal directories in blocklist mode", () => {
-			expect(isDirectoryAccessible("normal-dir", mockApp.settings)).toBe(true);
-		});
+		describe("rules-based permissions", () => {
+			it("should apply rules in order with first-match-wins logic", () => {
+				const appWithRules = new MockApp({
+					directoryPermissions: {
+						rules: [
+							{ path: "normal-dir", allowed: true },
+							{ path: "high-priority-dir/exception", allowed: true },
+							{ path: "high-priority-dir", allowed: false },
+						],
+						rootPermission: true,
+					},
+				});
 
-		it("should deny access to blocked directories in blocklist mode", () => {
-			expect(isDirectoryAccessible("blocked-dir", mockApp.settings)).toBe(false);
-		});
+				// First rule takes precedence
+				expect(isDirectoryAccessible("high-priority-dir", appWithRules.settings)).toBe(false);
 
-		it("should deny access to subdirectories of blocked directories", () => {
-			expect(isDirectoryAccessible("blocked-dir/subdir", mockApp.settings)).toBe(false);
-		});
+				// First matching rule (2nd rule) takes precedence
+				expect(isDirectoryAccessible("high-priority-dir/exception", appWithRules.settings)).toBe(
+					true
+				);
 
-		it("should handle root directory correctly", () => {
-			expect(isDirectoryAccessible("/", mockApp.settings)).toBe(true);
-		});
-
-		it("should handle empty directory path correctly", () => {
-			expect(isDirectoryAccessible("", mockApp.settings)).toBe(true);
-		});
-
-		it("should deny access to normal directories in allowlist mode", () => {
-			// Create a new mockApp instance with allowlist settings
-			const allowlistApp = new MockApp({
-				directoryPermissions: { mode: "allowlist", directories: ["allowed-dir"] },
+				// Later rule still applies when it's the first match
+				expect(isDirectoryAccessible("normal-dir", appWithRules.settings)).toBe(true);
 			});
-			expect(isDirectoryAccessible("normal-dir", allowlistApp.settings)).toBe(false);
-		});
 
-		it("should allow access to allowed directories in allowlist mode", () => {
-			// Create a new mockApp instance with allowlist settings
-			const allowlistApp = new MockApp({
-				directoryPermissions: { mode: "allowlist", directories: ["allowed-dir"] },
-			});
-			expect(isDirectoryAccessible("allowed-dir", allowlistApp.settings)).toBe(true);
-		});
+			it("should match parent/child relationships correctly", () => {
+				const appWithRules = new MockApp({
+					directoryPermissions: {
+						rules: [
+							{ path: "parent/child/grandchild", allowed: false },
+							{ path: "parent/child", allowed: true },
+							{ path: "parent", allowed: false },
+						],
+						rootPermission: true,
+					},
+				});
 
-		it("should allow access to subdirectories of allowed directories in allowlist mode", () => {
-			// Create a new mockApp instance with allowlist settings
-			const allowlistApp = new MockApp({
-				directoryPermissions: { mode: "allowlist", directories: ["allowed-dir"] },
+				expect(isDirectoryAccessible("parent", appWithRules.settings)).toBe(false);
+				expect(isDirectoryAccessible("parent/child", appWithRules.settings)).toBe(true);
+				expect(isDirectoryAccessible("parent/child/grandchild", appWithRules.settings)).toBe(false);
+				expect(isDirectoryAccessible("parent/child/other", appWithRules.settings)).toBe(true);
+				expect(isDirectoryAccessible("parent/other", appWithRules.settings)).toBe(false);
 			});
-			expect(isDirectoryAccessible("allowed-dir/subdir", allowlistApp.settings)).toBe(true);
+
+			it("should use rootPermission when no rules match", () => {
+				// Blocklist mode (default: allow)
+				const blocklistApp = new MockApp({
+					directoryPermissions: {
+						rules: [{ path: "private", allowed: false }],
+						rootPermission: true, // Allow by default
+					},
+				});
+
+				expect(isDirectoryAccessible("private", blocklistApp.settings)).toBe(false);
+				expect(isDirectoryAccessible("public", blocklistApp.settings)).toBe(true);
+
+				// Allowlist mode (default: deny)
+				const allowlistApp = new MockApp({
+					directoryPermissions: {
+						rules: [{ path: "public", allowed: true }],
+						rootPermission: false, // Deny by default
+					},
+				});
+
+				expect(isDirectoryAccessible("public", allowlistApp.settings)).toBe(true);
+				expect(isDirectoryAccessible("private", allowlistApp.settings)).toBe(false);
+			});
+
+			it("should respect rootPermission setting", () => {
+				// Block by default
+				const rootBlockedApp = new MockApp({
+					directoryPermissions: {
+						rules: [{ path: "allowed", allowed: true }],
+						rootPermission: false,
+					},
+				});
+
+				expect(isDirectoryAccessible("/", rootBlockedApp.settings)).toBe(false);
+				expect(isDirectoryAccessible("", rootBlockedApp.settings)).toBe(false);
+				expect(isDirectoryAccessible("random", rootBlockedApp.settings)).toBe(false);
+				expect(isDirectoryAccessible("allowed", rootBlockedApp.settings)).toBe(true);
+
+				const rootAllowedApp = new MockApp({
+					directoryPermissions: {
+						rules: [{ path: "blocked", allowed: false }],
+						rootPermission: true,
+					},
+				});
+
+				expect(isDirectoryAccessible("/", rootAllowedApp.settings)).toBe(true);
+				expect(isDirectoryAccessible("", rootAllowedApp.settings)).toBe(true);
+				expect(isDirectoryAccessible("random", rootAllowedApp.settings)).toBe(true);
+				expect(isDirectoryAccessible("blocked", rootAllowedApp.settings)).toBe(false);
+			});
+
+			it("should apply rootPermission recursively to all non-specified paths", () => {
+				// Root allowed, everything else allowed by default
+				const rootAllowedApp = new MockApp({
+					directoryPermissions: {
+						rules: [{ path: "blocked", allowed: false }],
+						rootPermission: true,
+					},
+				});
+
+				expect(isDirectoryAccessible("any/path/not/specified", rootAllowedApp.settings)).toBe(true);
+				expect(isDirectoryAccessible("some/random/directory", rootAllowedApp.settings)).toBe(true);
+				expect(isDirectoryAccessible("blocked/subdirectory", rootAllowedApp.settings)).toBe(false);
+
+				const rootBlockedApp = new MockApp({
+					directoryPermissions: {
+						rules: [
+							{ path: "also/allowed", allowed: true },
+							{ path: "allowed", allowed: true },
+						],
+						rootPermission: false,
+					},
+				});
+
+				expect(isDirectoryAccessible("any/path/not/specified", rootBlockedApp.settings)).toBe(
+					false
+				);
+				expect(isDirectoryAccessible("some/random/directory", rootBlockedApp.settings)).toBe(false);
+				expect(isDirectoryAccessible("allowed/subdirectory", rootBlockedApp.settings)).toBe(true);
+				expect(isDirectoryAccessible("also/allowed", rootBlockedApp.settings)).toBe(true);
+				expect(isDirectoryAccessible("also/allowed/nested", rootBlockedApp.settings)).toBe(true);
+			});
 		});
 	});
 });

@@ -27,8 +27,6 @@ export class MCPSettingTab extends PluginSettingTab {
 		containerEl.empty();
 		containerEl.addClass("mcp-settings-container");
 
-		containerEl.createEl("h1", { text: "MCP Plugin Settings" });
-
 		const isLocalRestApiEnabled =
 			this.plugin.app.plugins.enabledPlugins.has("obsidian-local-rest-api");
 		createRequiredPluginWarning(

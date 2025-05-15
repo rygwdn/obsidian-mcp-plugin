@@ -1,5 +1,9 @@
 import { App } from "obsidian";
-import { createInfoBox, createCopyableCode } from "./ui_components";
+import {
+	createInfoBox,
+	createCopyableCode,
+	createCollapsibleDetailsSection,
+} from "./ui_components";
 import { getLocalRestApiSettings, LocalRestApiSettings } from "./local_rest_api";
 
 export function createConnectionInfoSection(app: App, containerEl: HTMLElement): void {
@@ -20,8 +24,9 @@ export function createConnectionInfoSection(app: App, containerEl: HTMLElement):
 
 	displayBasicConnectionInfo(infoBox, streamingEndpointUrl, sseEndpointUrl, apiSettings);
 
-	const detailsEl = infoBox.createEl("details", { cls: "mcp-collapsible" });
-	addConnectionConfigs(detailsEl, streamingEndpointUrl, sseEndpointUrl, apiSettings);
+	const detailsEl = createCollapsibleDetailsSection(infoBox, "Example Configurations");
+	addStreamingConfig(detailsEl, streamingEndpointUrl, apiSettings);
+	addSseConfig(detailsEl, sseEndpointUrl, apiSettings);
 	addSupergatewayConfig(detailsEl, sseEndpointUrl, apiSettings);
 }
 
@@ -60,10 +65,9 @@ function displayBasicConnectionInfo(
 	}
 }
 
-function addConnectionConfigs(
+function addStreamingConfig(
 	container: HTMLElement,
 	streamingEndpointUrl: string,
-	sseEndpointUrl: string,
 	apiSettings: LocalRestApiSettings
 ): void {
 	const streamingConfigJson = {
@@ -76,7 +80,13 @@ function addConnectionConfigs(
 		.createDiv({ cls: "mcp-copyable-label" })
 		.createEl("span", { text: "Streaming HTTP Configuration" });
 	createCopyableCode(container, JSON.stringify(streamingConfigJson, null, 2));
+}
 
+function addSseConfig(
+	container: HTMLElement,
+	sseEndpointUrl: string,
+	apiSettings: LocalRestApiSettings
+): void {
 	const sseConfigJson = {
 		type: "sse",
 		url: sseEndpointUrl,
