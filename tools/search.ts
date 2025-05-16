@@ -35,7 +35,7 @@ export const searchTool: ToolRegistration = {
 			let remainingMatches = args.limit;
 
 			for (const { matches, cachedContents, file } of allMatches) {
-				lines.push(`## /${file.path}\n`);
+				lines.push(`## file:///${file.path}\n`);
 
 				for (const match of matches) {
 					if (remainingMatches <= 0) break;

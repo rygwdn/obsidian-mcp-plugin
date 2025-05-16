@@ -71,7 +71,7 @@ describe("search tool", () => {
 		expect(result).toContain("1 of 3 matches");
 
 		// Only one file should have content displayed
-		const fileMatches = result.match(/## \/[^\n]+/g);
+		const fileMatches = result.match(/## file:\/\/\/[^\n]+/g);
 		expect(fileMatches).toHaveLength(1);
 	});
 

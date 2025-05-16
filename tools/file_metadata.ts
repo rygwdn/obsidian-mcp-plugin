@@ -63,15 +63,15 @@ export const getFileMetadataTool: ToolRegistration = {
 		openWorldHint: false,
 	},
 	schema: {
-		path: z.string().describe("Path to the file to get metadata for"),
+		path: z
+			.string()
+			.describe(
+				"URI to the file to get metadata for (e.g., file:///path/to/file.md or daily:///today)"
+			),
 	},
 	handler: (obsidian: ObsidianInterface) => async (args: Record<string, unknown>) => {
-		let path = args.path as string;
-		if (path.startsWith("file:")) {
-			path = await resolvePath(obsidian, new URL(path));
-		}
-
-		return await generateFileMetadata(obsidian, path);
+		const vaultPath = await resolvePath(obsidian, args.path as string);
+		return await generateFileMetadata(obsidian, vaultPath);
 	},
 };
 

@@ -88,7 +88,7 @@ export class VaultFileResource {
 			);
 		}
 
-		const pathVar = await resolvePath(this.obsidian, uri);
+		const pathVar = await resolvePath(this.obsidian, uri.toString());
 
 		const depth = parseInt(uri.searchParams.get("depth") ?? "1");
 		const startOffset = parseInt(uri.searchParams.get("startOffset") ?? "0");

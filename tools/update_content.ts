@@ -45,18 +45,22 @@ export const updateContentTool: ToolRegistration = {
 			find?: string;
 			create_if_missing?: boolean;
 		}) => {
-			const resolved = await resolvePath(obsidian, new URL(args.uri));
+			const resolvedVaultPath = await resolvePath(obsidian, args.uri);
+
 			const file = await obsidian.getFileByPath(
-				resolved,
+				resolvedVaultPath,
 				args.create_if_missing ? "create" : "write"
 			);
 
 			const fileContent = await obsidian.read(file);
 
+			// Use the original URI string for display in messages
+			const displayUri = args.uri.replace(/^file:\/\/\/|^daily:\/\/\//, "");
+
 			if (args.mode === "append") {
-				return await append(args.content, fileContent, obsidian, file, resolved);
+				return await append(args.content, fileContent, obsidian, file, displayUri);
 			} else if (args.mode === "replace") {
-				return await replace(args.find, args.content, fileContent, resolved, obsidian, file);
+				return await replace(args.find, args.content, fileContent, displayUri, obsidian, file);
 			} else {
 				throw new Error(`Invalid mode: ${args.mode}`);
 			}
@@ -67,7 +71,7 @@ async function replace(
 	find: string | undefined,
 	replacement: string,
 	fileContent: string,
-	resolved: string,
+	originalUri: string,
 	obsidian: ObsidianInterface,
 	file: TFile
 ) {
@@ -77,20 +81,20 @@ async function replace(
 
 	const firstMatch = fileContent.indexOf(find);
 	if (firstMatch === -1) {
-		throw new Error(`Content not found in file: ${resolved}`);
+		throw new Error(`Content not found in file: ${originalUri}`);
 	}
 
 	const lastMatch = fileContent.lastIndexOf(find);
 	if (lastMatch !== firstMatch) {
 		throw new Error(
-			`Multiple matches found in file: ${resolved}. Please use a more specific search string.`
+			`Multiple matches found in file: ${originalUri}. Please use a more specific search string.`
 		);
 	}
 
 	const updatedContent = fileContent.replace(find, replacement);
 
 	await obsidian.modify(file, updatedContent);
-	return `Content successfully replaced in ${resolved}`;
+	return `Content successfully replaced in ${originalUri}`;
 }
 
 async function append(
@@ -98,7 +102,7 @@ async function append(
 	fileContent: string,
 	obsidian: ObsidianInterface,
 	file: TFile,
-	resolved: string
+	originalUri: string
 ) {
 	if (!fileContent.endsWith("\n")) {
 		content = "\n" + content;
@@ -106,5 +110,5 @@ async function append(
 
 	await obsidian.modify(file, fileContent + content);
 
-	return `Content appended successfully to ${resolved}`;
+	return `Content appended successfully to ${originalUri}`;
 }

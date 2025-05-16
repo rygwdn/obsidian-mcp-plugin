@@ -65,7 +65,7 @@ describe("DailyNoteUtils", () => {
 
 	describe("resolvePath", () => {
 		it("should resolve regular file path", async () => {
-			const uri = new URL("file:///other-note.md");
+			const uri = "file:///other-note.md";
 			const resolved = await DailyNoteUtils.resolvePath(obsidian, uri);
 			expect(resolved).toBe("other-note.md");
 		});
@@ -82,7 +82,7 @@ describe("DailyNoteUtils", () => {
 			const mockFn = vi.fn().mockResolvedValue("daily/2023-05-09.md");
 			vi.spyOn(DailyNoteUtils, "resolvePath").mockImplementation(mockFn);
 
-			const uri = new URL("daily://today");
+			const uri = "daily://today";
 			const resolved = await DailyNoteUtils.resolvePath(obsidian, uri);
 			expect(resolved).toBe("daily/2023-05-09.md");
 
@@ -95,7 +95,7 @@ describe("DailyNoteUtils", () => {
 
 			// For this test, we need to handle the original implementation but make it throw
 			const origFn = DailyNoteUtils.resolvePath;
-			const uri = new URL("daily://today");
+			const uri = "daily://today";
 
 			// Create a rejected promise to simulate the expected behavior
 			const mockImpl = vi

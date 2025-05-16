@@ -31,7 +31,7 @@ Review:
 - [x] Use `this.app` instead of global `app` or `window.app`
 - [x] Avoid using `innerHTML`, `outerHTML`, and `insertAdjacentHTML`
 - [x] Prefer Vault API over Adapter API for file operations
-- [ ] Implement Vault Editor API for content modification
+- [x] Implement Vault Editor API for content modification
 - [x] Avoid hardcoded styling (use CSS classes and variables)
 - [x] Add a settings toggle for logging verbosity - current implementation is too verbose by default
 - [x] Minimize console logging - move most logging behind the verbosity setting
@@ -54,18 +54,18 @@ Due to the nature of this plugin, special attention must be given to:
   - [x] What data leaves the vault
   - [x] How data is transmitted
   - [x] Whether any data is stored externally
-- [ ] add file permissions
-  - [ ] per-file with metadata (allow/block)
-  - [ ] per-directory with settings UI (allow/block)
+- [x] add file permissions
+  - [x] per-file with metadata (allow/block)
+  - [x] per-directory with settings UI (allow/block)
 
 ## UI/UX Guidelines
 
 - [x] Use sentence case for UI elements (correctly implemented)
 - [x] Avoid using "settings" in settings headings (only one "Basic Settings" heading should be renamed)
 - [x] Use appropriate heading elements (using createEl("h1"/"h2") in a clean way)
-- [ ] Fix hardcoded styles in connection_ui.ts (lines 121-122) to use CSS classes
+- [x] Fix hardcoded styles in connection_ui.ts (lines 121-122) to use CSS classes
+- [x] Use standard Obsidian styling for collapsible sections
 - [ ] Add warning labels for all permissions that allow content modification
-- [ ] Use standard Obsidian styling for collapsible sections
 
 ## Pull Request Submission Process
 
