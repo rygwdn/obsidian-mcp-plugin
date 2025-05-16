@@ -1,4 +1,3 @@
-import { App, PluginSettingTab } from "obsidian";
 import ObsidianMCPPlugin from "../main";
 import {
 	createSection,
@@ -11,14 +10,18 @@ import { createConnectionInfoSection } from "./connection_ui";
 import { createPromptsInstructions } from "./prompts_ui";
 import { addFeaturesSection } from "./tools_ui";
 import { createDirectoryPermissionsSection } from "./directory_permissions_ui";
+import type { ObsidianInterface } from "../obsidian/obsidian_interface";
+import { App, PluginSettingTab } from "obsidian";
 
 export class MCPSettingTab extends PluginSettingTab {
-	plugin: ObsidianMCPPlugin;
 	containerEl: HTMLElement;
 
-	constructor(app: App, plugin: ObsidianMCPPlugin) {
+	constructor(
+		app: App,
+		private plugin: ObsidianMCPPlugin,
+		public obsidian: ObsidianInterface
+	) {
 		super(app, plugin);
-		this.plugin = plugin;
 	}
 
 	display(): void {
@@ -27,8 +30,7 @@ export class MCPSettingTab extends PluginSettingTab {
 		containerEl.empty();
 		containerEl.addClass("mcp-settings-container");
 
-		const isLocalRestApiEnabled =
-			this.plugin.app.plugins.enabledPlugins.has("obsidian-local-rest-api");
+		const isLocalRestApiEnabled = this.plugin.hasLocalRestApi;
 		createRequiredPluginWarning(
 			containerEl,
 			isLocalRestApiEnabled,

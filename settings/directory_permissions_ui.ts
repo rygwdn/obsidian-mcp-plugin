@@ -1,4 +1,4 @@
-import { TFile } from "obsidian";
+import type { TFile } from "../obsidian/obsidian_types";
 import ObsidianMCPPlugin from "../main";
 import { createSection, createCollapsibleDetailsSection, createMcpButton } from "./ui_components";
 import { showDirectoryTreeModal } from "./directory_tree_modal";
@@ -6,17 +6,16 @@ import { DirectoryRule } from "./types";
 import { isFileAccessible } from "tools/permissions";
 
 export class DirectoryPermissionsUI {
-	private plugin: ObsidianMCPPlugin;
-	private containerEl: HTMLElement;
 	private rulesListContainer!: HTMLElement;
 	private examplesContainer!: HTMLElement | null;
 	private draggedRule: DirectoryRule | null = null;
 	private hoveredOverRule: DirectoryRule | null = null;
 	private lastRenderedRules: DirectoryRule[] = [];
 
-	constructor(plugin: ObsidianMCPPlugin, containerEl: HTMLElement) {
-		this.plugin = plugin;
-		this.containerEl = containerEl;
+	constructor(
+		private plugin: ObsidianMCPPlugin,
+		private containerEl: HTMLElement
+	) {
 		this.createDirectoryPermissionsSection();
 	}
 
@@ -326,7 +325,7 @@ export class DirectoryPermissionsUI {
 		const blockedFiles: TFile[] = [];
 
 		for (const file of files) {
-			if (isFileAccessible(this.plugin.app, file, this.plugin.settings)) {
+			if (isFileAccessible(this.plugin.obsidianInterface, file)) {
 				allowedFiles.push(file);
 			} else {
 				blockedFiles.push(file);

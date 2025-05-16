@@ -1,7 +1,6 @@
-import { App } from "obsidian";
 import { z } from "zod";
 import { ToolRegistration } from "./types";
-import { getAPI, isPluginEnabled } from "obsidian-dataview";
+import type { ObsidianInterface } from "../obsidian/obsidian_interface";
 
 const DATAVIEW_DOCS_URL = "https://blacksmithgu.github.io/obsidian-dataview/";
 const QUERY_TYPES_DOCS_URL = `${DATAVIEW_DOCS_URL}queries/query-types/`;
@@ -56,25 +55,19 @@ export const dataviewQueryTool: ToolRegistration = {
 					`Documentation: ${QUERY_TYPES_DOCS_URL}`
 			),
 	},
-	handler: (app: App) => async (args: Record<string, unknown>) => {
+	handler: (obsidian: ObsidianInterface) => async (args: Record<string, unknown>) => {
 		const { query } = args as { query: string };
-		if (!isPluginEnabled(app)) {
+		if (!obsidian.dataview) {
 			throw new Error("Dataview plugin is not enabled");
 		}
 
-		const dataviewApi = getAPI(app);
-		if (!dataviewApi) {
-			throw new Error(
-				"Dataview API is not available. Make sure the Dataview plugin is correctly loaded."
-			);
-		}
-
 		try {
-			const queryResult = await dataviewApi.queryMarkdown(query);
+			const queryResult = await obsidian.dataview.queryMarkdown(query);
+
 			if (!queryResult.successful) {
 				throw new Error(`Query execution failed: ${queryResult.error}`);
 			}
-			return queryResult.value;
+			return queryResult.value ?? "";
 		} catch (error) {
 			throw new Error(`Error executing Dataview query: ${error.message}`);
 		}

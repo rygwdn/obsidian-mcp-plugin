@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import moment from "moment"; // Import moment
 import { VaultFileResource, VaultDailyNoteResource } from "../tools/vault_file_resource";
-import { MockApp } from "./mocks/obsidian";
+import { MockObsidian } from "./mock_obsidian";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { getContentsTool } from "../tools/get_contents";
 import * as DailyNoteUtils from "../tools/daily_note_utils";
@@ -9,14 +9,13 @@ import * as DailyNoteUtils from "../tools/daily_note_utils";
 const MOCK_SYSTEM_DATE = "2023-05-09T12:00:00.000Z";
 
 describe("VaultFileResource", () => {
-	let mockApp: MockApp;
+	let obsidian: MockObsidian;
 	let resource: VaultFileResource;
 
 	beforeEach(() => {
 		vi.useFakeTimers();
 		vi.setSystemTime(new Date(MOCK_SYSTEM_DATE));
 		vi.clearAllMocks();
-		mockApp = new MockApp();
 
 		vi.stubGlobal("window", {
 			moment: (...args: unknown[]) => {
@@ -28,7 +27,9 @@ describe("VaultFileResource", () => {
 			},
 		});
 
-		mockApp.setFiles({
+		obsidian = new MockObsidian();
+
+		obsidian.setFiles({
 			"test1.md": "Test file 1 contents",
 			"test2.md": "Test file 2 contents",
 			"folder/test3.md": "Test file 3 contents",
@@ -38,22 +39,17 @@ describe("VaultFileResource", () => {
 			"daily_notes/2023-05-10.md": "Daily note content for tomorrow",
 		});
 
-		mockApp.internalPlugins.plugins["daily-notes"] = {
-			enabled: true,
-			instance: {
-				options: {
-					format: "YYYY-MM-DD",
-					folder: "daily_notes",
-				},
-			},
+		obsidian.dailyNotes = {
+			format: "YYYY-MM-DD",
+			folder: "daily_notes",
 		};
 
-		resource = new VaultFileResource(mockApp, mockApp.settings);
+		resource = new VaultFileResource(obsidian);
 	});
 
 	describe("constructor", () => {
 		it("should initialize correctly", () => {
-			const resource = new VaultFileResource(mockApp, mockApp.settings);
+			const resource = new VaultFileResource(obsidian);
 			expect.soft(resource.template).toBeDefined();
 			const resourceName = resource["resourceName"]; // Access protected property for test validation
 			expect(resourceName).toBe("file");
@@ -92,13 +88,13 @@ describe("VaultFileResource", () => {
 		it("should use list method when initialized", () => {
 			// Verify the resource is created correctly - we can't directly test .list()
 			// since it's actually inside a ResourceTemplate
-			const resource = new VaultFileResource(mockApp, mockApp.settings);
+			const resource = new VaultFileResource(obsidian);
 			expect(resource).toBeDefined();
 
 			// Instead, test the list method directly since that's what the template would call
 			const listResult = resource.list();
 			// The VaultFileResource should list all markdown files
-			const markdownFiles = mockApp.vault.getMarkdownFiles();
+			const markdownFiles = obsidian.getMarkdownFiles();
 			expect(listResult.resources).toHaveLength(markdownFiles.length);
 		});
 
@@ -113,7 +109,7 @@ describe("VaultFileResource", () => {
 		it("should return a list of markdown files correctly", () => {
 			const result = resource.list();
 			// The VaultFileResource should list all markdown files
-			const markdownFiles = mockApp.vault.getMarkdownFiles();
+			const markdownFiles = obsidian.getMarkdownFiles();
 			expect(result.resources.length).toBe(markdownFiles.length);
 
 			const markdownFileResources = result.resources.filter((r) => r.mimeType === "text/markdown");
@@ -166,7 +162,7 @@ describe("VaultFileResource", () => {
 		it("should throw an error for non-existent files", async () => {
 			const handlerCall = resource.handler(new URL("file:///non-existent.md"));
 			await expect(handlerCall).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Not found: non-existent.md]`
+				`[Error: File not found: non-existent.md]`
 			);
 		});
 
@@ -183,14 +179,13 @@ describe("VaultFileResource", () => {
 });
 
 describe("VaultDailyNoteResource", () => {
-	let mockApp: MockApp;
+	let obsidian: MockObsidian;
 	let resource: VaultDailyNoteResource;
 
 	beforeEach(() => {
 		vi.useFakeTimers();
 		vi.setSystemTime(new Date(MOCK_SYSTEM_DATE));
 		vi.clearAllMocks();
-		mockApp = new MockApp();
 
 		vi.stubGlobal("window", {
 			moment: (...args: unknown[]) => {
@@ -202,29 +197,25 @@ describe("VaultDailyNoteResource", () => {
 			},
 		});
 
-		mockApp.setFiles({
+		obsidian = new MockObsidian();
+
+		obsidian.setFiles({
 			"daily_notes/2023-05-09.md": "Daily note content for today",
 			"daily_notes/2023-05-08.md": "Daily note content for yesterday",
 			"daily_notes/2023-05-10.md": "Daily note content for tomorrow",
 		});
 
-		// Set up the mockApp to enable daily notes plugin
-		mockApp.internalPlugins.plugins["daily-notes"] = {
-			enabled: true,
-			instance: {
-				options: {
-					format: "YYYY-MM-DD",
-					folder: "daily_notes",
-				},
-			},
+		obsidian.dailyNotes = {
+			format: "YYYY-MM-DD",
+			folder: "daily_notes",
 		};
 
-		resource = new VaultDailyNoteResource(mockApp, mockApp.settings);
+		resource = new VaultDailyNoteResource(obsidian);
 	});
 
 	describe("constructor", () => {
 		it("should initialize correctly", () => {
-			const resource = new VaultDailyNoteResource(mockApp, mockApp.settings);
+			const resource = new VaultDailyNoteResource(obsidian);
 			expect.soft(resource.template).toBeDefined();
 			const resourceName = resource["resourceName"]; // Access protected property for test validation
 			expect(resourceName).toBe("daily");
@@ -293,8 +284,8 @@ describe("VaultDailyNoteResource", () => {
 		});
 
 		it("should throw error when daily notes plugin not enabled", async () => {
-			mockApp.internalPlugins.plugins["daily-notes"].enabled = false;
-			mockApp.plugins.plugins["periodic-notes"] = null as any;
+			// Disable the daily notes plugin
+			obsidian.dailyNotes = null;
 
 			const handlerCall = resource.handler(new URL("daily:///today"));
 
@@ -306,14 +297,14 @@ describe("VaultDailyNoteResource", () => {
 });
 
 describe("getContentsTool", () => {
-	let mockApp: MockApp;
+	let obsidian: MockObsidian;
 	let handler: (args: Record<string, unknown>) => Promise<string>;
 
 	beforeEach(() => {
 		vi.useFakeTimers(); // Use fake timers
 		vi.setSystemTime(new Date(MOCK_SYSTEM_DATE)); // Set system time
 		vi.clearAllMocks();
-		mockApp = new MockApp();
+		obsidian = new MockObsidian();
 
 		vi.stubGlobal("window", {
 			moment: (...args: unknown[]) => {
@@ -325,7 +316,7 @@ describe("getContentsTool", () => {
 			},
 		});
 
-		mockApp.setFiles({
+		obsidian.setFiles({
 			"test1.md": "Test file 1 contents",
 			"test2.md": "Test file 2 contents",
 			"folder/test3.md": "Test file 3 contents",
@@ -336,17 +327,12 @@ describe("getContentsTool", () => {
 			"daily_notes/2023-05-10.md": "Daily note content for tomorrow",
 		});
 
-		mockApp.internalPlugins.plugins["daily-notes"] = {
-			enabled: true,
-			instance: {
-				options: {
-					format: "YYYY-MM-DD",
-					folder: "daily_notes",
-				},
-			},
+		obsidian.dailyNotes = {
+			format: "YYYY-MM-DD",
+			folder: "daily_notes",
 		};
 
-		handler = getContentsTool.handler(mockApp, mockApp.settings);
+		handler = getContentsTool.handler(obsidian);
 	});
 
 	describe("error handling", () => {
@@ -393,12 +379,14 @@ describe("getContentsTool", () => {
 		it("should throw error for missing daily note", async () => {
 			vi.clearAllMocks();
 
-			mockApp.mockFiles.clear();
-			const errorHandler = getContentsTool.handler(mockApp, mockApp.settings);
+			obsidian.markdownFiles.delete("daily_notes/2023-05-09.md");
+			const errorHandler = getContentsTool.handler(obsidian);
 
 			await expect(
 				errorHandler({ uri: "daily:///today" })
-			).rejects.toThrowErrorMatchingInlineSnapshot(`[Error: Not found: daily_notes/2023-05-09.md]`);
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: File not found: daily_notes/2023-05-09.md]`
+			);
 		});
 	});
 });

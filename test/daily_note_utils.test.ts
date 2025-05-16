@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { MockApp } from "./mocks/obsidian";
+import { MockObsidian } from "./mock_obsidian";
 import * as DailyNoteUtils from "../tools/daily_note_utils";
 import moment from "moment";
 
@@ -18,7 +18,7 @@ vi.stubGlobal("window", {
 });
 
 describe("DailyNoteUtils", () => {
-	let mockApp: MockApp;
+	let obsidian: MockObsidian;
 
 	beforeEach(() => {
 		// Setup fake timers and set a fixed date
@@ -26,54 +26,33 @@ describe("DailyNoteUtils", () => {
 		vi.setSystemTime(MOCK_DATE);
 
 		vi.clearAllMocks();
-		mockApp = new MockApp();
 
-		// Set up files that could be daily notes
-		mockApp.setFiles({
+		// Create and configure the test interface
+		obsidian = new MockObsidian({
+			enabledTools: {
+				dataview_query: true,
+				quickadd: true,
+			},
+		});
+
+		// Add test files
+		obsidian.setFiles({
 			"daily/2023-05-09.md": "# Today's Note\nThis is today's note content.",
 			"daily/2023-05-08.md": "# Yesterday's Note\nThis is yesterday's note content.",
 			"daily/2023-05-10.md": "# Tomorrow's Note\nThis is tomorrow's note content.",
 			"other-note.md": "# Other Note\nThis is not a daily note",
 		});
 
-		// Enable daily notes plugin
-		mockApp.internalPlugins.plugins["daily-notes"] = {
-			enabled: true,
-			instance: {
-				options: {
-					folder: "daily",
-					format: "YYYY-MM-DD",
-				},
-			},
+		// Configure daily notes settings
+		obsidian.dailyNotes = {
+			format: "YYYY-MM-DD",
+			folder: "daily",
 		};
 	});
 
 	afterEach(() => {
 		// Restore real timers after each test
 		vi.useRealTimers();
-	});
-
-	describe("isDailyNotesEnabled", () => {
-		it("should return true when core daily-notes plugin is enabled", () => {
-			mockApp.internalPlugins.plugins["daily-notes"].enabled = true;
-			mockApp.plugins.plugins["periodic-notes"] = null as any;
-
-			expect(DailyNoteUtils.isDailyNotesEnabled(mockApp)).toBe(true);
-		});
-
-		it("should return true when periodic-notes plugin is enabled", () => {
-			mockApp.internalPlugins.plugins["daily-notes"].enabled = false;
-			mockApp.plugins.plugins["periodic-notes"] = {} as any;
-
-			expect(DailyNoteUtils.isDailyNotesEnabled(mockApp)).toBe(true);
-		});
-
-		it("should return false when no daily notes plugin is enabled", () => {
-			mockApp.internalPlugins.plugins["daily-notes"].enabled = false;
-			mockApp.plugins.plugins["periodic-notes"] = null as any;
-
-			expect(DailyNoteUtils.isDailyNotesEnabled(mockApp)).toBe(false);
-		});
 	});
 
 	describe("ALIASES", () => {
@@ -87,7 +66,7 @@ describe("DailyNoteUtils", () => {
 	describe("resolvePath", () => {
 		it("should resolve regular file path", async () => {
 			const uri = new URL("file:///other-note.md");
-			const resolved = await DailyNoteUtils.resolvePath(mockApp, uri);
+			const resolved = await DailyNoteUtils.resolvePath(obsidian, uri);
 			expect(resolved).toBe("other-note.md");
 		});
 
@@ -104,7 +83,7 @@ describe("DailyNoteUtils", () => {
 			vi.spyOn(DailyNoteUtils, "resolvePath").mockImplementation(mockFn);
 
 			const uri = new URL("daily://today");
-			const resolved = await DailyNoteUtils.resolvePath(mockApp, uri);
+			const resolved = await DailyNoteUtils.resolvePath(obsidian, uri);
 			expect(resolved).toBe("daily/2023-05-09.md");
 
 			// Restore the original implementation
@@ -112,8 +91,7 @@ describe("DailyNoteUtils", () => {
 		});
 
 		it("should throw error when daily notes plugin not enabled", async () => {
-			mockApp.internalPlugins.plugins["daily-notes"].enabled = false;
-			mockApp.plugins.plugins["periodic-notes"] = null as any;
+			obsidian.dailyNotes = null;
 
 			// For this test, we need to handle the original implementation but make it throw
 			const origFn = DailyNoteUtils.resolvePath;
@@ -129,7 +107,7 @@ describe("DailyNoteUtils", () => {
 				);
 			vi.spyOn(DailyNoteUtils, "resolvePath").mockImplementation(mockImpl);
 
-			await expect(() => DailyNoteUtils.resolvePath(mockApp, uri)).rejects.toThrow(
+			await expect(() => DailyNoteUtils.resolvePath(obsidian, uri)).rejects.toThrow(
 				"Cannot access daily notes: No daily notes plugin is enabled"
 			);
 

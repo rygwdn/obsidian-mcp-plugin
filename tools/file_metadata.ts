@@ -1,21 +1,19 @@
-import { App } from "obsidian";
 import { z } from "zod";
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { ReadResourceResult } from "@modelcontextprotocol/sdk/types";
 import { Variables } from "@modelcontextprotocol/sdk/shared/uriTemplate";
 import { ToolRegistration } from "./types";
 import { logger } from "./logging";
-import { getAccessibleFile, getAccessibleMarkdownFiles } from "./permissions";
-import { MCPPluginSettings } from "../settings/types";
+import type { ObsidianInterface } from "../obsidian/obsidian_interface";
+import { resolvePath } from "./daily_note_utils";
 
 export async function generateFileMetadata(
-	app: App,
-	filePath: string,
-	settings: MCPPluginSettings
+	obsidian: ObsidianInterface,
+	filePath: string
 ): Promise<string> {
-	const file = await getAccessibleFile(filePath, "read", app, settings);
+	const file = await obsidian.getFileByPath(filePath, "read");
 
-	const fileCache = app.metadataCache.getFileCache(file);
+	const fileCache = obsidian.getFileCache(file);
 	if (!fileCache) {
 		throw new Error(`No metadata found for file: ${filePath}`);
 	}
@@ -67,17 +65,18 @@ export const getFileMetadataTool: ToolRegistration = {
 	schema: {
 		path: z.string().describe("Path to the file to get metadata for"),
 	},
-	handler: (app: App, settings: MCPPluginSettings) => async (args: Record<string, unknown>) => {
-		const path = args.path as string;
-		return await generateFileMetadata(app, path, settings);
+	handler: (obsidian: ObsidianInterface) => async (args: Record<string, unknown>) => {
+		let path = args.path as string;
+		if (path.startsWith("file:")) {
+			path = await resolvePath(obsidian, new URL(path));
+		}
+
+		return await generateFileMetadata(obsidian, path);
 	},
 };
 
 export class FileMetadataResource {
-	constructor(
-		private app: App,
-		private settings: MCPPluginSettings
-	) {}
+	constructor(private obsidian: ObsidianInterface) {}
 
 	public register(server: McpServer) {
 		logger.logResourceRegistration("metadata");
@@ -107,7 +106,7 @@ export class FileMetadataResource {
 	}
 
 	public list() {
-		const files = getAccessibleMarkdownFiles(this.app, this.settings, "read");
+		const files = this.obsidian.getMarkdownFiles();
 		return {
 			resources: files.map((file) => ({
 				name: file.path,
@@ -118,7 +117,7 @@ export class FileMetadataResource {
 	}
 
 	public completePath(value: string) {
-		const files = getAccessibleMarkdownFiles(this.app, this.settings, "read");
+		const files = this.obsidian.getMarkdownFiles();
 		return files.map((file) => file.path).filter((path) => path.startsWith(value));
 	}
 
@@ -132,7 +131,7 @@ export class FileMetadataResource {
 			contents: [
 				{
 					uri: uri.toString(),
-					text: await generateFileMetadata(this.app, filePath, this.settings),
+					text: await generateFileMetadata(this.obsidian, filePath),
 					mimeType: "text/markdown",
 				},
 			],

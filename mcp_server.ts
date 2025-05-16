@@ -1,4 +1,3 @@
-import { App, TFolder } from "obsidian";
 import { McpServer, ToolCallback } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
@@ -6,28 +5,28 @@ import { searchTool } from "tools/search";
 import { updateContentTool } from "tools/update_content";
 import { dataviewQueryTool } from "tools/dataview_query";
 import { getFileMetadataTool, FileMetadataResource } from "tools/file_metadata";
-import { quickAddListTool, quickAddExecuteTool, isQuickAddEnabled } from "tools/quickadd";
+import { quickAddListTool, quickAddExecuteTool } from "tools/quickadd";
 import { ToolRegistration } from "tools/types";
-import { DEFAULT_SETTINGS, MCPPluginSettings } from "./settings/types";
+import { DEFAULT_SETTINGS } from "./settings/types";
 import { registerPrompts } from "tools/prompts";
 import { VaultDailyNoteResource, VaultFileResource } from "tools/vault_file_resource";
 import { getContentsTool } from "tools/get_contents";
 import type { Request, Response } from "express";
-import { isPluginEnabled as isDataviewEnabled } from "obsidian-dataview";
 import { logger } from "tools/logging";
 import { InitializeRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import type { ObsidianInterface } from "./obsidian/obsidian_interface";
 
 export class ObsidianMcpServer {
 	private server: McpServer;
 	private sseTransports: Record<string, SSEServerTransport> = {};
 
 	constructor(
-		private app: App,
-		private manifest: { version: string; name: string },
-		private settings: MCPPluginSettings
+		private obsidian: ObsidianInterface,
+		private manifest: { version: string; name: string }
 	) {
 		logger.log(`Initializing MCP server v${this.manifest.version}`);
-		const vaultDescription = this.settings.vaultDescription ?? DEFAULT_SETTINGS.vaultDescription;
+		const vaultDescription =
+			this.obsidian.settings.vaultDescription ?? DEFAULT_SETTINGS.vaultDescription;
 		const vaultStructure = this.getVaultStructure();
 
 		this.server = new McpServer(
@@ -41,12 +40,12 @@ export class ObsidianMcpServer {
 			logger.logError("Server Error:", error);
 		};
 
-		const { enabledTools } = this.settings;
+		const enabledTools = this.obsidian.settings.enabledTools;
 
 		if (enabledTools.file_access) {
-			new VaultFileResource(this.app, this.settings).register(this.server);
-			new VaultDailyNoteResource(this.app, this.settings).register(this.server);
-			new FileMetadataResource(this.app, this.settings).register(this.server);
+			new VaultFileResource(this.obsidian).register(this.server);
+			new VaultDailyNoteResource(this.obsidian).register(this.server);
+			new FileMetadataResource(this.obsidian).register(this.server);
 			this.registerTool(this.server, getContentsTool);
 			this.registerTool(this.server, getFileMetadataTool);
 		}
@@ -59,17 +58,17 @@ export class ObsidianMcpServer {
 			this.registerTool(this.server, updateContentTool);
 		}
 
-		if (enabledTools.dataview_query && isDataviewEnabled(this.app)) {
+		if (enabledTools.dataview_query && this.obsidian.dataview) {
 			this.registerTool(this.server, dataviewQueryTool);
 		}
 
-		if (isQuickAddEnabled(this.app) && enabledTools.quickadd) {
+		if (this.obsidian.quickAdd && enabledTools.quickadd) {
 			this.registerTool(this.server, quickAddListTool);
 			this.registerTool(this.server, quickAddExecuteTool);
 		}
 
-		if (this.settings.enablePrompts) {
-			registerPrompts(this.app, this.server, this.settings);
+		if (this.obsidian.settings.enablePrompts) {
+			registerPrompts(this.obsidian, this.server);
 		}
 	}
 
@@ -85,23 +84,14 @@ export class ObsidianMcpServer {
 	}
 
 	private getVaultStructure(): string {
-		const rootFolder = this.app.vault.getRoot();
-		let structure = "";
+		const folders = this.obsidian
+			.getMarkdownFiles()
+			.map((file) => file.path.split("/"))
+			.filter((parts) => parts.length > 2)
+			.map((parts) => parts.slice(0, 2).join("/"))
+			.map((folder) => `- ${folder}`);
 
-		const allFolders = this.app.vault
-			.getAllLoadedFiles()
-			.filter((file): file is TFolder => file instanceof TFolder)
-			.sort((a, b) => a.path.localeCompare(b.path));
-
-		const rootFolders = allFolders.filter((folder) => folder.parent === rootFolder);
-
-		for (const folder of rootFolders) {
-			structure += `- ${folder.path}\n`;
-			const subFolders = allFolders.filter((f) => f.parent === folder);
-			for (const subFolder of subFolders) {
-				structure += `  - ${subFolder.path}\n`;
-			}
-		}
+		const structure = Array.from(new Set(folders)).sort().join("\n");
 
 		return structure || "No directories found in vault.";
 	}
@@ -167,18 +157,15 @@ export class ObsidianMcpServer {
 		await this.server.close();
 		logger.log("MCP server closed");
 	}
-
 	private registerTool(server: McpServer, toolReg: ToolRegistration) {
-		const toolName = this.settings.toolNamePrefix
-			? `${this.settings.toolNamePrefix}_${toolReg.name}`
-			: toolReg.name;
-
+		const toolNamePrefix = this.obsidian.settings.toolNamePrefix;
+		const toolName = toolNamePrefix ? `${toolNamePrefix}_${toolReg.name}` : toolReg.name;
 		logger.logToolRegistration(toolName);
 
 		const wrappedToolHandler = logger.withToolLogging(
 			toolName,
 			async (args: Record<string, unknown>) => {
-				return await toolReg.handler(this.app, this.settings)(args);
+				return await toolReg.handler(this.obsidian)(args);
 			}
 		);
 

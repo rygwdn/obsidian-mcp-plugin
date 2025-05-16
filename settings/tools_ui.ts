@@ -1,6 +1,5 @@
 import ObsidianMCPPlugin from "../main";
 import { createSection, createToggleSetting } from "./ui_components";
-import * as DailyNoteUtils from "../tools/daily_note_utils";
 
 export function addFeaturesSection(plugin: ObsidianMCPPlugin, containerEl: HTMLElement): void {
 	createSection(containerEl, "Features");
@@ -68,7 +67,7 @@ function addDataviewFeatureSetting(
 }
 
 function addDailyNotesFeatureSetting(plugin: ObsidianMCPPlugin, containerEl: HTMLElement): void {
-	const isDailyNotesPluginEnabled = DailyNoteUtils.isDailyNotesEnabled(plugin.app);
+	const isDailyNotesPluginEnabled = Boolean(plugin.obsidianInterface.dailyNotes);
 	const dailyNoteSetting = createToggleSetting({
 		containerEl,
 		name: "Daily Notes Integration",

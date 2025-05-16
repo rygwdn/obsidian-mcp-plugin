@@ -1,3 +1,6 @@
+export type TFile = import("obsidian").TFile;
+export type CachedMetadata = import("obsidian").CachedMetadata;
+
 declare global {
 	interface Window {
 		moment: moment.Moment;
@@ -8,7 +11,7 @@ declare module "obsidian" {
 	interface App {
 		plugins: {
 			enabledPlugins: Set<string>;
-			plugins: Record<string, unknown>;
+			plugins: Record<string, object | undefined>;
 		};
 	}
 }

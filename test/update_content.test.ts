@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { updateContentTool } from "../tools/update_content";
-import { MockApp, MockFile } from "./mocks/obsidian";
+import { MockObsidian } from "./mock_obsidian";
 import moment from "moment";
 
 const MOCK_DATE = new Date("2023-05-09T12:00:00.000Z");
@@ -18,7 +18,7 @@ describe("update_content tool annotations", () => {
 });
 
 describe("update_content tool", () => {
-	let mockApp: MockApp;
+	let obsidian: MockObsidian;
 
 	beforeEach(() => {
 		// Setup fake timers and set a fixed date
@@ -26,7 +26,7 @@ describe("update_content tool", () => {
 		vi.setSystemTime(MOCK_DATE);
 
 		vi.clearAllMocks();
-		mockApp = new MockApp();
+		obsidian = new MockObsidian();
 
 		vi.stubGlobal("window", {
 			moment: (...args: unknown[]) => {
@@ -40,7 +40,7 @@ describe("update_content tool", () => {
 			},
 		});
 
-		mockApp.setFiles({
+		obsidian.setFiles({
 			"test.md": "This is a test file content",
 			"replace.md": "This is a file with specific content to replace.",
 			"multiple.md": "This has multiple matches. This has multiple matches.",
@@ -50,14 +50,9 @@ describe("update_content tool", () => {
 			"daily/2023-05-10.md": "# Tomorrow's Note\nThis is tomorrow's note content.",
 		});
 
-		mockApp.internalPlugins.plugins["daily-notes"] = {
-			enabled: true,
-			instance: {
-				options: {
-					folder: "daily",
-					format: "YYYY-MM-DD",
-				},
-			},
+		obsidian.dailyNotes = {
+			format: "YYYY-MM-DD",
+			folder: "daily",
 		};
 	});
 
@@ -68,37 +63,39 @@ describe("update_content tool", () => {
 	describe("regular file handling", () => {
 		describe("append mode", () => {
 			it("should append content to an existing file", async () => {
-				const handler = updateContentTool.handler(mockApp, mockApp.settings);
+				const handler = updateContentTool.handler(obsidian);
 				const result = await handler({
 					uri: "file:///test.md",
 					mode: "append",
 					content: "Some additional content",
 				});
 
-				expect(mockApp.vault.append).toHaveBeenCalled();
+				const file = obsidian.markdownFiles.get("test.md")!.contents;
+				expect(file).toContain("Some additional content");
 				expect(result).toContain("Content appended successfully");
 			});
 
 			it("should add a newline if the file doesn't end with one", async () => {
-				mockApp.setFiles({
+				obsidian.setFiles({
 					"test.md": "Content without newline",
 				});
 
-				const handler = updateContentTool.handler(mockApp, mockApp.settings);
+				const handler = updateContentTool.handler(obsidian);
 				await handler({
 					uri: "file:///test.md",
 					mode: "append",
 					content: "Appended content",
 				});
 
-				expect(mockApp.mockFiles.get("test.md")?.contents).toMatchInlineSnapshot(`
+				const file = obsidian.markdownFiles.get("test.md")!.contents;
+				expect(file).toMatchInlineSnapshot(`
 					"Content without newline
 					Appended content"
 				`);
 			});
 
 			it("should throw an error if the file doesn't exist and create_if_missing is false", async () => {
-				const handler = updateContentTool.handler(mockApp, mockApp.settings);
+				const handler = updateContentTool.handler(obsidian);
 				await expect(
 					handler({
 						uri: "file:///nonexistent.md",
@@ -109,7 +106,7 @@ describe("update_content tool", () => {
 			});
 
 			it("should create a new file if it doesn't exist and create_if_missing is true", async () => {
-				const handler = updateContentTool.handler(mockApp, mockApp.settings);
+				const handler = updateContentTool.handler(obsidian);
 				const result = await handler({
 					uri: "file:///new_file.md",
 					mode: "append",
@@ -119,8 +116,8 @@ describe("update_content tool", () => {
 
 				expect(result).toContain("Content appended successfully to new_file.md");
 
-				const file = mockApp.mockVault.files.get("new_file.md");
-				expect(file?.contents).toMatchInlineSnapshot(`
+				const file = obsidian.markdownFiles.get("new_file.md")!.contents;
+				expect(file).toMatchInlineSnapshot(`
 					"
 					New file content"
 				`);
@@ -129,7 +126,7 @@ describe("update_content tool", () => {
 
 		describe("replace mode", () => {
 			it("should replace content in a file", async () => {
-				const handler = updateContentTool.handler(mockApp, mockApp.settings);
+				const handler = updateContentTool.handler(obsidian);
 				const result = await handler({
 					uri: "file:///replace.md",
 					mode: "replace",
@@ -137,15 +134,13 @@ describe("update_content tool", () => {
 					content: "replacement text",
 				});
 
-				expect(mockApp.vault.modify).toHaveBeenCalled();
-				const file = mockApp.vault.getFileByPath("replace.md");
-				const content = await mockApp.vault.read(file as any);
-				expect(content).toBe("This is a file with replacement text to replace.");
+				const file = obsidian.markdownFiles.get("replace.md")!.contents;
+				expect(file).toBe("This is a file with replacement text to replace.");
 				expect(result).toContain("Content successfully replaced");
 			});
 
 			it("should throw an error when the find parameter is not provided", async () => {
-				const handler = updateContentTool.handler(mockApp, mockApp.settings);
+				const handler = updateContentTool.handler(obsidian);
 
 				await expect(
 					handler({
@@ -157,7 +152,7 @@ describe("update_content tool", () => {
 			});
 
 			it("should throw an error when content to find is not in the file", async () => {
-				const handler = updateContentTool.handler(mockApp, mockApp.settings);
+				const handler = updateContentTool.handler(obsidian);
 
 				await expect(
 					handler({
@@ -170,7 +165,7 @@ describe("update_content tool", () => {
 			});
 
 			it("should throw an error when there are multiple matches", async () => {
-				const handler = updateContentTool.handler(mockApp, mockApp.settings);
+				const handler = updateContentTool.handler(obsidian);
 
 				await expect(
 					handler({
@@ -183,7 +178,7 @@ describe("update_content tool", () => {
 			});
 
 			it("should work with empty replacement string", async () => {
-				const handler = updateContentTool.handler(mockApp, mockApp.settings);
+				const handler = updateContentTool.handler(obsidian);
 				const result = await handler({
 					uri: "file:///replace.md",
 					mode: "replace",
@@ -191,9 +186,8 @@ describe("update_content tool", () => {
 					content: "",
 				});
 
-				const file = mockApp.vault.getFileByPath("replace.md");
-				const content = await mockApp.vault.read(file as any);
-				expect(content).toBe("This is a file with  to replace.");
+				const file = obsidian.markdownFiles.get("replace.md")!.contents;
+				expect(file).toBe("This is a file with  to replace.");
 				expect(result).toContain("Content successfully replaced");
 			});
 		});
@@ -202,7 +196,7 @@ describe("update_content tool", () => {
 	describe("daily:// URI handling", () => {
 		describe("append mode", () => {
 			it("should append content to today's daily note", async () => {
-				const handler = updateContentTool.handler(mockApp, mockApp.settings);
+				const handler = updateContentTool.handler(obsidian);
 				const result = await handler({
 					uri: "daily:///today",
 					mode: "append",
@@ -212,15 +206,15 @@ describe("update_content tool", () => {
 				expect(result).toContain("Content appended successfully");
 
 				// Verify content was updated
-				expect(mockApp.vault.append).toHaveBeenCalled();
-				const file = mockApp.vault.getFileByPath("daily/2023-05-09.md");
-				expect(file).toBeDefined();
+				const file = obsidian.markdownFiles.get("daily/2023-05-09.md")!.contents;
+				expect(file).toContain("New content appended.");
 			});
 
 			it("should throw error when daily note doesn't exist and create_if_missing is false", async () => {
-				mockApp.mockVault.files.delete("daily/2023-05-09.md");
+				// Remove today's note
+				obsidian.markdownFiles.delete("daily/2023-05-09.md");
 
-				const handler = updateContentTool.handler(mockApp, mockApp.settings);
+				const handler = updateContentTool.handler(obsidian);
 				await expect(
 					handler({
 						uri: "daily:///today",
@@ -231,10 +225,9 @@ describe("update_content tool", () => {
 			});
 
 			it("should create and append to daily note when it doesn't exist and create_if_missing is true", async () => {
-				// Remove today's note
-				mockApp.mockVault.files.delete("daily/2023-05-09.md");
+				obsidian.markdownFiles.delete("daily/2023-05-09.md");
 
-				const handler = updateContentTool.handler(mockApp, mockApp.settings);
+				const handler = updateContentTool.handler(obsidian);
 				const result = await handler({
 					uri: "daily:///today",
 					mode: "append",
@@ -245,17 +238,15 @@ describe("update_content tool", () => {
 				expect(result).toContain("Content appended successfully");
 
 				// Verify the file was created with content
-				const file = mockApp.mockVault.files.get("daily/2023-05-09.md");
-				expect(file).toBeDefined();
-				expect(file?.contents).toContain("New daily note content.");
+				const file = obsidian.markdownFiles.get("daily/2023-05-09.md")!.contents;
+				expect(file).toContain("New daily note content.");
 			});
 
 			it("should throw error when no daily notes plugin is enabled", async () => {
 				// Disable the daily notes plugin
-				mockApp.internalPlugins.plugins["daily-notes"].enabled = false;
-				mockApp.plugins.plugins["periodic-notes"] = null as any;
+				obsidian.dailyNotes = null;
 
-				const handler = updateContentTool.handler(mockApp, mockApp.settings);
+				const handler = updateContentTool.handler(obsidian);
 				await expect(
 					handler({
 						uri: "daily:///today",
@@ -268,7 +259,7 @@ describe("update_content tool", () => {
 
 		describe("replace mode", () => {
 			it("should replace content in today's daily note", async () => {
-				const handler = updateContentTool.handler(mockApp, mockApp.settings);
+				const handler = updateContentTool.handler(obsidian);
 				const result = await handler({
 					uri: "daily:///today",
 					mode: "replace",
@@ -279,13 +270,12 @@ describe("update_content tool", () => {
 				expect(result).toContain("Content successfully replaced");
 
 				// Verify content was updated
-				expect(mockApp.vault.modify).toHaveBeenCalled();
-				const file = mockApp.vault.getFileByPath("daily/2023-05-09.md");
-				expect(file).toBeDefined();
+				const file = obsidian.markdownFiles.get("daily/2023-05-09.md")!.contents;
+				expect(file).toContain("This content has been replaced.");
 			});
 
 			it("should throw error when using replace mode without find parameter", async () => {
-				const handler = updateContentTool.handler(mockApp, mockApp.settings);
+				const handler = updateContentTool.handler(obsidian);
 				await expect(
 					handler({
 						uri: "daily:///today",
@@ -296,7 +286,7 @@ describe("update_content tool", () => {
 			});
 
 			it("should throw error when content to find is not in the daily note", async () => {
-				const handler = updateContentTool.handler(mockApp, mockApp.settings);
+				const handler = updateContentTool.handler(obsidian);
 				await expect(
 					handler({
 						uri: "daily:///today",
@@ -309,15 +299,11 @@ describe("update_content tool", () => {
 
 			it("should throw error when there are multiple matches in the daily note", async () => {
 				// Set up a note with multiple matches
-				mockApp.mockVault.files.set(
-					"daily/2023-05-09.md",
-					new MockFile(
-						"daily/2023-05-09.md",
-						"This has duplicate content. This has duplicate content."
-					)
-				);
+				obsidian.setFiles({
+					"daily/2023-05-09.md": "This has duplicate content. This has duplicate content.",
+				});
 
-				const handler = updateContentTool.handler(mockApp, mockApp.settings);
+				const handler = updateContentTool.handler(obsidian);
 				await expect(
 					handler({
 						uri: "daily:///today",

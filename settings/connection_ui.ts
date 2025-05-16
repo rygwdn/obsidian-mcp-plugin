@@ -1,10 +1,10 @@
-import { App } from "obsidian";
 import {
 	createInfoBox,
 	createCopyableCode,
 	createCollapsibleDetailsSection,
 } from "./ui_components";
 import { getLocalRestApiSettings, LocalRestApiSettings } from "./local_rest_api";
+import { App } from "obsidian";
 
 export function createConnectionInfoSection(app: App, containerEl: HTMLElement): void {
 	const infoBox = createInfoBox(containerEl);

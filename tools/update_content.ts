@@ -1,9 +1,8 @@
-import { App, TFile } from "obsidian";
+import type { TFile } from "../obsidian/obsidian_types";
 import { z } from "zod";
 import { ToolRegistration } from "./types";
 import { resolvePath } from "./daily_note_utils";
-import { getAccessibleFile } from "./permissions";
-import { MCPPluginSettings } from "../settings/types";
+import type { ObsidianInterface } from "../obsidian/obsidian_interface";
 
 export const updateContentTool: ToolRegistration = {
 	name: "update_content",
@@ -38,7 +37,7 @@ export const updateContentTool: ToolRegistration = {
 			),
 	},
 	handler:
-		(app: App, settings: MCPPluginSettings) =>
+		(obsidian: ObsidianInterface) =>
 		async (args: {
 			uri: string;
 			mode: "append" | "replace";
@@ -46,20 +45,18 @@ export const updateContentTool: ToolRegistration = {
 			find?: string;
 			create_if_missing?: boolean;
 		}) => {
-			const resolved = await resolvePath(app, new URL(args.uri));
-			const file = await getAccessibleFile(
+			const resolved = await resolvePath(obsidian, new URL(args.uri));
+			const file = await obsidian.getFileByPath(
 				resolved,
-				args.create_if_missing ? "create" : "write",
-				app,
-				settings
+				args.create_if_missing ? "create" : "write"
 			);
 
-			const fileContent = await app.vault.read(file);
+			const fileContent = await obsidian.read(file);
 
 			if (args.mode === "append") {
-				return await append(args.content, fileContent, app, file, resolved);
+				return await append(args.content, fileContent, obsidian, file, resolved);
 			} else if (args.mode === "replace") {
-				return await replace(args.find, args.content, fileContent, resolved, app, file);
+				return await replace(args.find, args.content, fileContent, resolved, obsidian, file);
 			} else {
 				throw new Error(`Invalid mode: ${args.mode}`);
 			}
@@ -71,7 +68,7 @@ async function replace(
 	replacement: string,
 	fileContent: string,
 	resolved: string,
-	app: App,
+	obsidian: ObsidianInterface,
 	file: TFile
 ) {
 	if (!find) {
@@ -92,14 +89,14 @@ async function replace(
 
 	const updatedContent = fileContent.replace(find, replacement);
 
-	await app.vault.modify(file, updatedContent);
+	await obsidian.modify(file, updatedContent);
 	return `Content successfully replaced in ${resolved}`;
 }
 
 async function append(
 	content: string,
 	fileContent: string,
-	app: App,
+	obsidian: ObsidianInterface,
 	file: TFile,
 	resolved: string
 ) {
@@ -107,7 +104,7 @@ async function append(
 		content = "\n" + content;
 	}
 
-	await app.vault.append(file, content);
+	await obsidian.modify(file, fileContent + content);
 
 	return `Content appended successfully to ${resolved}`;
 }

@@ -1,15 +1,11 @@
 import { ToolAnnotations } from "@modelcontextprotocol/sdk/types";
-import { App } from "obsidian";
 import { ZodRawShape } from "zod";
-import { MCPPluginSettings } from "../settings/types";
+import type { ObsidianInterface } from "../obsidian/obsidian_interface";
 
 export interface ToolRegistration {
 	annotations: ToolAnnotations;
 	name: string;
 	description: string;
 	schema?: ZodRawShape;
-	handler: (
-		app: App,
-		settings: MCPPluginSettings
-	) => (args: Record<string, unknown>) => Promise<string>;
+	handler: (obsidian: ObsidianInterface) => (args: Record<string, unknown>) => Promise<string>;
 }

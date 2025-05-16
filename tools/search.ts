@@ -1,6 +1,6 @@
-import { App, prepareFuzzySearch, prepareSimpleSearch, SearchMatchPart, TFile } from "obsidian";
 import { z } from "zod";
 import { ToolRegistration } from "./types";
+import type { ObsidianInterface } from "../obsidian/obsidian_interface";
 
 export const searchTool: ToolRegistration = {
 	name: "search",
@@ -19,12 +19,12 @@ export const searchTool: ToolRegistration = {
 		folder: z.string().optional().describe("Search under specific folder"),
 	},
 	handler:
-		(app: App) =>
+		(obsidian: ObsidianInterface) =>
 		async (args: { query: string; limit: number; fuzzy: boolean; folder?: string }) => {
 			const query = args.query;
 
-			const allMatches = await getResults(app, query, args.fuzzy, args.folder);
-			const totalMatches = allMatches.flatMap((m) => m.result.matches ?? []).length;
+			const allMatches = await obsidian.search(query, args.fuzzy, args.folder);
+			const totalMatches = allMatches.flatMap((m) => m.matches).length;
 
 			if (totalMatches === 0) {
 				throw new Error("No results found for query: " + query);
@@ -34,10 +34,10 @@ export const searchTool: ToolRegistration = {
 
 			let remainingMatches = args.limit;
 
-			for (const { result, cachedContents, file } of allMatches) {
+			for (const { matches, cachedContents, file } of allMatches) {
 				lines.push(`## /${file.path}\n`);
 
-				for (const match of result.matches ?? []) {
+				for (const match of matches) {
 					if (remainingMatches <= 0) break;
 					lines.push(...writeMatch(match, cachedContents));
 					remainingMatches--;
@@ -51,44 +51,7 @@ export const searchTool: ToolRegistration = {
 		},
 };
 
-interface SearchResult {
-	matches?: SearchMatchPart[];
-}
-
-interface SearchMatch {
-	result: SearchResult;
-	cachedContents: string;
-	file: TFile;
-}
-
-async function getResults(
-	app: App,
-	query: string,
-	fuzzy: boolean,
-	folder?: string
-): Promise<SearchMatch[]> {
-	const search = fuzzy ? prepareFuzzySearch(query) : prepareSimpleSearch(query);
-	const results: SearchMatch[] = [];
-
-	for (const file of app.vault.getMarkdownFiles()) {
-		if (folder && !file.path.startsWith(folder)) {
-			continue;
-		}
-
-		const cachedContents = await app.vault.cachedRead(file);
-		const result = search(cachedContents);
-		if (result) {
-			results.push({
-				result,
-				cachedContents,
-				file,
-			});
-		}
-	}
-	return results;
-}
-
-function writeMatch([start, end]: SearchMatchPart, cachedContents: string) {
+function writeMatch([start, end]: [number, number], cachedContents: string) {
 	const { startOffset, endOffset } = getOffsets(start, end, cachedContents);
 	const matchLines = cachedContents.slice(startOffset, endOffset).split("\n");
 

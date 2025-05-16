@@ -1,8 +1,7 @@
-import { App } from "obsidian";
 import { z } from "zod";
 import { ToolRegistration } from "./types";
 import { VaultDailyNoteResource, VaultFileResource } from "./vault_file_resource";
-import { MCPPluginSettings } from "../settings/types";
+import type { ObsidianInterface } from "../obsidian/obsidian_interface";
 
 export const getContentsTool: ToolRegistration = {
 	name: "get_contents",
@@ -35,7 +34,7 @@ export const getContentsTool: ToolRegistration = {
 			.describe("End offset for file contents, defaults to file length"),
 	},
 	handler:
-		(app: App, settings: MCPPluginSettings) =>
+		(obsidian: ObsidianInterface) =>
 		async (args: Record<string, string | number>): Promise<string> => {
 			if (!args.uri) {
 				throw new Error("URI parameter is required");
@@ -44,9 +43,9 @@ export const getContentsTool: ToolRegistration = {
 			// Convert file:// and daily:// to file:/// and daily:///
 			const uri = (args.uri as string).replace(/^(file|daily):\/\/([^/])/, "$1:///$2");
 
-			const resource = uri.startsWith("daily://")
-				? new VaultDailyNoteResource(app, settings)
-				: new VaultFileResource(app, settings);
+			const resource = uri.startsWith("daily:")
+				? new VaultDailyNoteResource(obsidian)
+				: new VaultFileResource(obsidian);
 
 			const url = new URL(uri);
 			["depth", "startOffset", "endOffset"].forEach((key) => {

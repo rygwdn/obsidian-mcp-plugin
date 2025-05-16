@@ -1,14 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { searchTool } from "../tools/search";
-import { MockApp } from "./mocks/obsidian";
+import { MockObsidian } from "./mock_obsidian";
 
 describe("search tool", () => {
-	let mockApp: MockApp;
+	let obsidian: MockObsidian;
 
 	beforeEach(() => {
 		vi.clearAllMocks();
-		mockApp = new MockApp();
-		mockApp.setFiles({
+		obsidian = new MockObsidian();
+
+		obsidian.setFiles({
 			"file1.md": "This is the first test file with apple content",
 			"file2.md": "Second file has banana content",
 			"file3.md": "Third file contains apple and banana",
@@ -18,15 +19,12 @@ describe("search tool", () => {
 	});
 
 	it("should return matching markdown files for a query", async () => {
-		const handler = searchTool.handler(mockApp, mockApp.settings);
+		const handler = searchTool.handler(obsidian);
 		const result = await handler({
 			query: "apple",
 			limit: 100,
 			fuzzy: false,
 		});
-
-		expect(mockApp.vault.getMarkdownFiles).toHaveBeenCalled();
-		expect(mockApp.vault.cachedRead).toHaveBeenCalled();
 
 		// We should find three markdown files with "apple"
 		expect(result).toContain("file1.md");
@@ -37,7 +35,7 @@ describe("search tool", () => {
 	});
 
 	it("should throw an error when no results are found", async () => {
-		const handler = searchTool.handler(mockApp, mockApp.settings);
+		const handler = searchTool.handler(obsidian);
 		await expect(
 			handler({
 				query: "nonexistent",
@@ -48,7 +46,7 @@ describe("search tool", () => {
 	});
 
 	it("should be case-insensitive", async () => {
-		const handler = searchTool.handler(mockApp, mockApp.settings);
+		const handler = searchTool.handler(obsidian);
 		const result = await handler({
 			query: "APPLE",
 			limit: 100,
@@ -62,7 +60,7 @@ describe("search tool", () => {
 	});
 
 	it("should respect the limit parameter", async () => {
-		const handler = searchTool.handler(mockApp, mockApp.settings);
+		const handler = searchTool.handler(obsidian);
 		const result = await handler({
 			query: "apple",
 			limit: 1,
@@ -78,7 +76,7 @@ describe("search tool", () => {
 	});
 
 	it("should filter by folder when specified", async () => {
-		const handler = searchTool.handler(mockApp, mockApp.settings);
+		const handler = searchTool.handler(obsidian);
 		const result = await handler({
 			query: "apple",
 			limit: 100,
@@ -94,9 +92,7 @@ describe("search tool", () => {
 
 	it("should use appropriate search function based on fuzzy flag", async () => {
 		// Instead of trying to spy on the mocked functions, let's test behavior
-
-		// We'll use different mock data for fuzzy search to verify it was used
-		const handler = searchTool.handler(mockApp, mockApp.settings);
+		const handler = searchTool.handler(obsidian);
 
 		// Run with fuzzy=false (simple search)
 		const result1 = await handler({
@@ -118,7 +114,7 @@ describe("search tool", () => {
 	});
 
 	it("should format match results with context", async () => {
-		const handler = searchTool.handler(mockApp, mockApp.settings);
+		const handler = searchTool.handler(obsidian);
 		const result = await handler({
 			query: "apple",
 			limit: 100,

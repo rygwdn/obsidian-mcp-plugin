@@ -13,6 +13,7 @@ export function getLocalRestApiSettings(app: App): LocalRestApiSettings | null {
 		return null;
 	}
 
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const localRestApiPlugin = app.plugins.plugins["obsidian-local-rest-api"] as any;
 	if (!localRestApiPlugin) {
 		console.error("Local REST API plugin instance not found");

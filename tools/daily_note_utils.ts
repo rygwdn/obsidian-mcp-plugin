@@ -1,5 +1,4 @@
-import { App, normalizePath } from "obsidian";
-import { DailyNotesPlugin, PeriodicNotesPlugin } from "./obsidian_types";
+import type { ObsidianInterface } from "../obsidian/obsidian_interface";
 
 export const ALIASES = {
 	today: () => window.moment(),
@@ -7,11 +6,7 @@ export const ALIASES = {
 	tomorrow: () => window.moment().add(1, "day"),
 };
 
-export function isDailyNotesEnabled(app: App): boolean {
-	return !!(getDailyNotesPlugin(app) || getPeriodicNotesPlugin(app));
-}
-
-export async function resolvePath(app: App, uri: URL): Promise<string> {
+export async function resolvePath(obsidian: ObsidianInterface, uri: URL): Promise<string> {
 	let path = uri.pathname;
 	if (uri.host) {
 		throw new Error(
@@ -24,70 +19,39 @@ export async function resolvePath(app: App, uri: URL): Promise<string> {
 	path = path.replace(/^\/*|\/*$/g, "");
 
 	if (uri.protocol.startsWith("daily")) {
-		assertDailyNotePluginEnabled(app);
-		const date = parseDate(path, app);
+		assertDailyNotePluginEnabled(obsidian);
+		const date = parseDate(path, obsidian);
 		if (!date.isValid()) {
 			throw new Error("Invalid date: " + path);
 		}
-		path = getDailyNotePath(app, date);
+		path = getDailyNotePath(obsidian, date);
 	}
 
-	return normalizePath(path);
+	return path;
 }
 
-function parseDate(dateStr: string, app: App): moment.Moment {
+function parseDate(dateStr: string, obsidian: ObsidianInterface): moment.Moment {
 	if (Object.keys(ALIASES).includes(dateStr)) {
 		return ALIASES[dateStr as keyof typeof ALIASES]();
 	} else {
-		const { format } = getDailyNoteSettings(app);
+		const format = obsidian.dailyNotes?.format || "YYYY-MM-DD";
 		return window.moment(dateStr, format);
 	}
 }
 
-export function assertDailyNotePluginEnabled(app: App): void {
-	if (!isDailyNotesEnabled(app)) {
+export function assertDailyNotePluginEnabled(obsidian: ObsidianInterface): void {
+	if (!obsidian.dailyNotes) {
 		throw new Error(
 			"Cannot access daily notes: No daily notes plugin is enabled (requires either core daily-notes or community periodic-notes plugins)"
 		);
 	}
 }
 
-function getDailyNotePath(app: App, date: moment.Moment): string {
-	const { format, folder } = getDailyNoteSettings(app);
+function getDailyNotePath(obsidian: ObsidianInterface, date: moment.Moment): string {
+	const format = obsidian.dailyNotes?.format || "YYYY-MM-DD";
+	const folder = obsidian.dailyNotes?.folder || "";
 
 	const filename = date.format(format);
 	const folderPath = folder ? `${folder}/` : "";
 	return `${folderPath}${filename}.md`;
-}
-
-function getDailyNotesPlugin(app: App): DailyNotesPlugin | null {
-	const internalPlugins = (
-		app as unknown as { internalPlugins: { plugins: Record<string, unknown> } }
-	).internalPlugins;
-	const plugin = internalPlugins.plugins["daily-notes"] as DailyNotesPlugin | undefined;
-	return plugin?.enabled ? plugin : null;
-}
-
-function getPeriodicNotesPlugin(app: App): PeriodicNotesPlugin | null {
-	return app.plugins.plugins["periodic-notes"] as PeriodicNotesPlugin | null;
-}
-
-function getDailyNoteSettings(app: App): { format: string; folder: string } {
-	const dailyNotesPlugin = getDailyNotesPlugin(app);
-	const periodicNotesPlugin = getPeriodicNotesPlugin(app);
-
-	let format: string = "YYYY-MM-DD";
-	let folder: string = "";
-
-	if (dailyNotesPlugin) {
-		const settings = dailyNotesPlugin.instance.options;
-		format = settings.format || format;
-		folder = settings.folder || folder;
-	} else if (periodicNotesPlugin) {
-		const settings = periodicNotesPlugin.settings?.daily;
-		format = settings?.format || format;
-		folder = settings?.folder || folder;
-	}
-
-	return { format, folder };
 }

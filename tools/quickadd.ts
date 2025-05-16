@@ -1,75 +1,6 @@
-import { App } from "obsidian";
 import { z } from "zod";
 import { ToolRegistration } from "./types";
-
-interface QuickAddChoice {
-	name: string;
-	id: string;
-	type?: string;
-	command?: {
-		name?: string;
-		type?: string;
-		templatePath?: string;
-		format?: {
-			format?: string;
-		};
-		folder?: string;
-		fileNameFormat?: string;
-		caption?: string;
-	};
-	macros?: Array<unknown>;
-	checkboxes?: Array<unknown>;
-	captureToActiveFile?: boolean;
-	// Add any other known properties here
-}
-
-interface QuickAddPlugin {
-	api: {
-		executeChoice: (choiceId: string, variables?: Record<string, string>) => Promise<void>;
-		getChoices: () => QuickAddChoice[];
-		format: (
-			input: string,
-			variables?: Record<string, unknown>,
-			shouldClearVariables?: boolean
-		) => Promise<string>;
-	};
-}
-
-// Helper function to get and validate QuickAdd plugin instance
-function getQuickAddPlugin(app: App): QuickAddPlugin {
-	// Check if QuickAdd plugin is enabled
-	if (!app.plugins.plugins.quickadd) {
-		throw new Error("QuickAdd plugin is not enabled");
-	}
-
-	const quickAdd = app.plugins.plugins.quickadd as QuickAddPlugin;
-
-	if (!quickAdd.api) {
-		throw new Error("QuickAdd API is not available");
-	}
-
-	return quickAdd;
-}
-
-// Get choices from QuickAdd plugin settings
-function getQuickAddChoices(app: App): QuickAddChoice[] {
-	if (!app.plugins.plugins.quickadd) {
-		throw new Error("QuickAdd plugin is not enabled");
-	}
-
-	interface QuickAddPluginWithSettings {
-		settings: {
-			choices?: QuickAddChoice[];
-		};
-	}
-
-	const quickAddPlugin = app.plugins.plugins.quickadd as QuickAddPluginWithSettings;
-	if (!quickAddPlugin.settings || !quickAddPlugin.settings.choices) {
-		throw new Error("QuickAdd settings or choices not available");
-	}
-
-	return quickAddPlugin.settings.choices;
-}
+import type { ObsidianInterface, QuickAddChoice } from "../obsidian/obsidian_interface";
 
 /**
  * Extracts variable names from a template string based on QuickAdd template syntax
@@ -100,46 +31,21 @@ function extractVariablesFromTemplate(templateString: string): string[] {
 		variables.add(match[1].trim());
 	}
 
-	// We don't add VALUE or NAME without variables as they're just user input
-
 	return Array.from(variables);
 }
 
 function formatChoicesAsMarkdown(choices: QuickAddChoice[]): string {
-	if (choices.length === 0) {
-		return "No QuickAdd choices found";
-	}
-
 	let markdown = "# Available QuickAdd Choices\n\n";
 
-	// Group choices by type
-	const choicesByType: Record<string, QuickAddChoice[]> = {};
-
 	choices.forEach((choice) => {
-		const type = choice.type || "Unknown";
-		if (!choicesByType[type]) {
-			choicesByType[type] = [];
+		markdown += `- "${choice.name}"`;
+
+		const templateFormat = choice.format?.enabled ? choice.format?.format : "";
+		const variables = extractVariablesFromTemplate(templateFormat || "");
+
+		if (variables.length > 0) {
+			markdown += ` with variables: ${JSON.stringify(variables)}`;
 		}
-		choicesByType[type].push(choice);
-	});
-
-	// Format each type group
-	Object.entries(choicesByType).forEach(([type, typeChoices]) => {
-		markdown += `## ${type} Choices\n\n`;
-
-		typeChoices.forEach((choice) => {
-			markdown += `- "${choice.name}"`;
-
-			// Extract variables from the template format
-			const templateFormat = choice.command?.format?.format;
-			const variables = extractVariablesFromTemplate(templateFormat || "");
-
-			if (variables.length > 0) {
-				markdown += `:\n  variables: ${variables.join(", ")}`;
-			}
-
-			markdown += "\n";
-		});
 
 		markdown += "\n";
 	});
@@ -158,8 +64,15 @@ export const quickAddListTool: ToolRegistration = {
 		openWorldHint: false,
 	},
 	schema: undefined,
-	handler: (app: App) => async (_args: Record<string, unknown>) => {
-		const choices = getQuickAddChoices(app);
+	handler: (obsidian: ObsidianInterface) => async (_args: Record<string, unknown>) => {
+		if (!obsidian.quickAdd) {
+			throw new Error("QuickAdd plugin is not enabled");
+		}
+
+		const choices = obsidian.quickAdd.getChoices();
+		if (choices.length === 0) {
+			return "No QuickAdd choices found";
+		}
 		return formatChoicesAsMarkdown(choices);
 	},
 };
@@ -182,50 +95,49 @@ export const quickAddExecuteTool: ToolRegistration = {
 			.optional()
 			.describe("Optional variables to pass to the QuickAdd choice or template"),
 	},
-	handler: (app: App) => async (args: Record<string, unknown>) => {
-		const { choice, template, variables } = args as {
-			choice?: string;
-			template?: string;
-			variables?: Record<string, unknown>;
-		};
+	handler:
+		(obsidian: ObsidianInterface) =>
+		async (args: Record<string, unknown>): Promise<string> => {
+			const { choice, template, variables } = args as {
+				choice?: string;
+				template?: string;
+				variables?: Record<string, unknown>;
+			};
 
-		const quickAdd = getQuickAddPlugin(app);
-
-		// Check if exactly one of choice or template is provided
-		if ((choice && template) || (!choice && !template)) {
-			throw new Error("You must provide exactly one of 'choice' or 'template' parameters");
-		}
-
-		if (choice) {
-			const choices = getQuickAddChoices(app);
-			const targetChoice = choices.find((c) => c.id === choice || c.name === choice);
-
-			if (!targetChoice) {
-				const availableChoices = formatChoicesAsMarkdown(choices);
-				throw new Error(
-					`QuickAdd choice not found: ${choice}. Available choices:\n\n${availableChoices}`
-				);
+			if (!obsidian.quickAdd) {
+				throw new Error("QuickAdd plugin is not enabled");
 			}
 
-			try {
-				await quickAdd.api.executeChoice(targetChoice.name, variables as Record<string, string>);
-				return `Successfully executed QuickAdd choice: **${targetChoice.name}**`;
-			} catch (error) {
-				throw new Error(`Error executing QuickAdd choice: ${error.message}`);
+			if ((choice && template) || (!choice && !template)) {
+				throw new Error("You must provide exactly one of 'choice' or 'template' parameters");
 			}
-		} else {
-			// Format template (template must be defined based on the check above)
-			try {
-				// Always clear variables (true as the third parameter)
-				const result = await quickAdd.api.format(template!, variables, true);
-				return result;
-			} catch (error) {
-				throw new Error(`Error formatting template: ${error.message}`);
+
+			if (choice) {
+				const choices = obsidian.quickAdd.getChoices();
+				const targetChoice = choices.find((c) => c.id === choice || c.name === choice);
+
+				if (!targetChoice) {
+					const availableChoices = formatChoicesAsMarkdown(choices);
+					throw new Error(
+						`QuickAdd choice not found: ${choice}. Available choices:\n\n${availableChoices}`
+					);
+				}
+
+				try {
+					await obsidian.quickAdd.executeChoice(
+						targetChoice.name,
+						variables as Record<string, string>
+					);
+					return `Successfully executed QuickAdd choice: **${targetChoice.name}**`;
+				} catch (error) {
+					throw new Error(`Error executing QuickAdd choice: ${error.message}`);
+				}
+			} else {
+				try {
+					return await obsidian.quickAdd.formatTemplate(template!, variables, true);
+				} catch (error) {
+					throw new Error(`Error formatting template: ${error.message}`);
+				}
 			}
-		}
-	},
+		},
 };
-
-export function isQuickAddEnabled(app: App): boolean {
-	return app.plugins.plugins.quickadd !== undefined;
-}

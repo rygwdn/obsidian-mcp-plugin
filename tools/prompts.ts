@@ -1,20 +1,20 @@
-import { App, TFile } from "obsidian";
+import type { TFile } from "../obsidian/obsidian_types";
 import { z, ZodType } from "zod";
 import { McpServer, RegisteredPrompt } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { GetPromptResult } from "@modelcontextprotocol/sdk/types.js";
-import { MCPPluginSettings } from "../settings/types";
 import { logger } from "./logging";
+import type { ObsidianInterface } from "../obsidian/obsidian_interface";
 
 export class VaultPrompt {
 	public registration: RegisteredPrompt | undefined;
 
 	constructor(
 		public file: TFile,
-		private app: App
+		private obsidian: ObsidianInterface
 	) {}
 
 	private get metadata() {
-		return this.app.metadataCache.getFileCache(this.file);
+		return this.obsidian.getFileCache(this.file);
 	}
 
 	public get name() {
@@ -40,7 +40,7 @@ export class VaultPrompt {
 	public async handler(args: Record<string, string>): Promise<GetPromptResult> {
 		return logger.withPromptLogging(this.name, async () => {
 			const frontmatterPosition = this.metadata?.frontmatterPosition?.end.offset;
-			let content = await this.app.vault.cachedRead(this.file);
+			let content = await this.obsidian.cachedRead(this.file);
 			if (frontmatterPosition) {
 				content = content.slice(frontmatterPosition).trimStart();
 			}
@@ -72,19 +72,19 @@ export class VaultPrompt {
 	}
 }
 
-export function getPrompts(app: App, settings: MCPPluginSettings) {
-	return app.vault
+export function getPrompts(obsidian: ObsidianInterface) {
+	return obsidian
 		.getMarkdownFiles()
-		.filter((file) => file.path.startsWith(settings.promptsFolder))
-		.map((file) => new VaultPrompt(file, app));
+		.filter((file) => file.path.startsWith(obsidian.settings.promptsFolder))
+		.map((file) => new VaultPrompt(file, obsidian));
 }
 
-export function registerPrompts(app: App, server: McpServer, settings: MCPPluginSettings) {
-	const prompts = getPrompts(app, settings);
-	logger.log(`Found ${prompts.length} prompts in folder: ${settings.promptsFolder}`);
+export function registerPrompts(obsidian: ObsidianInterface, server: McpServer) {
+	const prompts = getPrompts(obsidian);
+	logger.log(`Found ${prompts.length} prompts in folder: ${obsidian.settings.promptsFolder}`);
 
-	app.vault.on("modify", (file) => {
-		if (file.path.startsWith(settings.promptsFolder)) {
+	obsidian.onFileModified((file: TFile) => {
+		if (file.path.startsWith(obsidian.settings.promptsFolder)) {
 			logger.log(`Prompt file modified: ${file.path}`);
 			const prompt = prompts.find((prompt) => prompt.file.path === file.path);
 			prompt?.update();

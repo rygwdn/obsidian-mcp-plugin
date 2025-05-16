@@ -5,11 +5,18 @@ import { DEFAULT_SETTINGS, MCPPluginSettings } from "./settings/types";
 import { MCPSettingTab } from "./settings/tab";
 import type { Response } from "express";
 import { logger } from "./tools/logging";
+import type { ObsidianInterface } from "./obsidian/obsidian_interface";
+import { ObsidianImpl } from "./obsidian/obsidian_impl";
 
 export default class ObsidianMCPPlugin extends Plugin {
 	private api: LocalRestApiPublicApi;
 	private server: ObsidianMcpServer;
-	settings: MCPPluginSettings;
+	public settings: MCPPluginSettings;
+	public obsidianInterface: ObsidianInterface;
+
+	public get hasLocalRestApi() {
+		return this.app.plugins.enabledPlugins.has("obsidian-local-rest-api");
+	}
 
 	private errorResponse(response: Response, error: Error) {
 		console.error("Error handling MCP request:", error);
@@ -25,7 +32,8 @@ export default class ObsidianMCPPlugin extends Plugin {
 
 	async registerRoutes() {
 		this.api = getAPI(this.app, this.manifest);
-		this.server = new ObsidianMcpServer(this.app, this.manifest, this.settings);
+		this.obsidianInterface = new ObsidianImpl(this.app, this);
+		this.server = new ObsidianMcpServer(this.obsidianInterface, this.manifest);
 
 		this.api.addRoute("/mcp").post(async (request, response) => {
 			try {
@@ -63,8 +71,8 @@ export default class ObsidianMCPPlugin extends Plugin {
 
 	async onload() {
 		await this.loadSettings();
-		this.addSettingTab(new MCPSettingTab(this.app, this));
-		if (this.app.plugins.enabledPlugins.has("obsidian-local-rest-api")) {
+		this.addSettingTab(new MCPSettingTab(this.app, this, this.obsidianInterface));
+		if (this.hasLocalRestApi) {
 			await this.registerRoutes();
 		}
 
@@ -84,12 +92,6 @@ export default class ObsidianMCPPlugin extends Plugin {
 }
 
 declare module "obsidian" {
-	interface App {
-		plugins: {
-			enabledPlugins: Set<string>;
-			plugins: Record<string, unknown>;
-		};
-	}
 	interface Workspace {
 		on(name: "obsidian-local-rest-api:loaded", callback: () => void, ctx?: unknown): EventRef;
 	}
