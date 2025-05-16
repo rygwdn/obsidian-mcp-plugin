@@ -2,8 +2,11 @@
 
 ## [Unreleased]
 
+## [0.3.0] - 2025-05-16
+
 - feat: Enhance directory permissions system with reorderable rules list
 - feat: Implement first-match-wins order for directory access rules
+- refactor: Abstract Obsidian API behind interface layer
 - style: Update CSS to use Obsidian CSS variables for better theme compatibility
 
 ## [0.2.0] - 2025-05-12
