@@ -83,12 +83,27 @@ export class MCPSettingTab extends PluginSettingTab {
 		createTextSetting({
 			containerEl: this.containerEl,
 			name: "Tool Name Prefix",
-			desc: "Prefix for all tool names (e.g., 'vault_list_files' if prefix is 'vault')",
+			desc: "Optional prefix for all tool names",
 			placeholder: "vault",
 			getValue: () => this.plugin.settings.toolNamePrefix,
-			setValue: (value) => (this.plugin.settings.toolNamePrefix = value),
+			setValue: (value) => {
+				this.plugin.settings.toolNamePrefix = value;
+				updateExampleText(value);
+			},
 			saveSettings: () => this.plugin.saveSettings(),
 		});
+
+		const exampleContainer = this.containerEl.createEl("div", {
+			cls: "setting-item-description",
+			attr: { style: "margin-top: -10px; margin-left: 48px; font-style: italic;" },
+		});
+
+		const updateExampleText = (prefix: string) => {
+			const exampleTool = prefix ? `${prefix}_search` : "search";
+			exampleContainer.setText(`Example: "${exampleTool}" (${prefix ? "with" : "without"} prefix)`);
+		};
+
+		updateExampleText(this.plugin.settings.toolNamePrefix);
 
 		createToggleSetting({
 			containerEl: this.containerEl,

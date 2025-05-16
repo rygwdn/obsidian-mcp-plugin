@@ -28,7 +28,7 @@ export interface MCPPluginSettings {
 
 export const DEFAULT_SETTINGS: MCPPluginSettings = {
 	promptsFolder: "prompts",
-	toolNamePrefix: "vault",
+	toolNamePrefix: "",
 	vaultDescription:
 		"This vault contains personal notes on various topics including work projects, research, and daily journals. It's organized with folders for each major area and uses tags for cross-referencing.",
 	enabledTools: {
