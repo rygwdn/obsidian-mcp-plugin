@@ -27,11 +27,10 @@ export class ObsidianMcpServer {
 		logger.log(`Initializing MCP server v${this.manifest.version}`);
 		const vaultDescription =
 			this.obsidian.settings.vaultDescription ?? DEFAULT_SETTINGS.vaultDescription;
-		const vaultStructure = this.getVaultStructure();
 
 		this.server = new McpServer(
 			{ name: this.manifest.name, version: this.manifest.version },
-			{ instructions: `${vaultDescription}\n\nVault Structure:\n${vaultStructure}` }
+			{ instructions: vaultDescription }
 		);
 
 		this.patchSseVersion();
@@ -81,19 +80,6 @@ export class ObsidianMcpServer {
 			}
 			return response;
 		});
-	}
-
-	private getVaultStructure(): string {
-		const folders = this.obsidian
-			.getMarkdownFiles()
-			.map((file) => file.path.split("/"))
-			.filter((parts) => parts.length > 2)
-			.map((parts) => parts.slice(0, 2).join("/"))
-			.map((folder) => `- ${folder}`);
-
-		const structure = Array.from(new Set(folders)).sort().join("\n");
-
-		return structure || "No directories found in vault.";
 	}
 
 	async handleSseRequest(request: Request, response: Response) {
