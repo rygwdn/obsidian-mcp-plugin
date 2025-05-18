@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [0.4.0] - 2025-05-17
+
+- feat: Make tool name prefix customizable with visual preview in settings
+- fix: Improve URI handling and path resolution across plugin
+- refactor: Remove unused vault structure code
+- docs: Update submission checklist progress
+
 ## [0.3.0] - 2025-05-16
 
 - feat: Enhance directory permissions system with reorderable rules list

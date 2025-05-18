@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-mcp-plugin",
-	"version": "0.3.0",
+	"version": "0.4.0",
 	"description": "Provides a Model Context Protocol (MCP) endpoint via Obsidian Local REST API",
 	"type": "module",
 	"main": "main.js",
