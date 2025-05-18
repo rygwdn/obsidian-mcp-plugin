@@ -115,12 +115,12 @@ These aspects must be clearly documented in:
 
 ## Final Review Before Submission
 
-- [ ] Run all checks (`npm run check`)
-- [ ] Test with latest Obsidian version
+- [x] Run all checks (`npm run check`)
+- [x] Test with latest Obsidian version
 - [ ] Test on multiple platforms
 - [ ] Test with different themes
-- [ ] Take screenshots for documentation if needed
-- [ ] Verify all functionality works as expected
+- [x] Take screenshots for documentation if needed
+- [x] Verify all functionality works as expected
 
 ## After Submission
 
