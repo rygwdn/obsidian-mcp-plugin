@@ -85,8 +85,8 @@ The plugin provides granular control over what connected AI assistants can acces
 ### QuickAdd Permission
 
 - **What it enables**: Triggering workflows and actions defined in QuickAdd
-- **Security impact**: Can execute predefined commands with potentially broad effects
-- **Recommendation**: Review your QuickAdd macros before enabling this permission
+- **Security impact**: HIGH - QuickAdd actions can modify vault content, run scripts, or interact with external services, depending on how they are configured.
+- **Recommendation**: Review your QuickAdd macros and their potential impact carefully before enabling this permission. Only enable if you trust the source and understand the actions of your QuickAdd configurations.
 
 ## File Access Permissions
 

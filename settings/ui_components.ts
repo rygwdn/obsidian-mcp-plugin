@@ -76,6 +76,8 @@ export function createToggleSetting({
 	setValue,
 	saveSettings,
 	disabled = false,
+	warningText,
+	disabledWarningText,
 }: {
 	containerEl: HTMLElement;
 	name: string;
@@ -84,8 +86,17 @@ export function createToggleSetting({
 	setValue: (value: boolean) => void;
 	saveSettings: () => Promise<void>;
 	disabled?: boolean;
+	warningText?: string;
+	disabledWarningText?: string;
 }): Setting {
 	const setting = new Setting(containerEl).setName(name).setDesc(desc);
+
+	if (disabled && disabledWarningText) {
+		setting.nameEl.createSpan({ text: disabledWarningText, cls: "mcp-warning-text" });
+	}
+	if (warningText) {
+		setting.descEl.createSpan({ text: warningText, cls: "mcp-warning-text" });
+	}
 
 	setting.addToggle((toggle) => {
 		toggle
