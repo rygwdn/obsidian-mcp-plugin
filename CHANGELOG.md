@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [0.5.1] - 2025-05-19
+
+- refactor: standardize URI handling and improve error messages
+
 ## [0.5.0] - 2025-05-19
 
 - feat: enhance file event handling and prompt synchronization
