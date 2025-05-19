@@ -22,7 +22,7 @@
 		"test:watch": "vitest",
 		"test:coverage": "vitest run --coverage",
 		"typecheck": "npm run check-types && npm run check-test-types",
-		"fix": "npm run lint:fix ; npm run format",
+		"fix": "npm run lint:fix; npm run markdownlint:fix; npm run format",
 		"markdownlint": "markdownlint-cli2 --config .markdownlint.json \"**/*.md\" \"!node_modules/**/*.md\"",
 		"markdownlint:fix": "markdownlint-cli2 --config .markdownlint.json --fix \"**/*.md\" \"!node_modules/**/*.md\"",
 		"check": "npm-run-all -p lint format:check check-types check-test-types markdownlint -s test",

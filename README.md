@@ -73,7 +73,8 @@ This plugin offers a range of functionalities that can be enabled or disabled th
   trigger QuickAdd actions and list available choices. This can automate workflows and content
   creation processes defined in QuickAdd (requires
   [QuickAdd plugin](https://github.com/chhoumann/quickadd)).
-  *Security impact: HIGH - QuickAdd actions can modify vault content, run scripts, or interact with external services, depending on how they are configured.*
+  *Security impact: HIGH - QuickAdd actions can modify vault content, run scripts, or interact
+  with external services, depending on how they are configured.*
 
 - **Logging Verbosity**: Controls console logging detail level. By default, logging is minimal, but you
   can enable "Verbose Logging" in Advanced settings for debugging.
