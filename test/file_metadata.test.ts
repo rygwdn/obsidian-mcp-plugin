@@ -128,7 +128,7 @@ describe("File metadata functionality", () => {
 
 		it("should return metadata for an existing file", async () => {
 			const handler = getFileMetadataTool.handler(obsidian);
-			const result = await handler({ path: "with-frontmatter.md" });
+			const result = await handler({ path: "file:///with-frontmatter.md" });
 
 			expect(result).toMatchInlineSnapshot(`
 				"# File Metadata: with-frontmatter.md
@@ -158,7 +158,7 @@ describe("File metadata functionality", () => {
 		it("should throw an error for a non-existent file", async () => {
 			const handler = getFileMetadataTool.handler(obsidian);
 
-			await expect(handler({ path: "nonexistent.md" })).rejects.toThrow(
+			await expect(handler({ path: "file:///nonexistent.md" })).rejects.toThrow(
 				"File not found: nonexistent.md"
 			);
 		});

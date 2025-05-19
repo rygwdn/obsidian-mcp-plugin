@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { ToolRegistration } from "./types";
-import { VaultDailyNoteResource, VaultFileResource } from "./vault_file_resource";
+import { resolveUriToPath } from "./daily_note_utils";
 import type { ObsidianInterface } from "../obsidian/obsidian_interface";
+import { VaultFileResource } from "./vault_file_resource";
 
 export const getContentsTool: ToolRegistration = {
 	name: "get_contents",
@@ -40,23 +41,18 @@ export const getContentsTool: ToolRegistration = {
 				throw new Error("URI parameter is required");
 			}
 
-			// Convert file:// and daily:// to file:/// and daily:///
-			const uri = (args.uri as string).replace(/^(file|daily):\/\/([^/])/, "$1:///$2");
+			const path = await resolveUriToPath(obsidian, args.uri as string);
+			const url = new URL(`file://${path}`);
 
-			const resource = uri.startsWith("daily:")
-				? new VaultDailyNoteResource(obsidian)
-				: new VaultFileResource(obsidian);
-
-			const url = new URL(uri);
 			["depth", "startOffset", "endOffset"].forEach((key) => {
 				if (args[key] !== undefined) {
 					url.searchParams.set(key, String(args[key]));
 				}
 			});
 
-			const result = await resource.handler(url);
+			const result = await new VaultFileResource(obsidian).handler(url);
 			if (typeof result.contents?.[0]?.text !== "string") {
-				throw new Error(`No text found for URI: ${uri}`);
+				throw new Error(`No text found for URI: ${url}`);
 			}
 			return result.contents[0].text;
 		},

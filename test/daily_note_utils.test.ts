@@ -63,10 +63,10 @@ describe("DailyNoteUtils", () => {
 		});
 	});
 
-	describe("resolvePath", () => {
+	describe("resolveUriToPath", () => {
 		it("should resolve regular file path", async () => {
 			const uri = "file:///other-note.md";
-			const resolved = await DailyNoteUtils.resolvePath(obsidian, uri);
+			const resolved = await DailyNoteUtils.resolveUriToPath(obsidian, uri);
 			expect(resolved).toBe("other-note.md");
 		});
 
@@ -78,23 +78,23 @@ describe("DailyNoteUtils", () => {
 			});
 
 			// For this test we'll fake the implementation
-			const origFn = DailyNoteUtils.resolvePath;
+			const origFn = DailyNoteUtils.resolveUriToPath;
 			const mockFn = vi.fn().mockResolvedValue("daily/2023-05-09.md");
-			vi.spyOn(DailyNoteUtils, "resolvePath").mockImplementation(mockFn);
+			vi.spyOn(DailyNoteUtils, "resolveUriToPath").mockImplementation(mockFn);
 
 			const uri = "daily://today";
-			const resolved = await DailyNoteUtils.resolvePath(obsidian, uri);
+			const resolved = await DailyNoteUtils.resolveUriToPath(obsidian, uri);
 			expect(resolved).toBe("daily/2023-05-09.md");
 
 			// Restore the original implementation
-			vi.spyOn(DailyNoteUtils, "resolvePath").mockImplementation(origFn);
+			vi.spyOn(DailyNoteUtils, "resolveUriToPath").mockImplementation(origFn);
 		});
 
 		it("should throw error when daily notes plugin not enabled", async () => {
 			obsidian.dailyNotes = null;
 
 			// For this test, we need to handle the original implementation but make it throw
-			const origFn = DailyNoteUtils.resolvePath;
+			const origFn = DailyNoteUtils.resolveUriToPath;
 			const uri = "daily://today";
 
 			// Create a rejected promise to simulate the expected behavior
@@ -105,14 +105,14 @@ describe("DailyNoteUtils", () => {
 						"Cannot access daily notes: No daily notes plugin is enabled (requires either core daily-notes or community periodic-notes plugins)"
 					)
 				);
-			vi.spyOn(DailyNoteUtils, "resolvePath").mockImplementation(mockImpl);
+			vi.spyOn(DailyNoteUtils, "resolveUriToPath").mockImplementation(mockImpl);
 
-			await expect(() => DailyNoteUtils.resolvePath(obsidian, uri)).rejects.toThrow(
+			await expect(() => DailyNoteUtils.resolveUriToPath(obsidian, uri)).rejects.toThrow(
 				"Cannot access daily notes: No daily notes plugin is enabled"
 			);
 
 			// Restore original implementation
-			vi.spyOn(DailyNoteUtils, "resolvePath").mockImplementation(origFn);
+			vi.spyOn(DailyNoteUtils, "resolveUriToPath").mockImplementation(origFn);
 		});
 	});
 });

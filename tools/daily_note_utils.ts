@@ -6,56 +6,37 @@ export const ALIASES = {
 	tomorrow: () => window.moment().add(1, "day"),
 };
 
-export async function resolvePath(
+export async function resolveUriToPath(
 	obsidian: ObsidianInterface,
 	pathOrUriString: string
 ): Promise<string> {
-	// Normalize common "two-slash" file/daily URIs to "three-slash" to help new URL() parse them correctly.
-	// e.g. file://path -> file:///path, daily://today -> daily:///today
-	const normalizedInput = pathOrUriString.replace(/^(file|daily):\/\/([^/\s])/, "$1:///$2");
+	const url = cleanUri(pathOrUriString);
 
-	let url: URL;
-	try {
-		url = new URL(normalizedInput);
-	} catch {
-		return pathOrUriString.replace(/^\/*|\/*$/g, "");
+	if (url.host) {
+		throw new Error(
+			`Unexpected hostname in URI: '${url.host}'. For 'file:' URIs, ensure three slashes (e.g., 'file:///path/to/file'). Input: '${pathOrUriString}'`
+		);
 	}
 
-	const protocol = url.protocol;
+	let filePath = url.pathname;
+	filePath = filePath.replace(/^\/*|\/*$/g, "");
 
-	if (protocol === "file:" || protocol === "daily:") {
-		if (url.host) {
+	if (url.protocol === "daily:") {
+		assertDailyNotePluginEnabled(obsidian);
+		let dailyIdentifier = filePath;
+		if (dailyIdentifier === "" && url.pathname === "/") {
+			// Handle daily:/// or daily:/ as today
+			dailyIdentifier = "today";
+		}
+		const date = parseDate(dailyIdentifier, obsidian);
+		if (!date.isValid()) {
 			throw new Error(
-				`Unexpected hostname in URI: '${url.host}'. For 'file:' URIs, ensure three slashes (e.g., 'file:///path/to/file'). Input: '${pathOrUriString}'`
+				`Invalid date identifier in daily note URI: '${dailyIdentifier}' (from input '${pathOrUriString}')`
 			);
 		}
-
-		let filePath = url.pathname;
-		filePath = filePath.replace(/^\/*|\/*$/g, "");
-
-		if (protocol === "daily:") {
-			assertDailyNotePluginEnabled(obsidian);
-			let dailyIdentifier = filePath;
-			if (dailyIdentifier === "" && url.pathname === "/") {
-				// Handle daily:/// or daily:/ as today
-				dailyIdentifier = "today";
-			}
-			const date = parseDate(dailyIdentifier, obsidian);
-			if (!date.isValid()) {
-				throw new Error(
-					`Invalid date identifier in daily note URI: '${dailyIdentifier}' (from input '${pathOrUriString}')`
-				);
-			}
-			filePath = getDailyNotePath(obsidian, date);
-		}
-		return filePath;
-	} else if (protocol) {
-		throw new Error(
-			`Unsupported URI protocol: '${protocol}'. Expected 'file:' or 'daily:' for path resolution, or a simple path string. Input: '${pathOrUriString}'`
-		);
-	} else {
-		return pathOrUriString.replace(/^\/*|\/*$/g, "");
+		filePath = getDailyNotePath(obsidian, date);
 	}
+	return filePath;
 }
 
 function parseDate(dateStr: string, obsidian: ObsidianInterface): moment.Moment {
@@ -82,4 +63,21 @@ function getDailyNotePath(obsidian: ObsidianInterface, date: moment.Moment): str
 	const filename = date.format(format);
 	const folderPath = folder ? `${folder}/` : "";
 	return `${folderPath}${filename}.md`;
+}
+
+function cleanUri(uri: string) {
+	// Normalize common "two-slash" file/daily URIs to "three-slash" to help new URL() parse them correctly.
+	// e.g. file://path -> file:///path, daily://today -> daily:///today
+	uri = uri.replace(/^(file|daily):\/\/([^/])/, "$1:///$2");
+
+	if (uri.startsWith("daily:")) {
+		return new URL(uri);
+	}
+	if (uri.startsWith("file:")) {
+		return new URL(uri);
+	}
+	if (uri.startsWith("/")) {
+		return new URL(`file://${uri}`);
+	}
+	return new URL(`file:///${uri}`);
 }

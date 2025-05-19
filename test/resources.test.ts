@@ -341,7 +341,11 @@ describe("getContentsTool", () => {
 		});
 
 		it("should throw error for invalid URI format", async () => {
-			await expect(handler({ uri: "invalid-uri" })).rejects.toThrow("Invalid URL");
+			await expect(handler({ uri: "invalid-uri" })).rejects.toThrow("File not found: invalid-uri");
+		});
+
+		it("should throw error for invalid URI protocol", async () => {
+			await expect(handler({ uri: "something:///test" })).rejects.toThrow("Invalid URL");
 		});
 	});
 

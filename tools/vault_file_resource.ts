@@ -2,7 +2,7 @@ import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mc
 import { ReadResourceResult } from "@modelcontextprotocol/sdk/types";
 import { UriTemplate, Variables } from "@modelcontextprotocol/sdk/shared/uriTemplate.js";
 import { logger } from "./logging";
-import { ALIASES, resolvePath } from "./daily_note_utils";
+import { ALIASES, resolveUriToPath } from "./daily_note_utils";
 import type { ObsidianInterface } from "../obsidian/obsidian_interface";
 
 class SimpleUriTemplate extends UriTemplate {
@@ -88,7 +88,7 @@ export class VaultFileResource {
 			);
 		}
 
-		const pathVar = await resolvePath(this.obsidian, uri.toString());
+		const pathVar = await resolveUriToPath(this.obsidian, uri.toString());
 
 		const depth = parseInt(uri.searchParams.get("depth") ?? "1");
 		const startOffset = parseInt(uri.searchParams.get("startOffset") ?? "0");

@@ -1,7 +1,7 @@
 import type { TFile } from "../obsidian/obsidian_types";
 import { z } from "zod";
 import { ToolRegistration } from "./types";
-import { resolvePath } from "./daily_note_utils";
+import { resolveUriToPath } from "./daily_note_utils";
 import type { ObsidianInterface } from "../obsidian/obsidian_interface";
 
 export const updateContentTool: ToolRegistration = {
@@ -45,7 +45,7 @@ export const updateContentTool: ToolRegistration = {
 			find?: string;
 			create_if_missing?: boolean;
 		}) => {
-			const resolvedVaultPath = await resolvePath(obsidian, args.uri);
+			const resolvedVaultPath = await resolveUriToPath(obsidian, args.uri);
 
 			const file = await obsidian.getFileByPath(
 				resolvedVaultPath,

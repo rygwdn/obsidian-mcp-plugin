@@ -5,7 +5,7 @@ import { Variables } from "@modelcontextprotocol/sdk/shared/uriTemplate";
 import { ToolRegistration } from "./types";
 import { logger } from "./logging";
 import type { ObsidianInterface } from "../obsidian/obsidian_interface";
-import { resolvePath } from "./daily_note_utils";
+import { resolveUriToPath } from "./daily_note_utils";
 
 export async function generateFileMetadata(
 	obsidian: ObsidianInterface,
@@ -70,7 +70,7 @@ export const getFileMetadataTool: ToolRegistration = {
 			),
 	},
 	handler: (obsidian: ObsidianInterface) => async (args: Record<string, unknown>) => {
-		const vaultPath = await resolvePath(obsidian, args.path as string);
+		const vaultPath = await resolveUriToPath(obsidian, args.path as string);
 		return await generateFileMetadata(obsidian, vaultPath);
 	},
 };
