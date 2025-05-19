@@ -1,24 +1,48 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, Mock } from "vitest";
 import { MockObsidian } from "./mock_obsidian";
-import { getPrompts, registerPrompts, VaultPrompt } from "../tools/prompts";
+import { registerPrompts, VaultPrompt } from "../tools/prompts";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 describe("prompt tools", () => {
 	let obsidian: MockObsidian;
+	let mockServer: McpServer;
+	let updateFn: Mock;
 
 	beforeEach(() => {
 		vi.clearAllMocks();
 		obsidian = new MockObsidian({
 			promptsFolder: "prompts",
 		});
+		updateFn = vi.fn();
+		mockServer = {
+			prompt: vi.fn(() => ({
+				update: updateFn,
+			})),
+		} as unknown as McpServer;
 
 		obsidian.setFiles({
-			"prompts/test-prompt.md":
-				"---\ndescription: Test Prompt Description\nargs: [param1, param2]\n---\n\nThis is a {{param1}} prompt with a {{param2}} parameter.",
-			"prompts/no-args-prompt.md":
-				"---\ndescription: Prompt with no args\n---\n\nThis is a prompt with no parameters.",
-			"prompts/string-args-prompt.md":
-				'---\ndescription: Prompt with string args\nargs: "[\\"stringArg1\\", \\"stringArg2\\"]"\n---\n\nThis is a {{stringArg1}} with {{stringArg2}}.',
+			"prompts/test-prompt.md": [
+				"---",
+				"description: Test Prompt Description",
+				"args: [param1, param2]",
+				"---",
+				"This is a {{param1}} prompt with a {{param2}} parameter.",
+			].join("\n"),
+
+			"prompts/no-args-prompt.md": [
+				"---",
+				"description: Prompt with no args",
+				"---",
+				"This is a prompt with no parameters.",
+			].join("\n"),
+
+			"prompts/string-args-prompt.md": [
+				"---",
+				"description: Prompt with string args",
+				'args: "[\\"stringArg1\\", \\"stringArg2\\"]"',
+				"---",
+				"This is a {{stringArg1}} with {{stringArg2}}.",
+			].join("\n"),
 		});
 	});
 
@@ -39,7 +63,6 @@ describe("prompt tools", () => {
 
 		it("should return empty string for missing description", async () => {
 			const file = await obsidian.getFileByPath("prompts/test-prompt.md", "read");
-			// Mock the getFileCache to return an empty frontmatter
 			vi.spyOn(obsidian, "getFileCache").mockReturnValue({ frontmatter: {} });
 
 			const prompt = new VaultPrompt(file, obsidian);
@@ -87,16 +110,12 @@ describe("prompt tools", () => {
 			const file = await obsidian.getFileByPath("prompts/test-prompt.md", "read");
 			const prompt = new VaultPrompt(file, obsidian);
 
-			const mockServer = {
-				prompt: vi.fn(() => ({ update: vi.fn() })),
-			};
-
-			await prompt.register(mockServer as unknown as McpServer);
+			await prompt.register(mockServer);
 
 			expect(mockServer.prompt).toHaveBeenCalledWith(
-				expect.any(String),
-				expect.any(String),
-				expect.any(Object),
+				"test-prompt",
+				"Test Prompt Description",
+				expect.objectContaining({ param1: expect.anything(), param2: expect.anything() }),
 				expect.any(Function)
 			);
 			expect(prompt.registration).toBeDefined();
@@ -106,85 +125,122 @@ describe("prompt tools", () => {
 			const file = await obsidian.getFileByPath("prompts/test-prompt.md", "read");
 			const prompt = new VaultPrompt(file, obsidian);
 
-			const mockUpdate = vi.fn();
-			const mockServer = {
-				prompt: vi.fn(() => ({ update: mockUpdate })),
-			};
-
-			await prompt.register(mockServer as unknown as McpServer);
+			await prompt.register(mockServer);
 			prompt.update();
 
-			expect(mockUpdate).toHaveBeenCalledWith({
-				description: "Test Prompt Description",
-				argsSchema: expect.any(Object),
-			});
-		});
-	});
-
-	describe("getPrompts", () => {
-		it("should return prompts from the prompts folder", async () => {
-			const prompts = await getPrompts(obsidian);
-
-			expect(prompts).toHaveLength(3);
-			expect(prompts[0].name).toContain("test-prompt");
-		});
-
-		it("should return empty array when no prompts are found", async () => {
-			vi.spyOn(obsidian, "getMarkdownFiles").mockReturnValue([]);
-
-			const prompts = await getPrompts(obsidian);
-
-			expect(prompts).toHaveLength(0);
+			expect(updateFn).toHaveBeenCalledWith(
+				expect.objectContaining({
+					description: "Test Prompt Description",
+					argsSchema: expect.any(Object),
+				})
+			);
 		});
 	});
 
 	describe("registerPrompts", () => {
-		it("should register all prompts with the server", async () => {
-			const mockServer = {
-				prompt: vi.fn(() => ({ update: vi.fn() })),
-			};
-
-			// Force getMarkdownFiles to return exactly 3 files for deterministic test
-			vi.spyOn(obsidian, "getMarkdownFiles").mockReturnValue([
-				await obsidian.getFileByPath("prompts/test-prompt.md", "read"),
-				await obsidian.getFileByPath("prompts/no-args-prompt.md", "read"),
-				await obsidian.getFileByPath("prompts/string-args-prompt.md", "read"),
-			]);
-
-			// Use valid JSON for string args to avoid errors
-			vi.spyOn(obsidian, "getFileCache").mockImplementation((file: any) => {
-				if (file.path === "prompts/string-args-prompt.md") {
-					return {
-						frontmatter: {
-							description: "Prompt with string args",
-							args: '["stringArg1", "stringArg2"]',
-						},
-					};
-				}
-				return {
-					frontmatter: {
-						description: "Test description",
-						args: ["param1"],
-					},
-				};
+		beforeEach(() => {
+			obsidian.clearFiles();
+			obsidian.setFiles({
+				"prompts/initial1.md": "---\nname: initial1\ndescription: Initial1 desc\n---\nContent1",
+				"prompts/initial2.md": "---\nname: initial2\ndescription: Initial2 desc\n---\nContent2",
 			});
-
-			registerPrompts(obsidian, mockServer as unknown as McpServer);
-
-			// Should register 3 prompts
-			expect(mockServer.prompt).toHaveBeenCalledTimes(3);
+			vi.spyOn(obsidian, "onFileModified");
 		});
 
-		it("should set up file modification event handler", () => {
-			const mockServer = {
-				prompt: vi.fn(() => ({ update: vi.fn() })),
-			};
-
-			vi.spyOn(obsidian, "onFileModified");
-
+		it("should register all initial prompts with the server", () => {
 			registerPrompts(obsidian, mockServer as unknown as McpServer);
+			expect(mockServer.prompt).toHaveBeenCalledTimes(2);
+			expect(mockServer.prompt).toHaveBeenCalledWith(
+				"initial1",
+				"Initial1 desc",
+				expect.any(Object),
+				expect.any(Function)
+			);
+			expect(mockServer.prompt).toHaveBeenCalledWith(
+				"initial2",
+				"Initial2 desc",
+				expect.any(Object),
+				expect.any(Function)
+			);
+		});
 
+		it("should set up file modification event handler and react to changes", async () => {
+			registerPrompts(obsidian, mockServer);
 			expect(obsidian.onFileModified).toHaveBeenCalledWith(expect.any(Function));
+			expect(obsidian.modifiedCallback).toBeDefined();
+
+			const file = obsidian.markdownFiles.get("prompts/initial1.md")!;
+			file.contents = "---\nname: initial1\ndescription: UPDATED Initial1 desc\n---\nContent1";
+
+			obsidian.modifiedCallback?.("modify", file);
+			expect(updateFn).toHaveBeenCalledWith(
+				expect.objectContaining({ description: "UPDATED Initial1 desc" })
+			);
+		});
+
+		it("should handle delete operation", async () => {
+			registerPrompts(obsidian, mockServer);
+			expect(obsidian.onFileModified).toHaveBeenCalledWith(expect.any(Function));
+			expect(obsidian.modifiedCallback).toBeDefined();
+
+			const file = obsidian.markdownFiles.get("prompts/initial1.md")!;
+
+			vi.mocked(mockServer.prompt).mockClear();
+			obsidian.modifiedCallback?.("delete", file);
+			expect(updateFn).not.toHaveBeenCalled();
+			expect(mockServer.prompt).not.toHaveBeenCalled();
+		});
+
+		it("should handle create operation", async () => {
+			registerPrompts(obsidian, mockServer);
+			expect(obsidian.onFileModified).toHaveBeenCalledWith(expect.any(Function));
+			expect(obsidian.modifiedCallback).toBeDefined();
+
+			const newFilePath = "prompts/created-prompt.md";
+			obsidian.setFiles({
+				[newFilePath]: "---\nname: created-prompt\ndescription: Created Prompt\n---\nNew content",
+			});
+			vi.mocked(mockServer.prompt).mockClear();
+
+			obsidian.modifiedCallback?.("create", obsidian.markdownFiles.get(newFilePath)!);
+
+			expect(mockServer.prompt).toHaveBeenCalledTimes(1);
+			expect(mockServer.prompt).toHaveBeenCalledWith(
+				"created-prompt",
+				"Created Prompt",
+				expect.any(Object),
+				expect.any(Function)
+			);
+		});
+
+		it("should handle rename operation", async () => {
+			registerPrompts(obsidian, mockServer);
+			expect(obsidian.onFileModified).toHaveBeenCalledWith(expect.any(Function));
+			expect(obsidian.modifiedCallback).toBeDefined();
+
+			const oldRenamedPath = "prompts/initial1.md";
+			const newRenamedPath = "prompts/renamed-prompt.md";
+
+			obsidian.deleteFile(oldRenamedPath);
+			obsidian.setFiles({
+				[newRenamedPath]:
+					"---\nname: renamed-prompt\ndescription: Renamed Prompt\n---\nRenamed content",
+			});
+
+			vi.mocked(mockServer.prompt).mockClear();
+			obsidian.modifiedCallback?.("rename", obsidian.markdownFiles.get(newRenamedPath)!);
+
+			expect(mockServer.prompt).toHaveBeenCalledTimes(1);
+			expect(mockServer.prompt).toHaveBeenCalledWith(
+				"renamed-prompt",
+				"Renamed Prompt",
+				expect.any(Object),
+				expect.any(Function)
+			);
+
+			expect(updateFn).toHaveBeenCalledWith(
+				expect.objectContaining({ description: "Renamed Prompt" })
+			);
 		});
 	});
 });

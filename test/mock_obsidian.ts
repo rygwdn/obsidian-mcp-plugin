@@ -123,12 +123,31 @@ export class MockObsidian implements ObsidianInterface {
 		}
 	}
 
-	public modifiedCallback: ((file: TFile) => void) | null = null;
-	onFileModified(callback: (file: TFile) => void): void {
+	public modifiedCallback:
+		| ((operation: "create" | "modify" | "rename" | "delete", file: TFile) => void)
+		| null = null;
+
+	onFileModified(
+		callback: (operation: "create" | "modify" | "rename" | "delete", file: TFile) => void
+	): void {
 		if (this.modifiedCallback) {
 			throw new Error("onFileModified already set");
 		}
 		this.modifiedCallback = callback;
+	}
+
+	deleteFile(path: string): void {
+		const file = this.markdownFiles.get(path);
+		if (file) {
+			this.markdownFiles.delete(path);
+			this.modifiedCallback?.("delete", file);
+		}
+	}
+
+	clearFiles(): void {
+		for (const file of this.getMarkdownFiles()) {
+			this.deleteFile(file.path);
+		}
 	}
 
 	quickAdd: QuickAddInterface | null;

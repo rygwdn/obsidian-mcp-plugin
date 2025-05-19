@@ -118,9 +118,20 @@ export class ObsidianImpl implements ObsidianInterface {
 		return results;
 	}
 
-	onFileModified(callback: (file: TFile) => void): void {
+	onFileModified(
+		callback: (operation: "create" | "modify" | "rename" | "delete", file: TFile) => void
+	): void {
+		this.app.vault.on("create", (file: TFile) => {
+			callback("create", file);
+		});
 		this.app.vault.on("modify", (file: TFile) => {
-			callback(file);
+			callback("modify", file);
+		});
+		this.app.vault.on("rename", (file: TFile) => {
+			callback("rename", file);
+		});
+		this.app.vault.on("delete", (file: TFile) => {
+			callback("delete", file);
 		});
 	}
 

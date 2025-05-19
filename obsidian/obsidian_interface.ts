@@ -15,7 +15,9 @@ export interface ObsidianInterface {
 	checkFile(filePath: string): Promise<CheckFileResult>;
 	search(query: string, fuzzy: boolean, folder?: string): Promise<SearchResult[]>;
 
-	onFileModified(callback: (file: TFile) => void): void;
+	onFileModified(
+		callback: (operation: "create" | "modify" | "rename" | "delete", file: TFile) => void
+	): void;
 
 	quickAdd: QuickAddInterface | null;
 	dataview: DataviewInterface | null;

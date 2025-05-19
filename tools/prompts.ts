@@ -32,9 +32,25 @@ export class VaultPrompt {
 
 	public get args(): Record<string, ZodType> {
 		const args = this.metadata?.frontmatter?.["args"] || [];
-		const parsedArgs: string[] =
-			typeof args === "string" ? JSON.parse(args) : Array.isArray(args) ? args : [];
-		return Object.fromEntries(parsedArgs.map((arg) => [arg, z.string()]));
+		if (!args) {
+			return {};
+		}
+
+		if (Array.isArray(args)) {
+			return Object.fromEntries(args.map((arg) => [arg, z.string()]));
+		}
+
+		if (typeof args === "string") {
+			try {
+				return Object.fromEntries(JSON.parse(args).map((arg: string) => [arg, z.string()]));
+			} catch (error) {
+				logger.logError(`Invalid args: ${args}: ${error}`);
+				return {};
+			}
+		}
+
+		logger.logError(`Invalid args: ${args}`);
+		return {};
 	}
 
 	public async handler(args: Record<string, string>): Promise<GetPromptResult> {
@@ -72,26 +88,65 @@ export class VaultPrompt {
 	}
 }
 
-export function getPrompts(obsidian: ObsidianInterface) {
+function getPrompts(obsidian: ObsidianInterface) {
 	return obsidian
 		.getMarkdownFiles()
-		.filter((file) => file.path.startsWith(obsidian.settings.promptsFolder))
-		.map((file) => new VaultPrompt(file, obsidian));
+		.filter((file) => file.path.startsWith(obsidian.settings.promptsFolder));
+}
+
+function syncPrompts(
+	existingPrompts: Map<string, VaultPrompt>,
+	obsidian: ObsidianInterface,
+	server: McpServer,
+	updatedPrompts: TFile[]
+) {
+	const newPrompts = getPrompts(obsidian);
+
+	for (const promptFile of newPrompts) {
+		if (!existingPrompts.has(promptFile.path)) {
+			const prompt = new VaultPrompt(promptFile, obsidian);
+			existingPrompts.set(promptFile.path, prompt);
+			prompt.register(server);
+		}
+	}
+	for (const path of existingPrompts.keys()) {
+		if (!newPrompts.find((p) => p.path === path)) {
+			existingPrompts.delete(path);
+		}
+	}
+	for (const prompt of updatedPrompts) {
+		existingPrompts.get(prompt.path)?.update();
+	}
 }
 
 export function registerPrompts(obsidian: ObsidianInterface, server: McpServer) {
-	const prompts = getPrompts(obsidian);
-	logger.log(`Found ${prompts.length} prompts in folder: ${obsidian.settings.promptsFolder}`);
+	const promptMap = new Map<string, VaultPrompt>(
+		getPrompts(obsidian).map((p) => [p.path, new VaultPrompt(p, obsidian)])
+	);
 
-	obsidian.onFileModified((file: TFile) => {
-		if (file.path.startsWith(obsidian.settings.promptsFolder)) {
-			logger.log(`Prompt file modified: ${file.path}`);
-			const prompt = prompts.find((prompt) => prompt.file.path === file.path);
-			prompt?.update();
+	logger.log(`Found ${promptMap.size} prompts in folder: ${obsidian.settings.promptsFolder}`);
+
+	obsidian.onFileModified((operation, file) => {
+		if (!file.path.startsWith(obsidian.settings.promptsFolder)) {
+			return;
+		}
+
+		logger.log(`Prompt file ${operation} ${file.path}`);
+		if (operation === "delete") {
+			promptMap.delete(file.path);
+		} else if (operation === "create") {
+			if (promptMap.has(file.path)) {
+				return;
+			}
+			const prompt = new VaultPrompt(file, obsidian);
+			promptMap.set(file.path, prompt);
+			prompt.register(server);
+		} else {
+			syncPrompts(promptMap, obsidian, server, [file]);
 		}
 	});
 
-	for (const prompt of prompts) {
+	for (const prompt of promptMap.values()) {
 		prompt.register(server);
 	}
 }
