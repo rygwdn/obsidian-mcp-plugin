@@ -1,7 +1,7 @@
 {
 	"id": "obsidian-mcp-plugin",
 	"name": "MCP API for Obsidian",
-	"version": "0.5.1",
+	"version": "0.5.2",
 	"minAppVersion": "1.7.7",
 	"description": "Provides a Model Context Protocol (MCP) endpoint via Obsidian Local REST API",
 	"author": "Ryan Wooden",

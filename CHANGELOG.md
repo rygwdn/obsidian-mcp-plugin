@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [0.5.2] - 2025-05-19
+
+- refactor: improve MCP server architecture and connection logging
+
 ## [0.5.1] - 2025-05-19
 
 - refactor: standardize URI handling and improve error messages
