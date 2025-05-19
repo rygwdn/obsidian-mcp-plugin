@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.5.0] - 2025-05-19
+
+- feat: enhance file event handling and prompt synchronization
+- feat: add security warnings and refactor settings UI
+- fix: address markdown linting issues and improve fix script
+
 ## [0.4.0] - 2025-05-17
 
 - feat: Make tool name prefix customizable with visual preview in settings
