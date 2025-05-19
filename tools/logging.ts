@@ -67,14 +67,13 @@ export class Logger {
 			get: (header: string) => string | undefined;
 		}
 	): void {
-		this.log(`New ${connectionType} connection established: ${sessionId}`);
 		this.log(
-			`Client IP: ${request.ip || "unknown"}, User-Agent: ${request.get("User-Agent") || "unknown"}`
+			`${connectionType}:${sessionId}: connection established from ${request.ip || "unknown"}`
 		);
 	}
 
 	logConnectionClosed(connectionType: string, sessionId: string): void {
-		this.log(`${connectionType} connection closed: ${sessionId}`);
+		this.log(`${connectionType}:${sessionId}: connection closed`);
 	}
 
 	withToolLogging<T>(

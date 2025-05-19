@@ -13,88 +13,54 @@ import { VaultDailyNoteResource, VaultFileResource } from "tools/vault_file_reso
 import { getContentsTool } from "tools/get_contents";
 import type { Request, Response } from "express";
 import { logger } from "tools/logging";
-import { InitializeRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import type { ObsidianInterface } from "./obsidian/obsidian_interface";
+import { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types";
+
+class LegacySSEServerTransport extends SSEServerTransport {
+	async handleMessage(
+		message: unknown,
+		extra?: {
+			authInfo?: AuthInfo;
+		}
+	): Promise<void> {
+		// Force the protocol version to 2024-11-05 for SSE connections to improve compatibility with older clients
+		if (isInitializeRequest(message) && !message.params.protocolVersion.startsWith("2024")) {
+			logger.log(
+				"Legacy SSE server transport: Setting protocol version from",
+				message.params.protocolVersion,
+				"to 2024-11-05"
+			);
+			message.params.protocolVersion = "2024-11-05";
+		}
+		return await super.handleMessage(message, extra);
+	}
+}
 
 export class ObsidianMcpServer {
-	private server: McpServer;
 	private sseTransports: Record<string, SSEServerTransport> = {};
+	private servers: McpServer[] = [];
 
 	constructor(
 		private obsidian: ObsidianInterface,
 		private manifest: { version: string; name: string }
-	) {
-		logger.log(`Initializing MCP server v${this.manifest.version}`);
-		const vaultDescription =
-			this.obsidian.settings.vaultDescription ?? DEFAULT_SETTINGS.vaultDescription;
+	) {}
 
-		this.server = new McpServer(
-			{ name: this.manifest.name, version: this.manifest.version },
-			{ instructions: vaultDescription }
-		);
-
-		this.patchSseVersion();
-
-		this.server.server.onerror = (error) => {
-			logger.logError("Server Error:", error);
-		};
-
-		const enabledTools = this.obsidian.settings.enabledTools;
-
-		if (enabledTools.file_access) {
-			new VaultFileResource(this.obsidian).register(this.server);
-			new VaultDailyNoteResource(this.obsidian).register(this.server);
-			new FileMetadataResource(this.obsidian).register(this.server);
-			this.registerTool(this.server, getContentsTool);
-			this.registerTool(this.server, getFileMetadataTool);
-		}
-
-		if (enabledTools.search) {
-			this.registerTool(this.server, searchTool);
-		}
-
-		if (enabledTools.update_content) {
-			this.registerTool(this.server, updateContentTool);
-		}
-
-		if (enabledTools.dataview_query && this.obsidian.dataview) {
-			this.registerTool(this.server, dataviewQueryTool);
-		}
-
-		if (this.obsidian.quickAdd && enabledTools.quickadd) {
-			this.registerTool(this.server, quickAddListTool);
-			this.registerTool(this.server, quickAddExecuteTool);
-		}
-
-		if (this.obsidian.settings.enablePrompts) {
-			registerPrompts(this.obsidian, this.server);
-		}
-	}
-
-	private patchSseVersion() {
-		// Modify the server to always respond with the older protocol version for SSE connections to improve compatibility with older clients
-		this.server.server.setRequestHandler(InitializeRequestSchema, async (request, extra) => {
-			const response = await this.server.server["_oninitialize"](request);
-			if (extra.sessionId && this.sseTransports[extra.sessionId]) {
-				response.protocolVersion = "2024-11-05";
-			}
-			return response;
-		});
-	}
-
-	async handleSseRequest(request: Request, response: Response) {
+	public async handleSseRequest(request: Request, response: Response) {
 		if (request.method === "GET") {
-			const transport = new SSEServerTransport("/messages", response);
+			const transport = new LegacySSEServerTransport("/messages", response);
 			this.sseTransports[transport.sessionId] = transport;
 
 			logger.logConnection("SSE", transport.sessionId, request);
+			const server = this.createServer();
+			this.servers.push(server);
 
 			response.on("close", () => {
 				logger.logConnectionClosed("SSE", transport.sessionId);
 				delete this.sseTransports[transport.sessionId];
 			});
 
-			await this.server.connect(transport);
+			await server.connect(transport);
 		} else if (request.method === "POST") {
 			const sessionId = request.query.sessionId as string | undefined;
 			if (!sessionId) {
@@ -115,20 +81,21 @@ export class ObsidianMcpServer {
 		}
 	}
 
-	async handleStreamingRequest(request: Request, response: Response) {
-		logger.log(`New streaming request received`);
-		logger.log(
-			`Client IP: ${request.ip || "unknown"}, User-Agent: ${request.get("User-Agent") || "unknown"}`
-		);
+	public async handleStreamingRequest(request: Request, response: Response) {
+		logger.logConnection("HTTP", "streaming", request);
 
 		const transport = new StreamableHTTPServerTransport({
 			sessionIdGenerator: undefined,
 			enableJsonResponse: true,
 		});
 
+		const server = this.createServer();
+		this.servers.push(server);
+
 		await logger.withPerformanceLogging(
 			"Streaming request",
 			async () => {
+				await server.connect(transport);
 				await transport.handleRequest(request, response, request.body);
 			},
 			{
@@ -140,9 +107,66 @@ export class ObsidianMcpServer {
 
 	public async close() {
 		logger.log("Shutting down MCP server");
-		await this.server.close();
+		for (const server of this.servers) {
+			if (server.isConnected()) {
+				await server.close();
+			}
+		}
 		logger.log("MCP server closed");
 	}
+
+	private createServer() {
+		logger.log(`Initializing MCP server v${this.manifest.version}`);
+		const vaultDescription =
+			this.obsidian.settings.vaultDescription ?? DEFAULT_SETTINGS.vaultDescription;
+
+		const server = new McpServer(
+			{ name: this.manifest.name, version: this.manifest.version },
+			{ instructions: vaultDescription }
+		);
+
+		server.server.onerror = (error) => {
+			logger.logError("Server Error:", error);
+		};
+
+		this.registerTools(server);
+
+		if (this.obsidian.settings.enablePrompts) {
+			registerPrompts(this.obsidian, server);
+		}
+
+		return server;
+	}
+
+	private registerTools(server: McpServer) {
+		const enabledTools = this.obsidian.settings.enabledTools;
+
+		if (enabledTools.file_access) {
+			new VaultFileResource(this.obsidian).register(server);
+			new VaultDailyNoteResource(this.obsidian).register(server);
+			new FileMetadataResource(this.obsidian).register(server);
+			this.registerTool(server, getContentsTool);
+			this.registerTool(server, getFileMetadataTool);
+		}
+
+		if (enabledTools.search) {
+			this.registerTool(server, searchTool);
+		}
+
+		if (enabledTools.update_content) {
+			this.registerTool(server, updateContentTool);
+		}
+
+		if (enabledTools.dataview_query && this.obsidian.dataview) {
+			this.registerTool(server, dataviewQueryTool);
+		}
+
+		if (this.obsidian.quickAdd && enabledTools.quickadd) {
+			this.registerTool(server, quickAddListTool);
+			this.registerTool(server, quickAddExecuteTool);
+		}
+	}
+
 	private registerTool(server: McpServer, toolReg: ToolRegistration) {
 		const toolNamePrefix = this.obsidian.settings.toolNamePrefix;
 		const toolName = toolNamePrefix ? `${toolNamePrefix}_${toolReg.name}` : toolReg.name;
