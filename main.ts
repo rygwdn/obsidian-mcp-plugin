@@ -31,10 +31,15 @@ export default class ObsidianMCPPlugin extends Plugin {
 	}
 
 	async registerRoutes() {
+		if (this.api) {
+			return;
+		}
+
 		this.api = getAPI(this.app as any, this.manifest);
 		if (!this.api) {
 			return;
 		}
+
 		this.obsidianInterface = new ObsidianImpl(this.app, this);
 		this.server = new ObsidianMcpServer(this.obsidianInterface, this.manifest);
 
@@ -46,25 +51,35 @@ export default class ObsidianMCPPlugin extends Plugin {
 			}
 		});
 
-		this.api.addRoute("/messages").post(async (request, response) => {
-			try {
-				await this.server.handleSseRequest(request, response);
-			} catch (error) {
-				this.errorResponse(response, error);
-			}
-		});
+		if (this.settings.enableSSE) {
+			this.api.addRoute("/messages").post(async (request, response) => {
+				try {
+					await this.server.handleSseRequest(request, response);
+				} catch (error) {
+					this.errorResponse(response, error);
+				}
+			});
 
-		this.api.addRoute("/sse").get(async (request, response) => {
-			try {
-				await this.server.handleSseRequest(request, response);
-			} catch (error) {
-				this.errorResponse(response, error);
-			}
-		});
+			this.api.addRoute("/sse").get(async (request, response) => {
+				try {
+					await this.server.handleSseRequest(request, response);
+				} catch (error) {
+					this.errorResponse(response, error);
+				}
+			});
+		}
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		const savedData = await this.loadData();
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, savedData);
+		
+		// Migration: Enable SSE for existing users who don't have this setting yet
+		// New users will get the default value (false)
+		if (savedData && Object.keys(savedData).length > 0 && savedData.enableSSE === undefined) {
+			this.settings.enableSSE = true;
+		}
+		
 		logger.getVerboseSetting = () => this.settings.verboseLogging;
 	}
 

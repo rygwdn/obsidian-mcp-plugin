@@ -47,6 +47,17 @@ export class ObsidianMcpServer {
 	) {}
 
 	public async handleSseRequest(request: Request, response: Response) {
+		// Check if SSE is enabled in settings
+		if (!this.obsidian.settings.enableSSE) {
+			logger.logError("SSE request failed: SSE endpoints are disabled in plugin settings");
+			response.status(404).json({
+				error: "SSE not available",
+				message: "SSE endpoints are currently disabled",
+				details: "Enable SSE in the MCP Plugin settings to use Server-Sent Events connections"
+			});
+			return;
+		}
+
 		if (request.method === "GET") {
 			const transport = new LegacySSEServerTransport("/messages", response);
 			this.sseTransports[transport.sessionId] = transport;

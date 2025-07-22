@@ -107,6 +107,15 @@ export class MCPSettingTab extends PluginSettingTab {
 
 		createToggleSetting({
 			containerEl: this.containerEl,
+			name: "Enable SSE Endpoints",
+			desc: "Enable Server-Sent Events endpoints (/sse and /messages) for backward compatibility with older MCP clients",
+			getValue: () => this.plugin.settings.enableSSE,
+			setValue: (value) => (this.plugin.settings.enableSSE = value),
+			saveSettings: () => this.plugin.saveSettings(),
+		});
+
+		createToggleSetting({
+			containerEl: this.containerEl,
 			name: "Verbose Logging",
 			desc: "Enable detailed logging in console (useful for debugging, but can be noisy)",
 			getValue: () => this.plugin.settings.verboseLogging,
