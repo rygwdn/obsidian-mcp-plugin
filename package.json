@@ -44,7 +44,6 @@
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.29.0",
-		"@types/commander": "^2.12.5",
 		"@types/cors": "^2.8.19",
 		"@types/express": "^5.0.3",
 		"@types/glob-to-regexp": "^0.4.4",

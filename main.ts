@@ -31,7 +31,10 @@ export default class ObsidianMCPPlugin extends Plugin {
 	}
 
 	async registerRoutes() {
-		this.api = getAPI(this.app, this.manifest);
+		this.api = getAPI(this.app as any, this.manifest);
+		if (!this.api) {
+			return;
+		}
 		this.obsidianInterface = new ObsidianImpl(this.app, this);
 		this.server = new ObsidianMcpServer(this.obsidianInterface, this.manifest);
 
