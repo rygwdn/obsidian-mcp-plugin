@@ -53,7 +53,7 @@ export class ObsidianMcpServer {
 			response.status(404).json({
 				error: "SSE not available",
 				message: "SSE endpoints are currently disabled",
-				details: "Enable SSE in the MCP Plugin settings to use Server-Sent Events connections"
+				details: "Enable SSE in the MCP Plugin settings to use Server-Sent Events connections",
 			});
 			return;
 		}

@@ -35,7 +35,7 @@ export default class ObsidianMCPPlugin extends Plugin {
 			return;
 		}
 
-		this.api = getAPI(this.app as any, this.manifest);
+		this.api = getAPI(this.app as unknown as Parameters<typeof getAPI>[0], this.manifest);
 		if (!this.api) {
 			return;
 		}
@@ -73,13 +73,13 @@ export default class ObsidianMCPPlugin extends Plugin {
 	async loadSettings() {
 		const savedData = await this.loadData();
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, savedData);
-		
+
 		// Migration: Enable SSE for existing users who don't have this setting yet
 		// New users will get the default value (false)
 		if (savedData && Object.keys(savedData).length > 0 && savedData.enableSSE === undefined) {
 			this.settings.enableSSE = true;
 		}
-		
+
 		logger.getVerboseSetting = () => this.settings.verboseLogging;
 	}
 
