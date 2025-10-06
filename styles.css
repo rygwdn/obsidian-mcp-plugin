@@ -338,3 +338,39 @@
 .mcp-checkbox-label input[type="checkbox"] {
 	margin-right: 6px;
 }
+
+/* Tab Styles */
+.mcp-tab-nav {
+	display: flex;
+	gap: 8px;
+	border-bottom: 2px solid var(--background-modifier-border);
+	margin-bottom: 24px;
+}
+
+.mcp-tab-button {
+	padding: 12px 24px;
+	background: none;
+	border: none;
+	color: var(--text-muted);
+	cursor: pointer;
+	font-size: var(--font-ui-medium);
+	font-weight: var(--font-weight-medium);
+	border-bottom: 2px solid transparent;
+	margin-bottom: -2px;
+	transition: all 0.2s ease;
+}
+
+.mcp-tab-button:hover {
+	color: var(--text-normal);
+	background-color: var(--background-modifier-hover);
+}
+
+.mcp-tab-button-active {
+	color: var(--interactive-accent);
+	border-bottom-color: var(--interactive-accent);
+	font-weight: var(--font-weight-bold);
+}
+
+.mcp-tab-content {
+	padding: 0;
+}

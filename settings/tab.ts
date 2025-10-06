@@ -16,6 +16,7 @@ import { App, Notice, PluginSettingTab } from "obsidian";
 
 export class MCPSettingTab extends PluginSettingTab {
 	containerEl: HTMLElement;
+	private activeTab: "server" | "tokens" | "advanced" = "server";
 
 	constructor(
 		app: App,
@@ -31,24 +32,74 @@ export class MCPSettingTab extends PluginSettingTab {
 		containerEl.empty();
 		containerEl.addClass("mcp-settings-container");
 
-		createConnectionInfoSection(this.plugin, containerEl);
-		this.addServerSettings();
-		createAuthSection(this.plugin, containerEl);
-		this.addBasicSettings();
-		this.addPromptsSettings();
-		addFeaturesSection(this.plugin, containerEl);
-		createDirectoryPermissionsSection(this.plugin, containerEl);
-		this.addAdvancedSection();
+		// Create tab navigation
+		const tabNavEl = containerEl.createDiv({ cls: "mcp-tab-nav" });
+		this.createTabButton(tabNavEl, "server", "Server");
+		this.createTabButton(tabNavEl, "tokens", "Tokens");
+		this.createTabButton(tabNavEl, "advanced", "Advanced");
+
+		// Create tab content container
+		const tabContentEl = containerEl.createDiv({ cls: "mcp-tab-content" });
+
+		// Render active tab
+		this.renderActiveTab(tabContentEl);
 	}
 
-	private addServerSettings(): void {
-		createSection(this.containerEl, "Server Configuration");
+	private createTabButton(
+		container: HTMLElement,
+		tabId: "server" | "tokens" | "advanced",
+		label: string
+	): void {
+		const button = container.createEl("button", {
+			text: label,
+			cls: `mcp-tab-button ${this.activeTab === tabId ? "mcp-tab-button-active" : ""}`,
+		});
 
-		const statusEl = this.containerEl.createDiv({ cls: "mcp-server-status" });
+		button.addEventListener("click", () => {
+			this.activeTab = tabId;
+			this.display();
+		});
+	}
+
+	private renderActiveTab(container: HTMLElement): void {
+		switch (this.activeTab) {
+			case "server":
+				this.renderServerTab(container);
+				break;
+			case "tokens":
+				this.renderTokensTab(container);
+				break;
+			case "advanced":
+				this.renderAdvancedTab(container);
+				break;
+		}
+	}
+
+	private renderServerTab(container: HTMLElement): void {
+		createConnectionInfoSection(this.plugin, container);
+		this.addServerSettings(container);
+		this.addBasicSettings(container);
+		this.addPromptsSettings(container);
+	}
+
+	private renderTokensTab(container: HTMLElement): void {
+		createAuthSection(this.plugin, container);
+	}
+
+	private renderAdvancedTab(container: HTMLElement): void {
+		addFeaturesSection(this.plugin, container);
+		createDirectoryPermissionsSection(this.plugin, container);
+		this.addAdvancedSection(container);
+	}
+
+	private addServerSettings(container: HTMLElement): void {
+		createSection(container, "Server Configuration");
+
+		const statusEl = container.createDiv({ cls: "mcp-server-status" });
 		this.updateServerStatus(statusEl);
 
 		createToggleSetting({
-			containerEl: this.containerEl,
+			containerEl: container,
 			name: "Enable Server",
 			desc: "Enable the MCP server",
 			getValue: () => this.plugin.settings.server.enabled,
@@ -69,7 +120,7 @@ export class MCPSettingTab extends PluginSettingTab {
 		});
 
 		createTextSetting({
-			containerEl: this.containerEl,
+			containerEl: container,
 			name: "Port",
 			desc: "Port number for the MCP server",
 			placeholder: "27123",
@@ -91,7 +142,7 @@ export class MCPSettingTab extends PluginSettingTab {
 		});
 
 		createTextSetting({
-			containerEl: this.containerEl,
+			containerEl: container,
 			name: "Host",
 			desc: "Host address to bind to (127.0.0.1 for localhost only)",
 			placeholder: "127.0.0.1",
@@ -108,7 +159,7 @@ export class MCPSettingTab extends PluginSettingTab {
 		});
 
 		createToggleSetting({
-			containerEl: this.containerEl,
+			containerEl: container,
 			name: "Enable HTTPS",
 			desc: "Use HTTPS with self-signed certificate (recommended for MCP)",
 			getValue: () => this.plugin.settings.server.httpsEnabled,
@@ -124,15 +175,15 @@ export class MCPSettingTab extends PluginSettingTab {
 		});
 
 		if (this.plugin.settings.server.httpsEnabled) {
-			this.addCertificateSettings(statusEl);
+			this.addCertificateSettings(container, statusEl);
 		}
 	}
 
-	private addCertificateSettings(statusEl: HTMLElement): void {
+	private addCertificateSettings(container: HTMLElement, statusEl: HTMLElement): void {
 		const certInfo = this.plugin.getServerManager().getCertificateInfo();
 
 		if (certInfo) {
-			const certStatusEl = this.containerEl.createDiv({
+			const certStatusEl = container.createDiv({
 				cls: "mcp-cert-status setting-item-description",
 			});
 			certStatusEl.style.marginLeft = "48px";
@@ -150,7 +201,7 @@ export class MCPSettingTab extends PluginSettingTab {
 		}
 
 		createButtonSetting({
-			containerEl: this.containerEl,
+			containerEl: container,
 			name: "Regenerate Certificate",
 			desc: "Generate a new self-signed certificate",
 			buttonText: "Regenerate",
@@ -166,7 +217,7 @@ export class MCPSettingTab extends PluginSettingTab {
 		});
 
 		createTextAreaSetting({
-			containerEl: this.containerEl,
+			containerEl: container,
 			name: "Subject Alternative Names",
 			desc: "Additional hostnames or IPs for the certificate (one per line)",
 			placeholder: "myhost.local\n192.168.1.100",
@@ -203,11 +254,11 @@ export class MCPSettingTab extends PluginSettingTab {
 		}
 	}
 
-	private addBasicSettings(): void {
-		createSection(this.containerEl, "Basic Settings");
+	private addBasicSettings(container: HTMLElement): void {
+		createSection(container, "Basic Settings");
 
 		createTextAreaSetting({
-			containerEl: this.containerEl,
+			containerEl: container,
 			name: "Vault Description",
 			desc: "Description of your vault to include in MCP server instructions",
 			placeholder: "This vault contains personal notes...",
@@ -217,11 +268,11 @@ export class MCPSettingTab extends PluginSettingTab {
 		});
 	}
 
-	private addPromptsSettings(): void {
-		createSection(this.containerEl, "Prompts");
+	private addPromptsSettings(container: HTMLElement): void {
+		createSection(container, "Prompts");
 
 		createTextSetting({
-			containerEl: this.containerEl,
+			containerEl: container,
 			name: "Prompts Folder",
 			desc: "Folder path where your prompts are stored (relative to vault root)",
 			placeholder: "prompts",
@@ -230,14 +281,14 @@ export class MCPSettingTab extends PluginSettingTab {
 			saveSettings: () => this.plugin.saveSettings(),
 		});
 
-		createPromptsInstructions(this.containerEl);
+		createPromptsInstructions(container);
 	}
 
-	private addAdvancedSection(): void {
-		createSection(this.containerEl, "Advanced");
+	private addAdvancedSection(container: HTMLElement): void {
+		createSection(container, "Advanced");
 
 		createTextSetting({
-			containerEl: this.containerEl,
+			containerEl: container,
 			name: "Tool Name Prefix",
 			desc: "Optional prefix for all tool names",
 			placeholder: "vault",
@@ -249,7 +300,7 @@ export class MCPSettingTab extends PluginSettingTab {
 			saveSettings: () => this.plugin.saveSettings(),
 		});
 
-		const exampleContainer = this.containerEl.createEl("div", {
+		const exampleContainer = container.createEl("div", {
 			cls: "setting-item-description",
 			attr: { style: "margin-top: -10px; margin-left: 48px; font-style: italic;" },
 		});
@@ -262,7 +313,7 @@ export class MCPSettingTab extends PluginSettingTab {
 		updateExampleText(this.plugin.settings.toolNamePrefix);
 
 		createToggleSetting({
-			containerEl: this.containerEl,
+			containerEl: container,
 			name: "Enable SSE Endpoints",
 			desc: "Enable Server-Sent Events endpoints (/sse and /messages) for backward compatibility with older MCP clients",
 			getValue: () => this.plugin.settings.enableSSE,
@@ -271,7 +322,7 @@ export class MCPSettingTab extends PluginSettingTab {
 		});
 
 		createToggleSetting({
-			containerEl: this.containerEl,
+			containerEl: container,
 			name: "Verbose Logging",
 			desc: "Enable detailed logging in console (useful for debugging, but can be noisy)",
 			getValue: () => this.plugin.settings.verboseLogging,
