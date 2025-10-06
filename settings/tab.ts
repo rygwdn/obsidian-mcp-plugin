@@ -44,8 +44,6 @@ export class MCPSettingTab extends PluginSettingTab {
 	private addServerSettings(): void {
 		createSection(this.containerEl, "Server Configuration");
 
-		const serverManager = this.plugin.getServerManager();
-
 		const statusEl = this.containerEl.createDiv({ cls: "mcp-server-status" });
 		this.updateServerStatus(statusEl);
 
@@ -57,6 +55,7 @@ export class MCPSettingTab extends PluginSettingTab {
 			setValue: async (value) => {
 				this.plugin.settings.server.enabled = value;
 				await this.plugin.saveSettings();
+				const serverManager = this.plugin.getServerManager();
 				if (value) {
 					await serverManager.start();
 				} else {
@@ -83,7 +82,7 @@ export class MCPSettingTab extends PluginSettingTab {
 				}
 				this.plugin.settings.server.port = port;
 				await this.plugin.saveSettings();
-				await serverManager.restart();
+				await this.plugin.getServerManager().restart();
 				this.updateServerStatus(statusEl);
 			},
 			saveSettings: async () => {
@@ -100,7 +99,7 @@ export class MCPSettingTab extends PluginSettingTab {
 			setValue: async (value) => {
 				this.plugin.settings.server.host = value;
 				await this.plugin.saveSettings();
-				await serverManager.restart();
+				await this.plugin.getServerManager().restart();
 				this.updateServerStatus(statusEl);
 			},
 			saveSettings: async () => {
@@ -116,7 +115,7 @@ export class MCPSettingTab extends PluginSettingTab {
 			setValue: async (value) => {
 				this.plugin.settings.server.httpsEnabled = value;
 				await this.plugin.saveSettings();
-				await serverManager.restart();
+				await this.plugin.getServerManager().restart();
 				this.updateServerStatus(statusEl);
 			},
 			saveSettings: async () => {
@@ -156,9 +155,10 @@ export class MCPSettingTab extends PluginSettingTab {
 			desc: "Generate a new self-signed certificate",
 			buttonText: "Regenerate",
 			onClick: async () => {
-				this.plugin.settings.server.crypto = this.plugin.getServerManager().generateCertificate();
+				const serverManager = this.plugin.getServerManager();
+				this.plugin.settings.server.crypto = serverManager.generateCertificate();
 				await this.plugin.saveSettings();
-				await this.plugin.getServerManager().restart();
+				await serverManager.restart();
 				new Notice("Certificate regenerated successfully");
 				this.updateServerStatus(statusEl);
 				this.display();
@@ -172,13 +172,12 @@ export class MCPSettingTab extends PluginSettingTab {
 				desc: "Import existing certificate from the Local REST API plugin",
 				buttonText: "Import",
 				onClick: async () => {
-					const cert = this.plugin
-						.getServerManager()
-						.importCertificateFromLocalRestApi(this.app.plugins.plugins);
+					const serverManager = this.plugin.getServerManager();
+					const cert = serverManager.importCertificateFromLocalRestApi(this.app.plugins.plugins);
 					if (cert) {
 						this.plugin.settings.server.crypto = cert;
 						await this.plugin.saveSettings();
-						await this.plugin.getServerManager().restart();
+						await serverManager.restart();
 						new Notice("Certificate imported successfully");
 						this.updateServerStatus(statusEl);
 						this.display();

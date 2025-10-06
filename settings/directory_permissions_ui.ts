@@ -324,8 +324,13 @@ export class DirectoryPermissionsUI {
 		const allowedFiles: TFile[] = [];
 		const blockedFiles: TFile[] = [];
 
+		const obsidianInterface = this.plugin.obsidianInterface;
+		if (!obsidianInterface) {
+			return { allowedFiles, blockedFiles };
+		}
+
 		for (const file of files) {
-			if (isFileAccessible(this.plugin.obsidianInterface, file)) {
+			if (isFileAccessible(obsidianInterface, file)) {
 				allowedFiles.push(file);
 			} else {
 				blockedFiles.push(file);

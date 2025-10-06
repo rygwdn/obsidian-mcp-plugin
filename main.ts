@@ -9,10 +9,10 @@ import { ObsidianImpl } from "./obsidian/obsidian_impl";
 import { ServerManager } from "./server/server_manager";
 
 export default class ObsidianMCPPlugin extends Plugin {
-	private serverManager: ServerManager;
-	private mcpServer: ObsidianMcpServer;
+	private serverManager: ServerManager | null = null;
+	private mcpServer: ObsidianMcpServer | null = null;
 	public settings: MCPPluginSettings;
-	public obsidianInterface: ObsidianInterface;
+	public obsidianInterface: ObsidianInterface | null = null;
 
 	private errorResponse(response: Response, error: Error) {
 		logger.logError("Error handling MCP request:", error);
@@ -30,26 +30,28 @@ export default class ObsidianMCPPlugin extends Plugin {
 		this.obsidianInterface = new ObsidianImpl(this.app, this);
 		this.mcpServer = new ObsidianMcpServer(this.obsidianInterface, this.manifest);
 
-		this.serverManager.addRoute("/mcp").post(async (request, response) => {
+		const serverManager = this.getServerManager();
+
+		serverManager.addRoute("/mcp").post(async (request, response) => {
 			try {
-				await this.mcpServer.handleStreamingRequest(request, response);
+				await this.mcpServer!.handleStreamingRequest(request, response);
 			} catch (error) {
 				this.errorResponse(response, error);
 			}
 		});
 
 		if (this.settings.enableSSE) {
-			this.serverManager.addRoute("/messages").post(async (request, response) => {
+			serverManager.addRoute("/messages").post(async (request, response) => {
 				try {
-					await this.mcpServer.handleSseRequest(request, response);
+					await this.mcpServer!.handleSseRequest(request, response);
 				} catch (error) {
 					this.errorResponse(response, error);
 				}
 			});
 
-			this.serverManager.addRoute("/sse").get(async (request, response) => {
+			serverManager.addRoute("/sse").get(async (request, response) => {
 				try {
-					await this.mcpServer.handleSseRequest(request, response);
+					await this.mcpServer!.handleSseRequest(request, response);
 				} catch (error) {
 					this.errorResponse(response, error);
 				}
@@ -82,16 +84,23 @@ export default class ObsidianMCPPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
-		this.serverManager = new ServerManager(this.settings);
-		this.addSettingTab(new MCPSettingTab(this.app, this, this.obsidianInterface));
-
 		await this.registerRoutes();
 
-		try {
-			await this.serverManager.start();
-		} catch (error) {
-			logger.logError("Failed to start MCP server:", error);
-		}
+		this.addSettingTab(new MCPSettingTab(this.app, this, this.obsidianInterface!));
+
+		// Defer starting the server until Obsidian is fully loaded
+		this.app.workspace.onLayoutReady(async () => {
+			if (!this.settings.server.enabled) {
+				logger.log("[MCP Server] Server disabled in settings");
+				return;
+			}
+
+			try {
+				await this.getServerManager().start();
+			} catch (error) {
+				logger.logError("Failed to start MCP server:", error);
+			}
+		});
 	}
 
 	async onunload() {
@@ -104,6 +113,9 @@ export default class ObsidianMCPPlugin extends Plugin {
 	}
 
 	public getServerManager(): ServerManager {
+		if (!this.serverManager) {
+			this.serverManager = new ServerManager(this.settings);
+		}
 		return this.serverManager;
 	}
 }
