@@ -3,7 +3,7 @@
 	"name": "MCP API for Obsidian",
 	"version": "0.5.3",
 	"minAppVersion": "1.7.7",
-	"description": "Provides a Model Context Protocol (MCP) endpoint via Obsidian Local REST API",
+	"description": "Provides a Model Context Protocol (MCP) server for Obsidian",
 	"author": "Ryan Wooden",
 	"authorUrl": "https://github.com/rygwdn",
 	"isDesktopOnly": true

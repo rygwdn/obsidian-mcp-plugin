@@ -1,7 +1,7 @@
 {
 	"name": "obsidian-mcp-plugin",
 	"version": "0.5.3",
-	"description": "Provides a Model Context Protocol (MCP) endpoint via Obsidian Local REST API",
+	"description": "Provides a Model Context Protocol (MCP) server for Obsidian",
 	"type": "module",
 	"main": "main.js",
 	"repository": {
@@ -34,8 +34,7 @@
 		"mcp",
 		"model-context-protocol",
 		"ai",
-		"plugin",
-		"local-rest-api"
+		"plugin"
 	],
 	"author": "Ryan Wooden <rygwdn@gmail.com>",
 	"license": "MIT",

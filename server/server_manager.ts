@@ -286,34 +286,4 @@ export class ServerManager {
 			return null;
 		}
 	}
-
-	public importCertificateFromLocalRestApi(
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		appPlugins: any
-	): CryptoSettings | null {
-		try {
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			const localRestApiPlugin = appPlugins["obsidian-local-rest-api"] as any;
-			if (!localRestApiPlugin || !localRestApiPlugin.settings) {
-				logger.logError("[MCP Server] Local REST API plugin not found or has no settings");
-				return null;
-			}
-
-			const crypto = localRestApiPlugin.settings.crypto;
-			if (!crypto || !crypto.cert || !crypto.privateKey || !crypto.publicKey) {
-				logger.logError("[MCP Server] Local REST API plugin has no valid certificate");
-				return null;
-			}
-
-			logger.log("[MCP Server] Successfully imported certificate from Local REST API");
-			return {
-				cert: crypto.cert,
-				privateKey: crypto.privateKey,
-				publicKey: crypto.publicKey,
-			};
-		} catch (error) {
-			logger.logError("[MCP Server] Error importing certificate from Local REST API:", error);
-			return null;
-		}
-	}
 }

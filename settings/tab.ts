@@ -165,29 +165,6 @@ export class MCPSettingTab extends PluginSettingTab {
 			},
 		});
 
-		if (this.app.plugins.enabledPlugins.has("obsidian-local-rest-api")) {
-			createButtonSetting({
-				containerEl: this.containerEl,
-				name: "Import Certificate from Local REST API",
-				desc: "Import existing certificate from the Local REST API plugin",
-				buttonText: "Import",
-				onClick: async () => {
-					const serverManager = this.plugin.getServerManager();
-					const cert = serverManager.importCertificateFromLocalRestApi(this.app.plugins.plugins);
-					if (cert) {
-						this.plugin.settings.server.crypto = cert;
-						await this.plugin.saveSettings();
-						await serverManager.restart();
-						new Notice("Certificate imported successfully");
-						this.updateServerStatus(statusEl);
-						this.display();
-					} else {
-						new Notice("Failed to import certificate");
-					}
-				},
-			});
-		}
-
 		createTextAreaSetting({
 			containerEl: this.containerEl,
 			name: "Subject Alternative Names",
