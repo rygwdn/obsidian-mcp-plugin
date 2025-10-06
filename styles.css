@@ -263,3 +263,78 @@
 	padding-top: 1rem;
 	border-top: var(--border-width) solid var(--background-modifier-border);
 }
+
+/* Auth Token Styles */
+.mcp-token-list {
+	margin-top: 10px;
+}
+
+.mcp-token-item {
+	padding: 12px;
+	margin-bottom: 10px;
+	background: var(--background-secondary);
+	border-radius: 6px;
+	border: 1px solid var(--background-modifier-border);
+}
+
+.mcp-token-header {
+	margin-bottom: 8px;
+}
+
+.mcp-token-permissions {
+	margin-bottom: 8px;
+}
+
+.mcp-token-permission-text {
+	color: var(--text-muted);
+	font-size: 0.9em;
+}
+
+.mcp-token-meta {
+	margin-bottom: 8px;
+	font-size: 0.85em;
+}
+
+.mcp-token-actions {
+	display: flex;
+	gap: 8px;
+}
+
+.mcp-button-danger {
+	background-color: var(--background-modifier-error);
+	color: var(--text-error);
+}
+
+.mcp-button-danger:hover {
+	background-color: var(--background-modifier-error-hover);
+}
+
+.mcp-token-display {
+	margin: 16px 0;
+	padding: 12px;
+	background: var(--background-secondary);
+	border-radius: 6px;
+	border: 1px solid var(--background-modifier-border);
+}
+
+.mcp-token-value {
+	display: block;
+	padding: 8px;
+	margin-bottom: 8px;
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	font-family: var(--font-monospace);
+	word-break: break-all;
+}
+
+.mcp-checkbox-label {
+	display: inline-flex;
+	align-items: center;
+	cursor: pointer;
+	margin-right: 16px;
+}
+
+.mcp-checkbox-label input[type="checkbox"] {
+	margin-right: 6px;
+}

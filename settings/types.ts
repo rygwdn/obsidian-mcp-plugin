@@ -13,6 +13,20 @@ export interface CryptoSettings {
 	publicKey: string;
 }
 
+export enum TokenPermission {
+	READ = "read",
+	WRITE = "write",
+}
+
+export interface AuthToken {
+	id: string;
+	name: string;
+	token: string;
+	permissions: TokenPermission[];
+	createdAt: number;
+	lastUsed?: number;
+}
+
 export interface MCPPluginSettings {
 	promptsFolder: string;
 	toolNamePrefix: string;
@@ -38,6 +52,7 @@ export interface MCPPluginSettings {
 		httpsEnabled: boolean;
 		crypto: CryptoSettings | null;
 		subjectAltNames: string;
+		tokens: AuthToken[];
 	};
 }
 
@@ -67,5 +82,6 @@ export const DEFAULT_SETTINGS: MCPPluginSettings = {
 		httpsEnabled: true,
 		crypto: null,
 		subjectAltNames: "",
+		tokens: [],
 	},
 };

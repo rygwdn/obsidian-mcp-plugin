@@ -7,6 +7,8 @@
 - **Self-Contained Server**: Removed dependency on Obsidian Local REST API plugin. The MCP plugin
   now runs its own HTTP/HTTPS server. This greatly simplifies setup and reduces external
   dependencies.
+- **Authentication Required**: All API requests now require Bearer token authentication. Create at
+  least one token in settings to enable access.
 
 ### Added
 
@@ -17,6 +19,12 @@
 - Support for Subject Alternative Names in certificates
 - Option to run HTTP server (without TLS) for local testing
 - Migration support: can import existing certificates from Local REST API plugin
+- **Authentication system with token-based access control**
+  - Multiple token support with individual permissions
+  - Read and Write permission levels
+  - Token management UI (create, edit permissions, delete)
+  - Automatic permission enforcement for write operations
+  - Token usage tracking (last used timestamp)
 
 ### Changed
 
@@ -24,6 +32,7 @@
 - Connection UI updated to show plugin's own server status instead of Local REST API
 - Simplified architecture with direct control over server lifecycle
 - Build configuration updated to use `platform: "node"` for proper Node.js module handling
+- Write operations (`update_content`, `quickadd_execute`) now require Write permission
 
 ### Removed
 

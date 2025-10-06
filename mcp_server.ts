@@ -7,7 +7,7 @@ import { dataviewQueryTool } from "tools/dataview_query";
 import { getFileMetadataTool, FileMetadataResource } from "tools/file_metadata";
 import { quickAddListTool, quickAddExecuteTool } from "tools/quickadd";
 import { ToolRegistration } from "tools/types";
-import { DEFAULT_SETTINGS } from "./settings/types";
+import { DEFAULT_SETTINGS, TokenPermission } from "./settings/types";
 import { registerPrompts } from "tools/prompts";
 import { VaultDailyNoteResource, VaultFileResource } from "tools/vault_file_resource";
 import { getContentsTool } from "tools/get_contents";
@@ -16,6 +16,7 @@ import { logger } from "tools/logging";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import type { ObsidianInterface } from "./obsidian/obsidian_interface";
 import { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types";
+import type { AuthenticatedRequest } from "./server/auth";
 
 class LegacySSEServerTransport extends SSEServerTransport {
 	async handleMessage(
@@ -37,9 +38,13 @@ class LegacySSEServerTransport extends SSEServerTransport {
 	}
 }
 
+// Define which tools require write permission
+const WRITE_TOOLS = new Set(["update_content", "quickadd_execute"]);
+
 export class ObsidianMcpServer {
 	private sseTransports: Record<string, SSEServerTransport> = {};
 	private servers: McpServer[] = [];
+	private currentRequest: Request | null = null;
 
 	constructor(
 		private obsidian: ObsidianInterface,
@@ -94,6 +99,7 @@ export class ObsidianMcpServer {
 
 	public async handleStreamingRequest(request: Request, response: Response) {
 		logger.logConnection("HTTP", "streaming", request);
+		this.currentRequest = request;
 
 		const transport = new StreamableHTTPServerTransport({
 			sessionIdGenerator: undefined,
@@ -114,6 +120,8 @@ export class ObsidianMcpServer {
 				errorMessage: "Error handling streaming request",
 			}
 		);
+
+		this.currentRequest = null;
 	}
 
 	public async close() {
@@ -183,9 +191,19 @@ export class ObsidianMcpServer {
 		const toolName = toolNamePrefix ? `${toolNamePrefix}_${toolReg.name}` : toolReg.name;
 		logger.logToolRegistration(toolName);
 
+		const requiresWrite = WRITE_TOOLS.has(toolReg.name);
+
 		const wrappedToolHandler = logger.withToolLogging(
 			toolName,
 			async (args: Record<string, unknown>) => {
+				// Check permissions if this tool requires write access
+				if (requiresWrite && this.currentRequest) {
+					const authReq = this.currentRequest as AuthenticatedRequest;
+					if (!authReq.hasPermission(TokenPermission.WRITE)) {
+						throw new Error("Permission denied: This operation requires write permission");
+					}
+				}
+
 				return await toolReg.handler(this.obsidian)(args);
 			}
 		);

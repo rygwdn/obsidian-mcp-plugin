@@ -27,13 +27,29 @@ MCP server. Please review the security implications carefully before use.
 
 ### Authentication
 
-- Currently, the MCP server does not implement authentication
-- Security relies on localhost-only binding and HTTPS encryption
+- **All requests require Bearer token authentication**
+- Tokens are cryptographically secure random strings (32 bytes, base64url encoded)
+- Each token can have specific permissions (Read, Write)
+- Multiple tokens supported for different clients/use cases
+- Token usage is tracked with "last used" timestamps
+- **Security best practices:**
+  - Create separate tokens for each client application
+  - Use Read-only tokens when write access is not needed
+  - Regularly review and delete unused tokens
+  - Store tokens securely (password manager, encrypted config files)
+  - Never commit tokens to version control
+  - Regenerate tokens if compromised
+  - Monitor token usage through the plugin settings
+
+### Network Security Considerations
+
+- Default binding to localhost (127.0.0.1) provides strong isolation
+- HTTPS encryption protects tokens in transit
 - **IMPORTANT**: Do not expose the server to external networks without additional security measures
-- Consider implementing network-level protections:
-  - Use firewall rules to restrict access
-  - Use VPN or SSH tunneling for remote access
-  - Only bind to localhost unless absolutely necessary
+- For remote access, use secure tunneling:
+  - VPN for secure network-level access
+  - SSH tunneling with port forwarding
+  - Avoid binding to 0.0.0.0 or public IPs unless you understand the risks
 
 ### Content Protection
 

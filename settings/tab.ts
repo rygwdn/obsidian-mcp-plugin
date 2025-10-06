@@ -10,6 +10,7 @@ import { createConnectionInfoSection } from "./connection_ui";
 import { createPromptsInstructions } from "./prompts_ui";
 import { addFeaturesSection } from "./tools_ui";
 import { createDirectoryPermissionsSection } from "./directory_permissions_ui";
+import { createAuthSection } from "./auth_ui";
 import type { ObsidianInterface } from "../obsidian/obsidian_interface";
 import { App, Notice, PluginSettingTab } from "obsidian";
 
@@ -32,6 +33,7 @@ export class MCPSettingTab extends PluginSettingTab {
 
 		createConnectionInfoSection(this.plugin, containerEl);
 		this.addServerSettings();
+		createAuthSection(this.plugin, containerEl);
 		this.addBasicSettings();
 		this.addPromptsSettings();
 		addFeaturesSection(this.plugin, containerEl);

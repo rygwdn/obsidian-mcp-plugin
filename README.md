@@ -36,9 +36,11 @@ Reviewers Auto-update Tester):
 1. Install [BRAT](https://github.com/TfTHacker/obsidian42-brat) from Obsidian Community Plugins.
 2. In BRAT settings, add beta plugin: `rygwdn/obsidian-mcp-plugin`.
 3. Enable the plugin in Obsidian settings.
-4. The plugin will automatically start its server on first load. Your Obsidian vault will now
-    provide an MCP endpoint at `https://127.0.0.1:27123/mcp` (or your configured port). The
-    specific endpoint and example configurations are viewable in the plugin settings.
+4. **Create an authentication token** in the Authentication section of the plugin settings. Choose
+   the appropriate permissions (Read for queries, Write for modifications).
+5. The plugin will automatically start its server. Your Obsidian vault will now provide an MCP
+   endpoint at `https://127.0.0.1:27123/mcp` (or your configured port).
+6. Copy the generated token and use it in your MCP client configuration as a Bearer token.
 
 ### Migration from Local REST API
 
@@ -47,7 +49,48 @@ If you were previously using this plugin with the Obsidian Local REST API plugin
 1. The MCP plugin now runs its own server - you no longer need Local REST API for MCP functionality
 2. Your existing certificate can be imported via the "Import Certificate from Local REST API" button
    in Server Configuration settings
-3. All other settings will be preserved during the migration
+3. **Important**: Create at least one authentication token, as authentication is now required
+4. All other settings will be preserved during the migration
+
+## Authentication
+
+All requests to the MCP server require Bearer token authentication. The plugin uses a token-based
+system with granular permissions:
+
+### Token Permissions
+
+- **Read**: Allows querying vault content, searching, and reading files
+- **Write**: Allows modifying content, creating files, and executing actions
+
+### Using Tokens
+
+Include your token in the Authorization header:
+
+```json
+{
+ "type": "streamableHttp",
+ "url": "https://127.0.0.1:27123/mcp",
+ "headers": {
+  "Authorization": "Bearer YOUR_TOKEN_HERE"
+ }
+}
+```
+
+### Managing Tokens
+
+1. Navigate to plugin settings → Authentication section
+2. Click "Create New Token"
+3. Give it a descriptive name and select permissions
+4. Copy the token immediately (you won't see it again!)
+5. Store it securely in your MCP client configuration
+
+**Security Notes:**
+
+- Tokens are randomly generated using cryptographically secure methods
+- Each token can have different permissions
+- You can create multiple tokens for different clients
+- Delete unused tokens to maintain security
+- Track token usage via the "Last used" timestamp
 
 ## Available Functionality
 

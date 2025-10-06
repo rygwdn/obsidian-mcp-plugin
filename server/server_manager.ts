@@ -6,6 +6,7 @@ import bodyParser from "body-parser";
 import forge, { pki } from "node-forge";
 import { MCPPluginSettings, CryptoSettings } from "../settings/types";
 import { logger } from "../tools/logging";
+import { AuthManager } from "./auth";
 
 const DEFAULT_BINDING_HOST = "127.0.0.1";
 const CERT_NAME = "Obsidian MCP Plugin";
@@ -15,9 +16,11 @@ export class ServerManager {
 	private insecureServer: http.Server | null = null;
 	private app: Express;
 	private settings: MCPPluginSettings;
+	private authManager: AuthManager;
 
 	constructor(settings: MCPPluginSettings) {
 		this.settings = settings;
+		this.authManager = new AuthManager(settings);
 		this.app = express();
 		this.setupExpressMiddleware();
 	}
@@ -26,6 +29,7 @@ export class ServerManager {
 		this.app.use(cors());
 		this.app.use(bodyParser.json({ limit: "50mb" }));
 		this.app.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
+		this.app.use(this.authManager.middleware());
 	}
 
 	public addRoute(path: string): express.IRoute {
@@ -84,6 +88,10 @@ export class ServerManager {
 		const host = this.settings.server.host || DEFAULT_BINDING_HOST;
 		const port = this.settings.server.port;
 		return `${protocol}://${host}:${port}`;
+	}
+
+	public getAuthManager(): AuthManager {
+		return this.authManager;
 	}
 
 	private async startSecureServer(): Promise<void> {
