@@ -2,6 +2,33 @@
 
 ## [Unreleased]
 
+### BREAKING CHANGES
+
+- **Self-Contained Server**: Removed dependency on Obsidian Local REST API plugin. The MCP plugin
+  now runs its own HTTP/HTTPS server. This greatly simplifies setup and reduces external
+  dependencies.
+
+### Added
+
+- Built-in HTTP/HTTPS server with Express
+- Automatic self-signed certificate generation for HTTPS connections
+- Server configuration UI with real-time status display
+- Certificate management (regenerate, view expiry, import from Local REST API)
+- Support for Subject Alternative Names in certificates
+- Option to run HTTP server (without TLS) for local testing
+- Migration support: can import existing certificates from Local REST API plugin
+
+### Changed
+
+- Server settings now managed directly in plugin configuration
+- Connection UI updated to show plugin's own server status instead of Local REST API
+- Simplified architecture with direct control over server lifecycle
+- Build configuration updated to use `platform: "node"` for proper Node.js module handling
+
+### Removed
+
+- Dependency on `obsidian-local-rest-api` package (now optional for certificate import only)
+
 ## [0.5.2] - 2025-05-19
 
 - refactor: improve MCP server architecture and connection logging

@@ -1,34 +1,32 @@
 # Obsidian MCP Plugin
 
 Integrates the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) with Obsidian,
-enabling AI assistants to interact with your vault via the
-[Obsidian Local REST API](https://github.com/coddingtonbear/obsidian-local-rest-api). This plugin
+providing a self-contained server that enables AI assistants to interact with your vault. This plugin
 uses standardized tools and resources for seamless AI collaboration.
-
-> [!IMPORTANT]
-> The [Obsidian Local REST API](https://github.com/coddingtonbear/obsidian-local-rest-api) plugin is
-> **required** for this plugin to function. Please ensure it is installed and enabled in your
-> Obsidian vault.
 
 ## Key Features and Benefits
 
 This plugin offers a native and streamlined Model Context Protocol (MCP) experience directly within
-Obsidian, eliminating the need for external servers or applications.
+Obsidian, with its own built-in server - no external dependencies required.
 
+- **Self-Contained Server**: Built-in HTTP/HTTPS server with no external dependencies
 - **Native Obsidian Integration**: Operates as a standard Obsidian plugin for a seamless user
-  experience.
+  experience
 - **Flexible Connectivity**: Supports both SSE and Streamable HTTP transports for versatile
-  communication.
-- **User-Friendly Configuration**: Manage all settings through the standard Obsidian interface.
+  communication
+- **HTTPS Support**: Automatic self-signed certificate generation for secure connections
+- **Optional Certificate Import**: Can import existing certificates from Obsidian Local REST API
+  plugin for seamless migration
+- **User-Friendly Configuration**: Manage all settings through the standard Obsidian interface
 - **Comprehensive Toolset**:
-  - Complete MCP server functionality via the Obsidian Local REST API.
-  - Tools for file management (read, list, metadata), vault search, and querying.
-  - Resource-based access to vault files and daily notes.
-  - Built-in prompt management system.
+  - Complete MCP server functionality
+  - Tools for file management (read, list, metadata), vault search, and querying
+  - Resource-based access to vault files and daily notes
+  - Built-in prompt management system
 - **Plugin Integrations**:
-  - **Dataview**: Execute Dataview queries (requires Dataview plugin).
-  - **Daily Notes**: Interact with daily notes (requires Daily Notes or Periodic Notes plugin).
-  - **QuickAdd**: Trigger QuickAdd actions and list choices (requires QuickAdd plugin).
+  - **Dataview**: Execute Dataview queries (requires Dataview plugin)
+  - **Daily Notes**: Interact with daily notes (requires Daily Notes or Periodic Notes plugin)
+  - **QuickAdd**: Trigger QuickAdd actions and list choices (requires QuickAdd plugin)
 
 ## Installation
 
@@ -38,9 +36,18 @@ Reviewers Auto-update Tester):
 1. Install [BRAT](https://github.com/TfTHacker/obsidian42-brat) from Obsidian Community Plugins.
 2. In BRAT settings, add beta plugin: `rygwdn/obsidian-mcp-plugin`.
 3. Enable the plugin in Obsidian settings.
-4. Your Obsidian vault will now provide an MCP endpoint at something like
-    `https://127.0.0.1:27123/mcp`. The specific endpoint and example configurations are viewable in
-    the plugin settings.
+4. The plugin will automatically start its server on first load. Your Obsidian vault will now
+    provide an MCP endpoint at `https://127.0.0.1:27123/mcp` (or your configured port). The
+    specific endpoint and example configurations are viewable in the plugin settings.
+
+### Migration from Local REST API
+
+If you were previously using this plugin with the Obsidian Local REST API plugin:
+
+1. The MCP plugin now runs its own server - you no longer need Local REST API for MCP functionality
+2. Your existing certificate can be imported via the "Import Certificate from Local REST API" button
+   in Server Configuration settings
+3. All other settings will be preserved during the migration
 
 ## Available Functionality
 

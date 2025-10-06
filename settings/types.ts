@@ -7,6 +7,12 @@ export interface DirectoryRule {
 	allowed: boolean;
 }
 
+export interface CryptoSettings {
+	cert: string;
+	privateKey: string;
+	publicKey: string;
+}
+
 export interface MCPPluginSettings {
 	promptsFolder: string;
 	toolNamePrefix: string;
@@ -24,6 +30,14 @@ export interface MCPPluginSettings {
 	directoryPermissions: {
 		rules: DirectoryRule[];
 		rootPermission: boolean;
+	};
+	server: {
+		enabled: boolean;
+		port: number;
+		host: string;
+		httpsEnabled: boolean;
+		crypto: CryptoSettings | null;
+		subjectAltNames: string;
 	};
 }
 
@@ -45,5 +59,13 @@ export const DEFAULT_SETTINGS: MCPPluginSettings = {
 	directoryPermissions: {
 		rules: [],
 		rootPermission: true,
+	},
+	server: {
+		enabled: true,
+		port: 27123,
+		host: "127.0.0.1",
+		httpsEnabled: true,
+		crypto: null,
+		subjectAltNames: "",
 	},
 };

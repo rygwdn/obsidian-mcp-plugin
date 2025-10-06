@@ -5,43 +5,52 @@ considerations when using the Obsidian MCP Plugin.
 
 ## Security Considerations
 
-This plugin provides external systems with access to your Obsidian vault contents through the Local REST
-API plugin. Please review the security implications carefully before use.
+This plugin provides external systems with access to your Obsidian vault contents through its built-in
+MCP server. Please review the security implications carefully before use.
 
 ### Network Security
 
-- The MCP endpoint is exposed via the Local REST API plugin on your local machine
-- By default, connections are only accepted from localhost (127.0.0.1)
-- The Local REST API uses HTTPS with a self-signed certificate by default for all communications
-- External connections require explicit configuration in the Local REST API plugin settings, which you
-  should only enable if you fully understand the security implications
+- The MCP server runs directly within the Obsidian plugin on your local machine
+- By default, the server only accepts connections from localhost (127.0.0.1)
+- HTTPS is enabled by default with automatically generated self-signed certificates
+- The server can optionally run in HTTP mode for local testing, but HTTPS is strongly recommended
+- External connections require changing the host binding in settings, which you should only enable if
+  you fully understand the security implications
+
+### Certificate Management
+
+- The plugin automatically generates self-signed certificates on first run when HTTPS is enabled
+- Certificates are valid for 1 year and include Subject Alternative Names for localhost and 127.0.0.1
+- You can regenerate certificates at any time from the plugin settings
+- For migration from Local REST API plugin, existing certificates can be imported
+- Self-signed certificates require clients to disable certificate validation (`NODE_TLS_REJECT_UNAUTHORIZED=0`)
 
 ### Authentication
 
-- Authentication is handled through the Local REST API plugin's API key system
-- The Local REST API plugin generates secure API keys that act as passwords for accessing your vault
-- **IMPORTANT**: Treat API keys like passwords - they provide full access to your vault content
-- API keys should:
-  - Only be shared with trusted applications and services
-  - Be regenerated periodically for enhanced security
-  - Never be published or stored in public repositories
-  - Be treated with the same care as your most sensitive passwords
-- Consider using the Local REST API plugin's access control options to limit which endpoints are accessible
+- Currently, the MCP server does not implement authentication
+- Security relies on localhost-only binding and HTTPS encryption
+- **IMPORTANT**: Do not expose the server to external networks without additional security measures
+- Consider implementing network-level protections:
+  - Use firewall rules to restrict access
+  - Use VPN or SSH tunneling for remote access
+  - Only bind to localhost unless absolutely necessary
 
 ### Content Protection
 
 **Best practices for safeguarding sensitive information:**
 
-- Keep sensitive or private information in a separate vault without MCP access
+- Keep sensitive or private information in a separate vault without the MCP plugin enabled
 - Use selective tool permissions to limit access to specific functionalities:
   - Enable only the specific tools required for your use case
   - Disable content modification capabilities when not actively using them
   - Consider using read-only access for most use cases
-- Regularly review the access logs by enabling verbose logging temporarily
+- Use directory permissions to restrict access to specific folders in your vault
+- Regularly review the access logs by enabling verbose logging in plugin settings
 - Implement additional layers of security:
-  - Use the Local REST API's built-in request logging to monitor access
-  - Consider network-level protections (like a firewall) if exposing to external networks
-  - Use VPN or SSH tunneling for secure remote access rather than directly exposing the API
+  - Monitor server activity through the plugin's logging system
+  - Consider network-level protections (like a firewall) if changing from localhost binding
+  - Use VPN or SSH tunneling for secure remote access rather than directly exposing the server
+- Disable the server entirely when not in use via the "Enable Server" toggle in settings
 
 ### Content Modification Risks
 

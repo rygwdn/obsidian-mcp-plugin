@@ -3,43 +3,60 @@ import {
 	createCopyableCode,
 	createCollapsibleDetailsSection,
 } from "./ui_components";
-import { getLocalRestApiSettings, LocalRestApiSettings } from "./local_rest_api";
-import { App } from "obsidian";
+import ObsidianMCPPlugin from "../main";
 
-export function createConnectionInfoSection(app: App, containerEl: HTMLElement): void {
-	const infoBox = createInfoBox(containerEl);
-
-	const apiSettings = getLocalRestApiSettings(app);
-	if (!apiSettings) {
-		return;
-	}
-
-	if (!apiSettings.secureServerEnabled) {
-		createSecureServerWarning(infoBox);
-		return;
-	}
-
-	const streamingEndpointUrl = `https://${apiSettings.bindingHost}:${apiSettings.port}/mcp`;
-	const sseEndpointUrl = `https://${apiSettings.bindingHost}:${apiSettings.port}/sse`;
-
-	displayBasicConnectionInfo(infoBox, streamingEndpointUrl, sseEndpointUrl, apiSettings);
-
-	const detailsEl = createCollapsibleDetailsSection(infoBox, "Example Configurations");
-	addStreamingConfig(detailsEl, streamingEndpointUrl, apiSettings);
-	addSseConfig(detailsEl, sseEndpointUrl, apiSettings);
-	addSupergatewayConfig(detailsEl, sseEndpointUrl, apiSettings);
+interface ConnectionSettings {
+	protocol: string;
+	host: string;
+	port: number;
+	authToken?: string;
 }
 
-function createSecureServerWarning(container: HTMLElement): void {
+export function createConnectionInfoSection(
+	plugin: ObsidianMCPPlugin,
+	containerEl: HTMLElement
+): void {
+	const infoBox = createInfoBox(containerEl);
+
+	if (!plugin.settings.server.enabled) {
+		createServerDisabledWarning(infoBox);
+		return;
+	}
+
+	const settings: ConnectionSettings = {
+		protocol: plugin.settings.server.httpsEnabled ? "https" : "http",
+		host: plugin.settings.server.host || "127.0.0.1",
+		port: plugin.settings.server.port,
+	};
+
+	if (!plugin.settings.server.httpsEnabled) {
+		createHttpWarning(infoBox);
+	}
+
+	const streamingEndpointUrl = `${settings.protocol}://${settings.host}:${settings.port}/mcp`;
+	const sseEndpointUrl = `${settings.protocol}://${settings.host}:${settings.port}/sse`;
+
+	displayBasicConnectionInfo(infoBox, streamingEndpointUrl, sseEndpointUrl, settings);
+
+	const detailsEl = createCollapsibleDetailsSection(infoBox, "Example Configurations");
+	addStreamingConfig(detailsEl, streamingEndpointUrl, settings);
+	addSseConfig(detailsEl, sseEndpointUrl, settings);
+	addSupergatewayConfig(detailsEl, sseEndpointUrl, settings);
+}
+
+function createServerDisabledWarning(container: HTMLElement): void {
 	const warningEl = container.createEl("div", { cls: "mcp-warning" });
 	warningEl.createEl("p", {
-		text: "⚠️ The Local REST API plugin must have 'Enable secure server' option enabled. MCP requires HTTPS for security.",
+		text: "⚠️ The MCP server is currently disabled. Enable it in the Server Configuration section below to use MCP features.",
 		cls: "mcp-warning-text",
 	});
+}
 
-	warningEl.createEl("a", {
-		text: "Configure Local REST API plugin",
-		href: "obsidian://show-plugin?id=obsidian-local-rest-api",
+function createHttpWarning(container: HTMLElement): void {
+	const warningEl = container.createEl("div", { cls: "mcp-warning" });
+	warningEl.createEl("p", {
+		text: "⚠️ HTTP mode is active. MCP clients typically require HTTPS. Consider enabling HTTPS in Server Configuration for better compatibility.",
+		cls: "mcp-warning-text",
 	});
 }
 
@@ -47,7 +64,7 @@ function displayBasicConnectionInfo(
 	container: HTMLElement,
 	streamingEndpointUrl: string,
 	sseEndpointUrl: string,
-	apiSettings: LocalRestApiSettings
+	settings: ConnectionSettings
 ): void {
 	const streamingRow = container.createDiv({ cls: "mcp-copyable-row" });
 	streamingRow.createEl("span", {
@@ -60,20 +77,20 @@ function displayBasicConnectionInfo(
 	sseRow.createEl("span", { text: "SSE URL", cls: "mcp-copyable-inline-label" });
 	createCopyableCode(sseRow, sseEndpointUrl);
 
-	if (apiSettings.authToken) {
-		createCopyableCode(container, `Authorization: Bearer ${apiSettings.authToken}`);
+	if (settings.authToken) {
+		createCopyableCode(container, `Authorization: Bearer ${settings.authToken}`);
 	}
 }
 
 function addStreamingConfig(
 	container: HTMLElement,
 	streamingEndpointUrl: string,
-	apiSettings: LocalRestApiSettings
+	settings: ConnectionSettings
 ): void {
 	const streamingConfigJson = {
 		type: "streamableHttp",
 		url: streamingEndpointUrl,
-		headers: apiSettings.authToken ? { Authorization: `Bearer ${apiSettings.authToken}` } : {},
+		headers: settings.authToken ? { Authorization: `Bearer ${settings.authToken}` } : {},
 	};
 
 	container
@@ -85,12 +102,12 @@ function addStreamingConfig(
 function addSseConfig(
 	container: HTMLElement,
 	sseEndpointUrl: string,
-	apiSettings: LocalRestApiSettings
+	settings: ConnectionSettings
 ): void {
 	const sseConfigJson = {
 		type: "sse",
 		url: sseEndpointUrl,
-		headers: apiSettings.authToken ? { Authorization: `Bearer ${apiSettings.authToken}` } : {},
+		headers: settings.authToken ? { Authorization: `Bearer ${settings.authToken}` } : {},
 	};
 
 	container
@@ -102,7 +119,7 @@ function addSseConfig(
 function addSupergatewayConfig(
 	container: HTMLElement,
 	sseEndpointUrl: string,
-	apiSettings: LocalRestApiSettings
+	settings: ConnectionSettings
 ): void {
 	const supergatewayJson = {
 		type: "stdio",
@@ -112,7 +129,7 @@ function addSupergatewayConfig(
 			"supergateway",
 			"--sse",
 			sseEndpointUrl,
-			...(apiSettings.authToken ? ["--oauth2Bearer", apiSettings.authToken] : []),
+			...(settings.authToken ? ["--oauth2Bearer", settings.authToken] : []),
 		],
 		env: {
 			NODE_TLS_REJECT_UNAUTHORIZED: "0",

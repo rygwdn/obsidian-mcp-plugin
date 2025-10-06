@@ -111,6 +111,27 @@ export function createToggleSetting({
 	return setting;
 }
 
+export function createButtonSetting({
+	containerEl,
+	name,
+	desc,
+	buttonText,
+	onClick,
+}: {
+	containerEl: HTMLElement;
+	name: string;
+	desc: string;
+	buttonText: string;
+	onClick: () => void | Promise<void>;
+}): Setting {
+	return new Setting(containerEl)
+		.setName(name)
+		.setDesc(desc)
+		.addButton((button) => {
+			button.setButtonText(buttonText).onClick(onClick);
+		});
+}
+
 export function createSection(containerEl: HTMLElement, title: string): void {
 	containerEl.createEl("h2", { text: title, cls: "mcp-settings-heading" });
 }
