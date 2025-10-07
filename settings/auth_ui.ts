@@ -131,7 +131,7 @@ function addTokenExampleConfig(
 	const httpEndpointUrl = `${protocol}://${host}:${port}/mcp`;
 
 	const httpConfigJson = {
-		type: "streamableHttp",
+		type: "http",
 		url: httpEndpointUrl,
 		headers: {
 			Authorization: `Bearer ${token.token}`,
