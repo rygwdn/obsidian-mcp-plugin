@@ -374,3 +374,34 @@
 .mcp-tab-content {
 	padding: 0;
 }
+
+/* Modal Tab Styles */
+.mcp-modal-tab-content {
+	padding: 16px 0;
+	min-height: 200px;
+}
+
+.mcp-configure-token-modal {
+	min-width: 500px;
+}
+
+.mcp-simple-rules-list {
+	margin: 12px 0;
+	padding: 8px;
+	background: var(--background-secondary);
+	border-radius: 6px;
+	border: 1px solid var(--background-modifier-border);
+}
+
+.mcp-simple-rule-item {
+	padding: 6px;
+	margin: 4px 0;
+	font-size: 0.9em;
+}
+
+.mcp-simple-rule-item code {
+	font-family: var(--font-monospace);
+	background: var(--background-primary);
+	padding: 2px 6px;
+	border-radius: 3px;
+}

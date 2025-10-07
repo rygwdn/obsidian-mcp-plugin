@@ -80,6 +80,17 @@ export class AuthManager {
 			token: AuthManager.generateToken(),
 			permissions,
 			createdAt: Date.now(),
+			enabledTools: {
+				file_access: true,
+				search: true,
+				update_content: true,
+				dataview_query: true,
+				quickadd: true,
+			},
+			directoryPermissions: {
+				rules: [],
+				rootPermission: true,
+			},
 		};
 
 		this.settings.server.tokens.push(token);
@@ -127,6 +138,8 @@ export class AuthManager {
 			permissions: t.permissions,
 			createdAt: t.createdAt,
 			lastUsed: t.lastUsed,
+			enabledTools: t.enabledTools,
+			directoryPermissions: t.directoryPermissions,
 		}));
 	}
 }

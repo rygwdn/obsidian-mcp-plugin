@@ -25,6 +25,17 @@ export interface AuthToken {
 	permissions: TokenPermission[];
 	createdAt: number;
 	lastUsed?: number;
+	enabledTools: {
+		file_access: boolean;
+		search: boolean;
+		update_content: boolean;
+		dataview_query: boolean;
+		quickadd: boolean;
+	};
+	directoryPermissions: {
+		rules: DirectoryRule[];
+		rootPermission: boolean;
+	};
 }
 
 export interface MCPPluginSettings {

@@ -81,13 +81,12 @@ function updateTokenList(plugin: ObsidianMCPPlugin, containerEl: HTMLElement): v
 		const actionsEl = tokenEl.createDiv({ cls: "mcp-token-actions" });
 
 		createMcpButton(actionsEl, {
-			text: "Edit Permissions",
+			text: "Configure",
 			onClick: async () => {
-				new EditTokenModal(plugin.app, token, async (permissions) => {
-					plugin.getServerManager().getAuthManager().updateTokenPermissions(token.id, permissions);
+				new ConfigureTokenModal(plugin, token, async () => {
 					await plugin.saveSettings();
 					updateTokenList(plugin, containerEl);
-					new Notice("Token permissions updated");
+					new Notice("Token configuration updated");
 				}).open();
 			},
 		});
@@ -202,25 +201,91 @@ class CreateTokenModal extends Modal {
 	}
 }
 
-class EditTokenModal extends Modal {
+class ConfigureTokenModal extends Modal {
 	private permissions: TokenPermission[];
+	private activeTab: "permissions" | "features" | "directories" = "permissions";
 
 	constructor(
-		app: App,
+		private plugin: ObsidianMCPPlugin,
 		private token: AuthToken,
-		private onSubmit: (permissions: TokenPermission[]) => void
+		private onSubmit: () => void
 	) {
-		super(app);
+		super(plugin.app);
 		this.permissions = [...token.permissions];
 	}
 
 	onOpen() {
 		const { contentEl } = this;
 		contentEl.empty();
+		contentEl.addClass("mcp-configure-token-modal");
 
-		contentEl.createEl("h2", { text: `Edit Token: ${this.token.name}` });
+		contentEl.createEl("h2", { text: `Configure Token: ${this.token.name}` });
 
-		const permSetting = new Setting(contentEl)
+		// Tab navigation
+		const tabNavEl = contentEl.createDiv({ cls: "mcp-tab-nav" });
+		this.createTabButton(tabNavEl, "permissions", "Permissions");
+		this.createTabButton(tabNavEl, "features", "Features");
+		this.createTabButton(tabNavEl, "directories", "Directory Access");
+
+		// Tab content
+		const tabContentEl = contentEl.createDiv({ cls: "mcp-modal-tab-content" });
+		this.renderActiveTab(tabContentEl);
+
+		// Bottom buttons
+		new Setting(contentEl)
+			.addButton((btn) =>
+				btn.setButtonText("Cancel").onClick(() => {
+					this.close();
+				})
+			)
+			.addButton((btn) =>
+				btn
+					.setButtonText("Save")
+					.setCta()
+					.onClick(() => {
+						if (this.permissions.length === 0) {
+							new Notice("At least one permission is required");
+							return;
+						}
+						this.token.permissions = this.permissions;
+						this.onSubmit();
+						this.close();
+					})
+			);
+	}
+
+	private createTabButton(
+		container: HTMLElement,
+		tabId: "permissions" | "features" | "directories",
+		label: string
+	): void {
+		const button = container.createEl("button", {
+			text: label,
+			cls: `mcp-tab-button ${this.activeTab === tabId ? "mcp-tab-button-active" : ""}`,
+		});
+
+		button.addEventListener("click", () => {
+			this.activeTab = tabId;
+			this.onOpen();
+		});
+	}
+
+	private renderActiveTab(container: HTMLElement): void {
+		switch (this.activeTab) {
+			case "permissions":
+				this.renderPermissionsTab(container);
+				break;
+			case "features":
+				this.renderFeaturesTab(container);
+				break;
+			case "directories":
+				this.renderDirectoriesTab(container);
+				break;
+		}
+	}
+
+	private renderPermissionsTab(container: HTMLElement): void {
+		const permSetting = new Setting(container)
 			.setName("Permissions")
 			.setDesc("Select the permissions this token should have");
 
@@ -257,26 +322,100 @@ class EditTokenModal extends Modal {
 			}
 		});
 		writeCheckbox.createSpan({ text: " Write" });
+	}
 
-		new Setting(contentEl)
-			.addButton((btn) =>
-				btn.setButtonText("Cancel").onClick(() => {
-					this.close();
+	private renderFeaturesTab(container: HTMLElement): void {
+		container.createEl("p", {
+			text: "Enable or disable specific tools for this token",
+			cls: "setting-item-description",
+		});
+
+		new Setting(container)
+			.setName("File Access")
+			.setDesc("Enable reading files, listing directories, and retrieving file metadata")
+			.addToggle((toggle) =>
+				toggle.setValue(this.token.enabledTools.file_access).onChange((value) => {
+					this.token.enabledTools.file_access = value;
 				})
-			)
-			.addButton((btn) =>
-				btn
-					.setButtonText("Save")
-					.setCta()
-					.onClick(() => {
-						if (this.permissions.length === 0) {
-							new Notice("At least one permission is required");
-							return;
-						}
-						this.onSubmit(this.permissions);
-						this.close();
+			);
+
+		new Setting(container)
+			.setName("Content Modification")
+			.setDesc("Enable modifying file content ⚠️ Allows direct changes to vault")
+			.addToggle((toggle) =>
+				toggle.setValue(this.token.enabledTools.update_content).onChange((value) => {
+					this.token.enabledTools.update_content = value;
+				})
+			);
+
+		new Setting(container)
+			.setName("Vault Search")
+			.setDesc("Search for text in vault files")
+			.addToggle((toggle) =>
+				toggle.setValue(this.token.enabledTools.search).onChange((value) => {
+					this.token.enabledTools.search = value;
+				})
+			);
+
+		const isDataviewEnabled = this.plugin.app.plugins.enabledPlugins.has("dataview");
+		new Setting(container)
+			.setName("Dataview Integration")
+			.setDesc(isDataviewEnabled ? "Execute Dataview queries" : "Dataview plugin is not enabled")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(isDataviewEnabled && this.token.enabledTools.dataview_query)
+					.setDisabled(!isDataviewEnabled)
+					.onChange((value) => {
+						this.token.enabledTools.dataview_query = value;
 					})
 			);
+
+		const isQuickAddEnabled = this.plugin.app.plugins.enabledPlugins.has("quickadd");
+		new Setting(container)
+			.setName("QuickAdd Integration")
+			.setDesc(
+				isQuickAddEnabled ? "Execute QuickAdd macros and choices" : "QuickAdd plugin is not enabled"
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(isQuickAddEnabled && this.token.enabledTools.quickadd)
+					.setDisabled(!isQuickAddEnabled)
+					.onChange((value) => {
+						this.token.enabledTools.quickadd = value;
+					})
+			);
+	}
+
+	private renderDirectoriesTab(container: HTMLElement): void {
+		container.createEl("p", {
+			text: "Configure which directories this token can access. Rules are applied in order.",
+			cls: "setting-item-description",
+		});
+
+		new Setting(container)
+			.setName("Root Permission")
+			.setDesc("Default permission for all files not covered by rules below")
+			.addToggle((toggle) =>
+				toggle.setValue(this.token.directoryPermissions.rootPermission).onChange((value) => {
+					this.token.directoryPermissions.rootPermission = value;
+				})
+			);
+
+		// Simple rules list display for now
+		if (this.token.directoryPermissions.rules.length > 0) {
+			container.createEl("h4", { text: "Directory Rules" });
+			const rulesList = container.createEl("div", { cls: "mcp-simple-rules-list" });
+			this.token.directoryPermissions.rules.forEach((rule) => {
+				const ruleEl = rulesList.createEl("div", { cls: "mcp-simple-rule-item" });
+				ruleEl.createEl("code", { text: rule.path });
+				ruleEl.createEl("span", { text: ` - ${rule.allowed ? "Allowed" : "Blocked"}` });
+			});
+		} else {
+			container.createEl("p", {
+				text: "No directory rules configured. All files follow the root permission.",
+				cls: "setting-item-description",
+			});
+		}
 	}
 
 	onClose() {
