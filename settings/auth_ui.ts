@@ -290,30 +290,49 @@ function renderEditTokenConfig(
 	token: AuthToken,
 	updateSection: () => void
 ): void {
-	containerEl.createEl("h3", { text: `Configure: ${token.name}` });
+	// Header with name and timestamp
+	const headerEl = containerEl.createDiv({ cls: "mcp-token-config-header" });
+	headerEl.createEl("h3", { text: `Configure: ${token.name}` });
 
-	// Token metadata
-	const metaEl = containerEl.createDiv({ cls: "mcp-token-meta-section" });
-	metaEl.createEl("p", {
+	const timestampEl = headerEl.createDiv({ cls: "mcp-token-config-timestamp" });
+	timestampEl.createEl("span", {
 		text: `Created: ${new Date(token.createdAt).toLocaleString()}`,
 		cls: "setting-item-description",
 	});
 	if (token.lastUsed) {
-		metaEl.createEl("p", {
-			text: `Last used: ${new Date(token.lastUsed).toLocaleString()}`,
+		timestampEl.createEl("span", {
+			text: ` | Last used: ${new Date(token.lastUsed).toLocaleString()}`,
 			cls: "setting-item-description",
 		});
 	}
+
+	// Example configuration at top with copy button
+	const exampleSection = containerEl.createDiv({ cls: "mcp-token-example-section" });
+	exampleSection.createEl("h4", { text: "Client Configuration" });
+	const detailsEl = createCollapsibleDetailsSection(exampleSection, "Example Configuration");
+	addTokenExampleConfig(plugin, detailsEl, token);
+
+	// Copy token button
+	const copyContainer = exampleSection.createDiv({ cls: "mcp-token-copy-container" });
+	copyContainer.createEl("span", { text: "Token: ", cls: "setting-item-description" });
+	const copyButton = createMcpButton(copyContainer, {
+		text: "📋 Copy Full Token",
+		additionalClasses: "mcp-button-secondary",
+		onClick: () => {
+			navigator.clipboard.writeText(token.token).then(() => {
+				copyButton.setText("✓ Copied!");
+				setTimeout(() => {
+					copyButton.setText("📋 Copy Full Token");
+				}, 2000);
+			});
+		},
+	});
 
 	// Features
 	renderFeaturesConfig(plugin, containerEl, token);
 
 	// Directories
 	renderDirectoriesConfig(plugin, containerEl, token, updateSection);
-
-	// Example configuration in collapsible section
-	const detailsEl = createCollapsibleDetailsSection(containerEl, "Example Configuration");
-	addTokenExampleConfig(plugin, detailsEl, token);
 
 	// Save button
 	const buttonContainer = containerEl.createDiv({ cls: "mcp-token-config-buttons" });
@@ -341,7 +360,7 @@ function renderFeaturesConfig(
 	});
 
 	new Setting(containerEl)
-		.setName("File Access")
+		.setName("📄 File Access")
 		.setDesc("Enable reading files, listing directories, and retrieving file metadata")
 		.addToggle((toggle) =>
 			toggle.setValue(token.enabledTools.file_access).onChange((value) => {
@@ -350,7 +369,7 @@ function renderFeaturesConfig(
 		);
 
 	const updateSetting = new Setting(containerEl)
-		.setName("Content Modification")
+		.setName("✏️ Content Modification")
 		.setDesc("Enable modifying file content");
 
 	updateSetting.descEl.createSpan({
@@ -365,7 +384,7 @@ function renderFeaturesConfig(
 	);
 
 	new Setting(containerEl)
-		.setName("Vault Search")
+		.setName("🔍 Vault Search")
 		.setDesc("Search for text in vault files")
 		.addToggle((toggle) =>
 			toggle.setValue(token.enabledTools.search).onChange((value) => {
@@ -375,7 +394,7 @@ function renderFeaturesConfig(
 
 	const isDataviewEnabled = plugin.app.plugins.enabledPlugins.has("dataview");
 	const dataviewSetting = new Setting(containerEl)
-		.setName("Dataview Integration")
+		.setName("📊 Dataview Integration")
 		.setDesc(isDataviewEnabled ? "Execute Dataview queries" : "Dataview plugin is not enabled");
 
 	dataviewSetting.addToggle((toggle) =>
@@ -389,7 +408,7 @@ function renderFeaturesConfig(
 
 	const isQuickAddEnabled = plugin.app.plugins.enabledPlugins.has("quickadd");
 	const quickAddSetting = new Setting(containerEl)
-		.setName("QuickAdd Integration")
+		.setName("⚡ QuickAdd Integration")
 		.setDesc(
 			isQuickAddEnabled ? "Execute QuickAdd macros and choices" : "QuickAdd plugin is not enabled"
 		);
@@ -423,14 +442,33 @@ function renderDirectoriesConfig(
 		cls: "setting-item-description",
 	});
 
-	new Setting(containerEl)
+	const rootPermSetting = new Setting(containerEl)
 		.setName("Root Permission")
-		.setDesc("Default permission for all files not covered by rules below")
-		.addToggle((toggle) =>
-			toggle.setValue(token.directoryPermissions.rootPermission).onChange((value) => {
-				token.directoryPermissions.rootPermission = value;
-			})
-		);
+		.setDesc("Default permission for all files not covered by rules below");
+
+	const buttonContainer = rootPermSetting.controlEl.createDiv({ cls: "mcp-button-container" });
+
+	createMcpButton(buttonContainer, {
+		text: "Allow",
+		additionalClasses: token.directoryPermissions.rootPermission
+			? "mcp-button-primary"
+			: "mcp-button-secondary",
+		onClick: () => {
+			token.directoryPermissions.rootPermission = true;
+			updateSection();
+		},
+	});
+
+	createMcpButton(buttonContainer, {
+		text: "Deny",
+		additionalClasses: !token.directoryPermissions.rootPermission
+			? "mcp-button-danger"
+			: "mcp-button-secondary",
+		onClick: () => {
+			token.directoryPermissions.rootPermission = false;
+			updateSection();
+		},
+	});
 
 	// Directory rules list
 	const rulesContainer = containerEl.createDiv({ cls: "mcp-directory-rules-list" });

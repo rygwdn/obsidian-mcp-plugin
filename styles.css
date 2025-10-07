@@ -353,11 +353,40 @@
 	font-size: 1em;
 }
 
-.mcp-token-meta-section {
+.mcp-token-config-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
 	margin-bottom: 1rem;
-	padding: 0.5rem;
+}
+
+.mcp-token-config-header h3 {
+	margin: 0;
+}
+
+.mcp-token-config-timestamp {
+	font-size: 0.85em;
+	color: var(--text-muted);
+}
+
+.mcp-token-example-section {
+	margin-bottom: 1.5rem;
+	padding: 1rem;
 	background: var(--background-secondary);
-	border-radius: 4px;
+	border-radius: 6px;
+	border: 1px solid var(--background-modifier-border);
+}
+
+.mcp-token-example-section h4 {
+	margin-top: 0;
+	margin-bottom: 0.5rem;
+}
+
+.mcp-token-copy-container {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-top: 1rem;
 }
 
 .mcp-button-danger {
@@ -500,5 +529,15 @@
 .mcp-button-container {
 	display: flex;
 	align-items: center;
-	justify-content: center;
+	gap: 8px;
+}
+
+.mcp-button-secondary {
+	background-color: var(--background-secondary);
+	color: var(--text-muted);
+	border: 1px solid var(--background-modifier-border);
+}
+
+.mcp-button-secondary:hover {
+	background-color: var(--background-modifier-hover);
 }
