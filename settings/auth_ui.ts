@@ -14,18 +14,18 @@ export function createAuthSection(plugin: ObsidianMCPPlugin, containerEl: HTMLEl
 
 	const authManager = plugin.getServerManager().getAuthManager();
 
-	// Warning if no tokens
-	if (plugin.settings.server.tokens.length === 0) {
-		const warningEl = containerEl.createDiv({ cls: "mcp-warning" });
-		warningEl.createEl("p", {
-			text: "⚠️ No authentication tokens configured. The server will deny all requests. Create at least one token to enable access.",
-			cls: "mcp-warning-text",
-		});
-	}
+	// Warning container (will be updated dynamically)
+	const warningContainer = containerEl.createDiv();
 
 	// Token list
 	const tokenListEl = containerEl.createDiv({ cls: "mcp-token-list" });
-	updateTokenList(plugin, tokenListEl);
+
+	const updateSection = () => {
+		updateWarning(plugin, warningContainer);
+		updateTokenList(plugin, tokenListEl, warningContainer);
+	};
+
+	updateSection();
 
 	// Add token button
 	createButtonSetting({
@@ -37,7 +37,7 @@ export function createAuthSection(plugin: ObsidianMCPPlugin, containerEl: HTMLEl
 			new CreateTokenModal(plugin.app, async (name, permissions) => {
 				const token = authManager.createToken(name, permissions);
 				await plugin.saveSettings();
-				updateTokenList(plugin, tokenListEl);
+				updateSection();
 
 				// Show token to user (only time they'll see it)
 				new TokenDisplayModal(plugin.app, token).open();
@@ -46,7 +46,22 @@ export function createAuthSection(plugin: ObsidianMCPPlugin, containerEl: HTMLEl
 	});
 }
 
-function updateTokenList(plugin: ObsidianMCPPlugin, containerEl: HTMLElement): void {
+function updateWarning(plugin: ObsidianMCPPlugin, container: HTMLElement): void {
+	container.empty();
+	if (plugin.settings.server.tokens.length === 0) {
+		const warningEl = container.createDiv({ cls: "mcp-warning" });
+		warningEl.createEl("p", {
+			text: "⚠️ No authentication tokens configured. The server will deny all requests. Create at least one token to enable access.",
+			cls: "mcp-warning-text",
+		});
+	}
+}
+
+function updateTokenList(
+	plugin: ObsidianMCPPlugin,
+	containerEl: HTMLElement,
+	warningContainer?: HTMLElement
+): void {
 	containerEl.empty();
 
 	const tokens = plugin.settings.server.tokens;
@@ -112,7 +127,8 @@ function updateTokenList(plugin: ObsidianMCPPlugin, containerEl: HTMLElement): v
 			onClick: async () => {
 				new ConfigureTokenModal(plugin, token, async () => {
 					await plugin.saveSettings();
-					updateTokenList(plugin, containerEl);
+					if (warningContainer) updateWarning(plugin, warningContainer);
+					updateTokenList(plugin, containerEl, warningContainer);
 					new Notice("Token configuration updated");
 				}).open();
 			},
@@ -129,7 +145,8 @@ function updateTokenList(plugin: ObsidianMCPPlugin, containerEl: HTMLElement): v
 				) {
 					plugin.getServerManager().getAuthManager().deleteToken(token.id);
 					await plugin.saveSettings();
-					updateTokenList(plugin, containerEl);
+					if (warningContainer) updateWarning(plugin, warningContainer);
+					updateTokenList(plugin, containerEl, warningContainer);
 					new Notice("Token deleted");
 				}
 			},
