@@ -387,6 +387,22 @@
 	align-items: center;
 	gap: 8px;
 	margin-top: 1rem;
+	margin-bottom: 1rem;
+}
+
+.mcp-token-display-value {
+	font-family: var(--font-monospace);
+	font-size: 0.85em;
+	background: var(--background-primary);
+	padding: 4px 8px;
+	border-radius: 4px;
+	border: 1px solid var(--background-modifier-border);
+	word-break: break-all;
+	flex-grow: 1;
+}
+
+.mcp-example-content {
+	margin-top: 0.5rem;
 }
 
 .mcp-button-danger {

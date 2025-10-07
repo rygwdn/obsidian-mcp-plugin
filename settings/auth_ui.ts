@@ -1,9 +1,5 @@
 import ObsidianMCPPlugin from "../main";
-import {
-	createMcpButton,
-	createCopyableCode,
-	createCollapsibleDetailsSection,
-} from "./ui_components";
+import { createMcpButton, createCopyableCode } from "./ui_components";
 import { Notice, Modal, Setting, App } from "obsidian";
 import { TokenPermission, AuthToken, DirectoryRule } from "./types";
 import { showDirectoryTreeModal } from "./directory_tree_modal";
@@ -134,24 +130,24 @@ function updateTokenList(
 			},
 		});
 
-		// Feature icons
+		// Feature icons in same order as config section
 		const featuresEl = tokenEl.createDiv({ cls: "mcp-token-features" });
 
-		// Map enabled tools to icons
-		const iconMap: Record<string, string> = {
-			file_access: "📄",
-			update_content: "✏️",
-			search: "🔍",
-			dataview_query: "📊",
-			quickadd: "⚡",
-		};
+		// Icon mapping in display order
+		const toolsInOrder = [
+			{ key: "file_access", icon: "📄", title: "File Access" },
+			{ key: "update_content", icon: "✏️", title: "Content Modification" },
+			{ key: "search", icon: "🔍", title: "Vault Search" },
+			{ key: "dataview_query", icon: "📊", title: "Dataview Integration" },
+			{ key: "quickadd", icon: "⚡", title: "QuickAdd Integration" },
+		];
 
-		for (const [toolKey, enabled] of Object.entries(token.enabledTools)) {
-			if (enabled && iconMap[toolKey]) {
+		for (const tool of toolsInOrder) {
+			if (token.enabledTools[tool.key as keyof typeof token.enabledTools]) {
 				featuresEl.createSpan({
-					text: iconMap[toolKey],
+					text: tool.icon,
 					cls: "mcp-token-feature-icon",
-					attr: { title: toolKey.replace(/_/g, " ") },
+					attr: { title: tool.title },
 				});
 			}
 		}
@@ -309,12 +305,16 @@ function renderEditTokenConfig(
 	// Example configuration at top with copy button
 	const exampleSection = containerEl.createDiv({ cls: "mcp-token-example-section" });
 	exampleSection.createEl("h4", { text: "Client Configuration" });
-	const detailsEl = createCollapsibleDetailsSection(exampleSection, "Example Configuration");
-	addTokenExampleConfig(plugin, detailsEl, token);
 
-	// Copy token button
+	// Token display with copy button
 	const copyContainer = exampleSection.createDiv({ cls: "mcp-token-copy-container" });
 	copyContainer.createEl("span", { text: "Token: ", cls: "setting-item-description" });
+
+	copyContainer.createEl("code", {
+		text: token.token,
+		cls: "mcp-token-display-value",
+	});
+
 	const copyButton = createMcpButton(copyContainer, {
 		text: "📋 Copy Full Token",
 		additionalClasses: "mcp-button-secondary",
@@ -327,6 +327,10 @@ function renderEditTokenConfig(
 			});
 		},
 	});
+
+	// Example config (no longer collapsible)
+	const exampleContent = exampleSection.createDiv({ cls: "mcp-example-content" });
+	addTokenExampleConfig(plugin, exampleContent, token);
 
 	// Features
 	renderFeaturesConfig(plugin, containerEl, token);
@@ -446,26 +450,13 @@ function renderDirectoriesConfig(
 		.setName("Root Permission")
 		.setDesc("Default permission for all files not covered by rules below");
 
-	const buttonContainer = rootPermSetting.controlEl.createDiv({ cls: "mcp-button-container" });
-
-	createMcpButton(buttonContainer, {
-		text: "Allow",
+	createMcpButton(rootPermSetting.controlEl, {
+		text: token.directoryPermissions.rootPermission ? "Allowed" : "Denied",
 		additionalClasses: token.directoryPermissions.rootPermission
-			? "mcp-button-primary"
-			: "mcp-button-secondary",
+			? "mcp-toggle-button mcp-allowed"
+			: "mcp-toggle-button mcp-blocked",
 		onClick: () => {
-			token.directoryPermissions.rootPermission = true;
-			updateSection();
-		},
-	});
-
-	createMcpButton(buttonContainer, {
-		text: "Deny",
-		additionalClasses: !token.directoryPermissions.rootPermission
-			? "mcp-button-danger"
-			: "mcp-button-secondary",
-		onClick: () => {
-			token.directoryPermissions.rootPermission = false;
+			token.directoryPermissions.rootPermission = !token.directoryPermissions.rootPermission;
 			updateSection();
 		},
 	});
