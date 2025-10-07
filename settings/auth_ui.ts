@@ -438,7 +438,7 @@ function renderDirectoriesConfig(
 	plugin: ObsidianMCPPlugin,
 	containerEl: HTMLElement,
 	token: AuthToken,
-	updateSection: () => void
+	_updateSection: () => void
 ): void {
 	containerEl.createEl("h4", { text: "Directory Access" });
 	containerEl.createEl("p", {
@@ -450,20 +450,29 @@ function renderDirectoriesConfig(
 		.setName("Root Permission")
 		.setDesc("Default permission for all files not covered by rules below");
 
-	createMcpButton(rootPermSetting.controlEl, {
+	// Store reference to button for updates
+	const updateRootPermButton = (button: HTMLButtonElement) => {
+		button.setText(token.directoryPermissions.rootPermission ? "Allowed" : "Denied");
+		button.removeClass("mcp-allowed", "mcp-blocked");
+		button.addClass(token.directoryPermissions.rootPermission ? "mcp-allowed" : "mcp-blocked");
+	};
+
+	const rootPermButton = createMcpButton(rootPermSetting.controlEl, {
 		text: token.directoryPermissions.rootPermission ? "Allowed" : "Denied",
 		additionalClasses: token.directoryPermissions.rootPermission
 			? "mcp-toggle-button mcp-allowed"
 			: "mcp-toggle-button mcp-blocked",
 		onClick: () => {
 			token.directoryPermissions.rootPermission = !token.directoryPermissions.rootPermission;
-			updateSection();
+			updateRootPermButton(rootPermButton);
 		},
 	});
 
 	// Directory rules list
 	const rulesContainer = containerEl.createDiv({ cls: "mcp-directory-rules-list" });
-	renderDirectoryRulesList(plugin, rulesContainer, token, updateSection);
+	const updateRulesList = () =>
+		renderDirectoryRulesList(plugin, rulesContainer, token, updateRulesList);
+	updateRulesList();
 
 	// Add rule button
 	const addButtonContainer = containerEl.createDiv({ cls: "mcp-add-directory-container" });
@@ -480,7 +489,7 @@ function renderDirectoriesConfig(
 					path: path,
 					allowed: action === "allow",
 				});
-				updateSection();
+				updateRulesList();
 			});
 		},
 	});
@@ -490,7 +499,7 @@ function renderDirectoryRulesList(
 	plugin: ObsidianMCPPlugin,
 	containerEl: HTMLElement,
 	token: AuthToken,
-	updateSection: () => void
+	updateRulesList: () => void
 ): void {
 	containerEl.empty();
 
@@ -550,7 +559,7 @@ function renderDirectoryRulesList(
 				targetIndex < draggedIndex ? targetIndex : Math.min(targetIndex + 1, rules.length);
 			rules.splice(insertIndex, 0, draggedRule);
 
-			updateSection();
+			updateRulesList();
 		});
 
 		rowEl.addEventListener("drop", (event) => {
@@ -565,12 +574,19 @@ function renderDirectoryRulesList(
 
 		// Toggle button
 		const toggleContainer = rowEl.createDiv({ cls: "mcp-button-container" });
-		createMcpButton(toggleContainer, {
+
+		const updateToggleButton = (button: HTMLButtonElement) => {
+			button.setText(rule.allowed ? "Allow" : "Block");
+			button.removeClass("mcp-allowed", "mcp-blocked");
+			button.addClass(rule.allowed ? "mcp-allowed" : "mcp-blocked");
+		};
+
+		const toggleButton = createMcpButton(toggleContainer, {
 			text: rule.allowed ? "Allow" : "Block",
 			additionalClasses: ["mcp-toggle-button", rule.allowed ? "mcp-allowed" : "mcp-blocked"],
 			onClick: () => {
 				rule.allowed = !rule.allowed;
-				updateSection();
+				updateToggleButton(toggleButton);
 			},
 		});
 
@@ -581,7 +597,7 @@ function renderDirectoryRulesList(
 			additionalClasses: "mcp-remove-directory-button",
 			onClick: () => {
 				token.directoryPermissions.rules.splice(index, 1);
-				updateSection();
+				updateRulesList();
 			},
 		});
 	});
