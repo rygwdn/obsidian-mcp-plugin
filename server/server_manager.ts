@@ -294,4 +294,45 @@ export class ServerManager {
 			return null;
 		}
 	}
+
+	public async serveCertificateTemporarily(cert: string): Promise<number> {
+		return new Promise((resolve, reject) => {
+			// Find an available port
+			const tempServer = express();
+			tempServer.disable("x-powered-by");
+
+			// Serve the certificate
+			tempServer.get("/certificate.pem", (_req, res) => {
+				res.setHeader("Content-Type", "application/x-pem-file");
+				res.setHeader("Content-Disposition", "attachment; filename=obsidian-mcp-plugin.pem");
+				res.send(cert);
+			});
+
+			// Start server on random available port
+			const server = tempServer.listen(0, "127.0.0.1", () => {
+				const address = server.address();
+				if (!address || typeof address === "string") {
+					reject(new Error("Failed to get server address"));
+					return;
+				}
+
+				const port = address.port;
+				logger.log(`[MCP Server] Serving certificate temporarily on port ${port}`);
+
+				// Stop server after 30 seconds
+				setTimeout(() => {
+					server.close(() => {
+						logger.log(`[MCP Server] Temporary certificate server closed`);
+					});
+				}, 30000);
+
+				resolve(port);
+			});
+
+			server.on("error", (error) => {
+				logger.logError("[MCP Server] Error starting temporary certificate server:", error);
+				reject(error);
+			});
+		});
+	}
 }

@@ -10,8 +10,6 @@ import { createPromptsInstructions } from "./prompts_ui";
 import { createAuthSection } from "./auth_ui";
 import type { ObsidianInterface } from "../obsidian/obsidian_interface";
 import { App, Notice, PluginSettingTab, Setting } from "obsidian";
-import * as fs from "fs";
-import * as path from "path";
 
 export class MCPSettingTab extends PluginSettingTab {
 	containerEl: HTMLElement;
@@ -207,7 +205,7 @@ export class MCPSettingTab extends PluginSettingTab {
 			.setName("Install Certificate")
 			.setDesc("Install the self-signed certificate to trust HTTPS connections")
 			.addButton((button) =>
-				button.setButtonText("Open Certificate").onClick(async () => {
+				button.setButtonText("Download Certificate").onClick(async () => {
 					try {
 						const cert = this.plugin.settings.server.crypto?.cert;
 						if (!cert) {
@@ -215,32 +213,20 @@ export class MCPSettingTab extends PluginSettingTab {
 							return;
 						}
 
-						// Use Obsidian's native file system to write temp file
-						const adapter = this.app.vault.adapter;
-						const tempPath = `obsidian-mcp-plugin-cert.pem`;
+						// Start temporary HTTP server to serve the certificate
+						const serverManager = this.plugin.getServerManager();
+						const tempPort = await serverManager.serveCertificateTemporarily(cert);
 
-						// Get config directory path
-						let configDir: string;
-						if ("getBasePath" in adapter && typeof adapter.getBasePath === "function") {
-							configDir = adapter.getBasePath();
-						} else {
-							configDir = adapter.getResourcePath("");
-						}
-
-						// Write cert to temp file in config directory
-						const certPath = path.join(configDir, "..", tempPath);
-
-						fs.writeFileSync(certPath, cert, "utf-8");
-
-						// Open file with default application
+						// Open browser to download the certificate
+						const downloadUrl = `http://127.0.0.1:${tempPort}/certificate.pem`;
 						// eslint-disable-next-line @typescript-eslint/no-require-imports
 						const { shell } = require("electron");
-						await shell.openPath(certPath);
+						await shell.openExternal(downloadUrl);
 
-						new Notice("Certificate file opened");
+						new Notice(`Certificate available at ${downloadUrl} for 30 seconds`);
 					} catch (error) {
-						console.error("Error opening certificate:", error);
-						new Notice("Failed to open certificate file");
+						console.error("Error serving certificate:", error);
+						new Notice("Failed to serve certificate file");
 					}
 				})
 			);
@@ -256,11 +242,11 @@ export class MCPSettingTab extends PluginSettingTab {
 		let instructions = "";
 
 		if (platform === "darwin") {
-			instructions = `<strong>macOS:</strong> When Keychain Access opens, <strong>drag the certificate file from Finder into the "System" keychain</strong> (not "login"). You may need to authenticate with your password. Then, find "Obsidian MCP Plugin" in the System keychain, double-click it, expand "Trust", and set "When using this certificate" to "Always Trust". Authenticate again to save.`;
+			instructions = `<strong>macOS:</strong> After downloading, open Keychain Access, then <strong>drag the downloaded certificate file into the "System" keychain</strong> (not "login"). Authenticate with your password. Then, find "Obsidian MCP Plugin" in the System keychain, double-click it, expand "Trust", and set "When using this certificate" to "Always Trust". Authenticate again to save.`;
 		} else if (platform === "win32") {
-			instructions = `<strong>Windows:</strong> Right-click the opened certificate file, select "Install Certificate", choose "Current User" or "Local Machine", select "Place all certificates in the following store", click "Browse" and select "Trusted Root Certification Authorities", then click "Finish".`;
+			instructions = `<strong>Windows:</strong> After downloading, right-click the certificate file, select "Install Certificate", choose "Current User" or "Local Machine", select "Place all certificates in the following store", click "Browse" and select "Trusted Root Certification Authorities", then click "Finish".`;
 		} else {
-			instructions = `<strong>Linux:</strong> Copy the certificate to /usr/local/share/ca-certificates/ and run: <code>sudo update-ca-certificates</code>`;
+			instructions = `<strong>Linux:</strong> After downloading, copy the certificate to /usr/local/share/ca-certificates/ and run: <code>sudo update-ca-certificates</code>`;
 		}
 
 		instructionsEl.innerHTML = instructions;
