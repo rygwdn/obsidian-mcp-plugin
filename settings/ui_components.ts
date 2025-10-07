@@ -219,7 +219,9 @@ export function createMcpButton(
 		if (Array.isArray(options.additionalClasses)) {
 			button.addClasses(options.additionalClasses);
 		} else {
-			button.addClass(options.additionalClasses);
+			// Split on spaces and add each class individually
+			const classes = options.additionalClasses.split(/\s+/).filter((c) => c.length > 0);
+			button.addClasses(classes);
 		}
 	}
 
