@@ -15,7 +15,7 @@ import { App, Notice, PluginSettingTab } from "obsidian";
 
 export class MCPSettingTab extends PluginSettingTab {
 	containerEl: HTMLElement;
-	private activeTab: "server" | "tokens" | "advanced" = "server";
+	private activeTab: "tokens" | "server" | "vault" | "advanced" = "tokens";
 
 	constructor(
 		app: App,
@@ -33,8 +33,9 @@ export class MCPSettingTab extends PluginSettingTab {
 
 		// Create tab navigation
 		const tabNavEl = containerEl.createDiv({ cls: "mcp-tab-nav" });
-		this.createTabButton(tabNavEl, "server", "Server");
 		this.createTabButton(tabNavEl, "tokens", "Tokens");
+		this.createTabButton(tabNavEl, "server", "Server");
+		this.createTabButton(tabNavEl, "vault", "Vault");
 		this.createTabButton(tabNavEl, "advanced", "Advanced");
 
 		// Create tab content container
@@ -46,7 +47,7 @@ export class MCPSettingTab extends PluginSettingTab {
 
 	private createTabButton(
 		container: HTMLElement,
-		tabId: "server" | "tokens" | "advanced",
+		tabId: "tokens" | "server" | "vault" | "advanced",
 		label: string
 	): void {
 		const button = container.createEl("button", {
@@ -62,11 +63,14 @@ export class MCPSettingTab extends PluginSettingTab {
 
 	private renderActiveTab(container: HTMLElement): void {
 		switch (this.activeTab) {
+			case "tokens":
+				this.renderTokensTab(container);
+				break;
 			case "server":
 				this.renderServerTab(container);
 				break;
-			case "tokens":
-				this.renderTokensTab(container);
+			case "vault":
+				this.renderVaultTab(container);
 				break;
 			case "advanced":
 				this.renderAdvancedTab(container);
@@ -74,12 +78,17 @@ export class MCPSettingTab extends PluginSettingTab {
 		}
 	}
 
+	private renderTokensTab(container: HTMLElement): void {
+		createAuthSection(this.plugin, container);
+	}
+
 	private renderServerTab(container: HTMLElement): void {
 		this.addServerSettings(container);
 	}
 
-	private renderTokensTab(container: HTMLElement): void {
-		createAuthSection(this.plugin, container);
+	private renderVaultTab(container: HTMLElement): void {
+		this.addBasicSettings(container);
+		this.addPromptsSettings(container);
 	}
 
 	private renderAdvancedTab(container: HTMLElement): void {
