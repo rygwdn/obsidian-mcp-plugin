@@ -7,8 +7,6 @@ import {
 	createButtonSetting,
 } from "./ui_components";
 import { createPromptsInstructions } from "./prompts_ui";
-import { addFeaturesSection } from "./tools_ui";
-import { createDirectoryPermissionsSection } from "./directory_permissions_ui";
 import { createAuthSection } from "./auth_ui";
 import type { ObsidianInterface } from "../obsidian/obsidian_interface";
 import { App, Notice, PluginSettingTab } from "obsidian";
@@ -92,8 +90,6 @@ export class MCPSettingTab extends PluginSettingTab {
 	}
 
 	private renderAdvancedTab(container: HTMLElement): void {
-		addFeaturesSection(this.plugin, container);
-		createDirectoryPermissionsSection(this.plugin, container);
 		this.addAdvancedSection(container);
 	}
 

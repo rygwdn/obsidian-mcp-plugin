@@ -7,12 +7,25 @@ import {
 	createCollapsibleDetailsSection,
 } from "./ui_components";
 import { Notice, Modal, Setting, App } from "obsidian";
-import { TokenPermission, AuthToken } from "./types";
+import { TokenPermission, AuthToken, DirectoryRule } from "./types";
+import { showDirectoryTreeModal } from "./directory_tree_modal";
+
+interface TokenUIState {
+	selectedTokenId: string | null;
+	isCreatingNew: boolean;
+	newTokenName: string;
+	newTokenPermissions: TokenPermission[];
+}
 
 export function createAuthSection(plugin: ObsidianMCPPlugin, containerEl: HTMLElement): void {
 	createSection(containerEl, "Authentication");
 
-	const authManager = plugin.getServerManager().getAuthManager();
+	const state: TokenUIState = {
+		selectedTokenId: null,
+		isCreatingNew: false,
+		newTokenName: "",
+		newTokenPermissions: [TokenPermission.READ],
+	};
 
 	// Warning container (will be updated dynamically)
 	const warningContainer = containerEl.createDiv();
@@ -20,9 +33,13 @@ export function createAuthSection(plugin: ObsidianMCPPlugin, containerEl: HTMLEl
 	// Token list
 	const tokenListEl = containerEl.createDiv({ cls: "mcp-token-list" });
 
+	// Configuration section (shown when token is selected or creating new)
+	const configSectionEl = containerEl.createDiv({ cls: "mcp-token-config-section" });
+
 	const updateSection = () => {
 		updateWarning(plugin, warningContainer);
-		updateTokenList(plugin, tokenListEl, warningContainer);
+		updateTokenList(plugin, tokenListEl, state, updateSection);
+		updateConfigSection(plugin, configSectionEl, state, updateSection);
 	};
 
 	updateSection();
@@ -34,14 +51,11 @@ export function createAuthSection(plugin: ObsidianMCPPlugin, containerEl: HTMLEl
 		desc: "Generate a new authentication token with specific permissions",
 		buttonText: "Create Token",
 		onClick: async () => {
-			new CreateTokenModal(plugin.app, async (name, permissions) => {
-				const token = authManager.createToken(name, permissions);
-				await plugin.saveSettings();
-				updateSection();
-
-				// Show token to user (only time they'll see it)
-				new TokenDisplayModal(plugin.app, token).open();
-			}).open();
+			state.isCreatingNew = true;
+			state.selectedTokenId = null;
+			state.newTokenName = "";
+			state.newTokenPermissions = [TokenPermission.READ];
+			updateSection();
 		},
 	});
 }
@@ -60,7 +74,8 @@ function updateWarning(plugin: ObsidianMCPPlugin, container: HTMLElement): void 
 function updateTokenList(
 	plugin: ObsidianMCPPlugin,
 	containerEl: HTMLElement,
-	warningContainer?: HTMLElement
+	state: TokenUIState,
+	updateSection: () => void
 ): void {
 	containerEl.empty();
 
@@ -75,10 +90,31 @@ function updateTokenList(
 	}
 
 	tokens.forEach((token) => {
-		const tokenEl = containerEl.createDiv({ cls: "mcp-token-item" });
+		const tokenEl = containerEl.createDiv({
+			cls: `mcp-token-item ${state.selectedTokenId === token.id ? "mcp-token-selected" : ""}`,
+		});
 
 		const headerEl = tokenEl.createDiv({ cls: "mcp-token-header" });
 		headerEl.createEl("strong", { text: token.name });
+
+		// Make the token clickable to select/deselect
+		tokenEl.addEventListener("click", (e) => {
+			// Don't select if clicking on buttons or interactive elements
+			if (
+				e.target instanceof HTMLButtonElement ||
+				(e.target instanceof HTMLElement && e.target.closest("button"))
+			) {
+				return;
+			}
+
+			if (state.selectedTokenId === token.id) {
+				state.selectedTokenId = null;
+			} else {
+				state.selectedTokenId = token.id;
+				state.isCreatingNew = false;
+			}
+			updateSection();
+		});
 
 		// Token value display with copy button
 		const tokenValueEl = tokenEl.createDiv({ cls: "mcp-token-value-container" });
@@ -123,14 +159,15 @@ function updateTokenList(
 		const actionsEl = tokenEl.createDiv({ cls: "mcp-token-actions" });
 
 		createMcpButton(actionsEl, {
-			text: "Configure",
+			text: state.selectedTokenId === token.id ? "Hide Config" : "Configure",
 			onClick: async () => {
-				new ConfigureTokenModal(plugin, token, async () => {
-					await plugin.saveSettings();
-					if (warningContainer) updateWarning(plugin, warningContainer);
-					updateTokenList(plugin, containerEl, warningContainer);
-					new Notice("Token configuration updated");
-				}).open();
+				if (state.selectedTokenId === token.id) {
+					state.selectedTokenId = null;
+				} else {
+					state.selectedTokenId = token.id;
+					state.isCreatingNew = false;
+				}
+				updateSection();
 			},
 		});
 
@@ -145,8 +182,8 @@ function updateTokenList(
 				) {
 					plugin.getServerManager().getAuthManager().deleteToken(token.id);
 					await plugin.saveSettings();
-					if (warningContainer) updateWarning(plugin, warningContainer);
-					updateTokenList(plugin, containerEl, warningContainer);
+					state.selectedTokenId = null;
+					updateSection();
 					new Notice("Token deleted");
 				}
 			},
@@ -155,6 +192,434 @@ function updateTokenList(
 		// Add example configuration in collapsible section
 		const detailsEl = createCollapsibleDetailsSection(tokenEl, "Example Configuration");
 		addTokenExampleConfig(plugin, detailsEl, token);
+	});
+}
+
+function updateConfigSection(
+	plugin: ObsidianMCPPlugin,
+	containerEl: HTMLElement,
+	state: TokenUIState,
+	updateSection: () => void
+): void {
+	containerEl.empty();
+
+	if (state.isCreatingNew) {
+		renderCreateTokenConfig(plugin, containerEl, state, updateSection);
+	} else if (state.selectedTokenId) {
+		const token = plugin.settings.server.tokens.find((t) => t.id === state.selectedTokenId);
+		if (token) {
+			renderEditTokenConfig(plugin, containerEl, token, updateSection);
+		}
+	}
+}
+
+function renderCreateTokenConfig(
+	plugin: ObsidianMCPPlugin,
+	containerEl: HTMLElement,
+	state: TokenUIState,
+	updateSection: () => void
+): void {
+	containerEl.addClass("mcp-token-config-visible");
+
+	containerEl.createEl("h3", { text: "Create New Token" });
+
+	// Token name
+	new Setting(containerEl).setName("Token Name").addText((text) =>
+		text
+			.setPlaceholder("e.g., My MCP Client")
+			.setValue(state.newTokenName)
+			.onChange((value) => {
+				state.newTokenName = value;
+			})
+	);
+
+	// Permissions
+	renderPermissionsConfig(containerEl, state.newTokenPermissions, (permissions) => {
+		state.newTokenPermissions = permissions;
+	});
+
+	// Features (using default settings as template)
+	const tempToken: AuthToken = {
+		id: "temp",
+		name: state.newTokenName,
+		token: "",
+		permissions: state.newTokenPermissions,
+		createdAt: Date.now(),
+		enabledTools: {
+			file_access: true,
+			update_content: true,
+			search: true,
+			dataview_query: true,
+			quickadd: true,
+		},
+		directoryPermissions: {
+			rules: [],
+			rootPermission: true,
+		},
+	};
+
+	renderFeaturesConfig(plugin, containerEl, tempToken);
+	renderDirectoriesConfig(plugin, containerEl, tempToken, updateSection);
+
+	// Create/Cancel buttons
+	const buttonContainer = containerEl.createDiv({ cls: "mcp-token-config-buttons" });
+
+	createMcpButton(buttonContainer, {
+		text: "Cancel",
+		onClick: () => {
+			state.isCreatingNew = false;
+			updateSection();
+		},
+	});
+
+	createMcpButton(buttonContainer, {
+		text: "Create Token",
+		additionalClasses: "mcp-button-primary",
+		onClick: async () => {
+			if (!state.newTokenName.trim()) {
+				new Notice("Token name is required");
+				return;
+			}
+			if (state.newTokenPermissions.length === 0) {
+				new Notice("At least one permission is required");
+				return;
+			}
+
+			const authManager = plugin.getServerManager().getAuthManager();
+			const newToken = authManager.createToken(state.newTokenName, state.newTokenPermissions);
+
+			// Apply the configured settings
+			newToken.enabledTools = tempToken.enabledTools;
+			newToken.directoryPermissions = tempToken.directoryPermissions;
+
+			await plugin.saveSettings();
+			state.isCreatingNew = false;
+			state.selectedTokenId = null;
+			updateSection();
+
+			// Show token to user (only time they'll see it)
+			new TokenDisplayModal(plugin.app, newToken).open();
+		},
+	});
+}
+
+function renderEditTokenConfig(
+	plugin: ObsidianMCPPlugin,
+	containerEl: HTMLElement,
+	token: AuthToken,
+	updateSection: () => void
+): void {
+	containerEl.addClass("mcp-token-config-visible");
+
+	containerEl.createEl("h3", { text: `Configure: ${token.name}` });
+
+	// Permissions
+	renderPermissionsConfig(containerEl, token.permissions, (permissions) => {
+		token.permissions = permissions;
+	});
+
+	// Features
+	renderFeaturesConfig(plugin, containerEl, token);
+
+	// Directories
+	renderDirectoriesConfig(plugin, containerEl, token, updateSection);
+
+	// Save button
+	const buttonContainer = containerEl.createDiv({ cls: "mcp-token-config-buttons" });
+
+	createMcpButton(buttonContainer, {
+		text: "Save Changes",
+		additionalClasses: "mcp-button-primary",
+		onClick: async () => {
+			if (token.permissions.length === 0) {
+				new Notice("At least one permission is required");
+				return;
+			}
+			await plugin.saveSettings();
+			new Notice("Token configuration updated");
+			updateSection();
+		},
+	});
+}
+
+function renderPermissionsConfig(
+	containerEl: HTMLElement,
+	permissions: TokenPermission[],
+	onChange: (permissions: TokenPermission[]) => void
+): void {
+	const permSetting = new Setting(containerEl)
+		.setName("Permissions")
+		.setDesc("Select the permissions this token should have");
+
+	const checkboxContainer = permSetting.controlEl.createDiv();
+
+	const readCheckbox = checkboxContainer.createEl("label");
+	readCheckbox.addClass("mcp-checkbox-label");
+	const readInput = readCheckbox.createEl("input", { type: "checkbox" });
+	readInput.checked = permissions.includes(TokenPermission.READ);
+	readInput.addEventListener("change", () => {
+		if (readInput.checked) {
+			if (!permissions.includes(TokenPermission.READ)) {
+				permissions.push(TokenPermission.READ);
+			}
+		} else {
+			const index = permissions.indexOf(TokenPermission.READ);
+			if (index > -1) {
+				permissions.splice(index, 1);
+			}
+		}
+		onChange(permissions);
+	});
+	readCheckbox.createSpan({ text: " Read" });
+
+	checkboxContainer.createEl("br");
+
+	const writeCheckbox = checkboxContainer.createEl("label");
+	writeCheckbox.addClass("mcp-checkbox-label");
+	const writeInput = writeCheckbox.createEl("input", { type: "checkbox" });
+	writeInput.checked = permissions.includes(TokenPermission.WRITE);
+	writeInput.addEventListener("change", () => {
+		if (writeInput.checked) {
+			if (!permissions.includes(TokenPermission.WRITE)) {
+				permissions.push(TokenPermission.WRITE);
+			}
+		} else {
+			const index = permissions.indexOf(TokenPermission.WRITE);
+			if (index > -1) {
+				permissions.splice(index, 1);
+			}
+		}
+		onChange(permissions);
+	});
+	writeCheckbox.createSpan({ text: " Write" });
+}
+
+function renderFeaturesConfig(
+	plugin: ObsidianMCPPlugin,
+	containerEl: HTMLElement,
+	token: AuthToken
+): void {
+	containerEl.createEl("h4", { text: "Features" });
+	containerEl.createEl("p", {
+		text: "Enable or disable specific tools for this token",
+		cls: "setting-item-description",
+	});
+
+	new Setting(containerEl)
+		.setName("File Access")
+		.setDesc("Enable reading files, listing directories, and retrieving file metadata")
+		.addToggle((toggle) =>
+			toggle.setValue(token.enabledTools.file_access).onChange((value) => {
+				token.enabledTools.file_access = value;
+			})
+		);
+
+	const updateSetting = new Setting(containerEl)
+		.setName("Content Modification")
+		.setDesc("Enable modifying file content");
+
+	updateSetting.descEl.createSpan({
+		text: " ⚠️ Allows direct changes to vault",
+		cls: "mcp-warning-text",
+	});
+
+	updateSetting.addToggle((toggle) =>
+		toggle.setValue(token.enabledTools.update_content).onChange((value) => {
+			token.enabledTools.update_content = value;
+		})
+	);
+
+	new Setting(containerEl)
+		.setName("Vault Search")
+		.setDesc("Search for text in vault files")
+		.addToggle((toggle) =>
+			toggle.setValue(token.enabledTools.search).onChange((value) => {
+				token.enabledTools.search = value;
+			})
+		);
+
+	const isDataviewEnabled = plugin.app.plugins.enabledPlugins.has("dataview");
+	const dataviewSetting = new Setting(containerEl)
+		.setName("Dataview Integration")
+		.setDesc(isDataviewEnabled ? "Execute Dataview queries" : "Dataview plugin is not enabled");
+
+	dataviewSetting.addToggle((toggle) =>
+		toggle
+			.setValue(isDataviewEnabled && token.enabledTools.dataview_query)
+			.setDisabled(!isDataviewEnabled)
+			.onChange((value) => {
+				token.enabledTools.dataview_query = value;
+			})
+	);
+
+	const isQuickAddEnabled = plugin.app.plugins.enabledPlugins.has("quickadd");
+	const quickAddSetting = new Setting(containerEl)
+		.setName("QuickAdd Integration")
+		.setDesc(
+			isQuickAddEnabled ? "Execute QuickAdd macros and choices" : "QuickAdd plugin is not enabled"
+		);
+
+	if (isQuickAddEnabled) {
+		quickAddSetting.descEl.createSpan({
+			text: " ⚠️ Allows direct changes to vault",
+			cls: "mcp-warning-text",
+		});
+	}
+
+	quickAddSetting.addToggle((toggle) =>
+		toggle
+			.setValue(isQuickAddEnabled && token.enabledTools.quickadd)
+			.setDisabled(!isQuickAddEnabled)
+			.onChange((value) => {
+				token.enabledTools.quickadd = value;
+			})
+	);
+}
+
+function renderDirectoriesConfig(
+	plugin: ObsidianMCPPlugin,
+	containerEl: HTMLElement,
+	token: AuthToken,
+	updateSection: () => void
+): void {
+	containerEl.createEl("h4", { text: "Directory Access" });
+	containerEl.createEl("p", {
+		text: "Configure which directories this token can access. Rules are applied in order.",
+		cls: "setting-item-description",
+	});
+
+	new Setting(containerEl)
+		.setName("Root Permission")
+		.setDesc("Default permission for all files not covered by rules below")
+		.addToggle((toggle) =>
+			toggle.setValue(token.directoryPermissions.rootPermission).onChange((value) => {
+				token.directoryPermissions.rootPermission = value;
+			})
+		);
+
+	// Directory rules list
+	const rulesContainer = containerEl.createDiv({ cls: "mcp-directory-rules-list" });
+	renderDirectoryRulesList(plugin, rulesContainer, token, updateSection);
+
+	// Add rule button
+	const addButtonContainer = containerEl.createDiv({ cls: "mcp-add-directory-container" });
+	createMcpButton(addButtonContainer, {
+		text: "Add Directory Rule",
+		additionalClasses: "mcp-add-directory-button",
+		onClick: async () => {
+			showDirectoryTreeModal(plugin.app, async (action, path) => {
+				if (action === "cancel" || !path) {
+					return;
+				}
+
+				token.directoryPermissions.rules.push({
+					path: path,
+					allowed: action === "allow",
+				});
+				updateSection();
+			});
+		},
+	});
+}
+
+function renderDirectoryRulesList(
+	plugin: ObsidianMCPPlugin,
+	containerEl: HTMLElement,
+	token: AuthToken,
+	updateSection: () => void
+): void {
+	containerEl.empty();
+
+	const rules = token.directoryPermissions.rules;
+
+	if (rules.length === 0) {
+		containerEl.createEl("p", {
+			text: "No directory rules configured. All files follow the root permission.",
+			cls: "setting-item-description",
+		});
+		return;
+	}
+
+	let draggedRule: DirectoryRule | null = null;
+	let hoveredOverRule: DirectoryRule | null = null;
+
+	rules.forEach((rule, index) => {
+		const rowEl = containerEl.createDiv({ cls: "mcp-directory-row" });
+
+		// Drag handle
+		const dragHandle = rowEl.createSpan({ cls: "mcp-drag-handle" });
+		dragHandle.innerHTML = "⋮⋮";
+		dragHandle.setAttribute("draggable", "true");
+
+		dragHandle.addEventListener("dragstart", () => {
+			draggedRule = rule;
+			hoveredOverRule = null;
+			rowEl.addClass("dragging");
+		});
+
+		dragHandle.addEventListener("dragend", () => {
+			draggedRule = null;
+			hoveredOverRule = null;
+			rowEl.removeClass("dragging");
+		});
+
+		rowEl.addEventListener("dragover", (event) => {
+			event.preventDefault();
+
+			if (!draggedRule || draggedRule === rule || hoveredOverRule === rule) {
+				return;
+			}
+
+			hoveredOverRule = rule;
+
+			const draggedIndex = rules.indexOf(draggedRule);
+			if (draggedIndex === -1) return;
+
+			rules.splice(draggedIndex, 1);
+			const targetIndex = rules.indexOf(rule);
+			if (targetIndex === -1) {
+				rules.splice(draggedIndex, 0, draggedRule);
+				return;
+			}
+
+			const insertIndex =
+				targetIndex < draggedIndex ? targetIndex : Math.min(targetIndex + 1, rules.length);
+			rules.splice(insertIndex, 0, draggedRule);
+
+			updateSection();
+		});
+
+		rowEl.addEventListener("drop", (event) => {
+			event.preventDefault();
+		});
+
+		// Path display
+		rowEl.createSpan({
+			text: rule.path,
+			cls: "mcp-directory-path",
+		});
+
+		// Toggle button
+		const toggleContainer = rowEl.createDiv({ cls: "mcp-button-container" });
+		createMcpButton(toggleContainer, {
+			text: rule.allowed ? "Allow" : "Block",
+			additionalClasses: ["mcp-toggle-button", rule.allowed ? "mcp-allowed" : "mcp-blocked"],
+			onClick: () => {
+				rule.allowed = !rule.allowed;
+				updateSection();
+			},
+		});
+
+		// Remove button
+		const removeContainer = rowEl.createDiv({ cls: "mcp-button-container" });
+		createMcpButton(removeContainer, {
+			text: "Remove",
+			additionalClasses: "mcp-remove-directory-button",
+			onClick: () => {
+				token.directoryPermissions.rules.splice(index, 1);
+				updateSection();
+			},
+		});
 	});
 }
 
@@ -180,320 +645,6 @@ function addTokenExampleConfig(
 		.createDiv({ cls: "mcp-copyable-label" })
 		.createEl("span", { text: "HTTP Configuration" });
 	createCopyableCode(container, JSON.stringify(httpConfigJson, null, 2));
-}
-
-class CreateTokenModal extends Modal {
-	private name = "";
-	private permissions: TokenPermission[] = [TokenPermission.READ];
-
-	constructor(
-		app: App,
-		private onSubmit: (name: string, permissions: TokenPermission[]) => void
-	) {
-		super(app);
-	}
-
-	onOpen() {
-		const { contentEl } = this;
-		contentEl.empty();
-
-		contentEl.createEl("h2", { text: "Create Authentication Token" });
-
-		new Setting(contentEl).setName("Token Name").addText((text) =>
-			text.setPlaceholder("e.g., My MCP Client").onChange((value) => {
-				this.name = value;
-			})
-		);
-
-		const permSetting = new Setting(contentEl)
-			.setName("Permissions")
-			.setDesc("Select the permissions this token should have");
-
-		const checkboxContainer = permSetting.controlEl.createDiv();
-
-		const readCheckbox = checkboxContainer.createEl("label");
-		readCheckbox.addClass("mcp-checkbox-label");
-		const readInput = readCheckbox.createEl("input", { type: "checkbox" });
-		readInput.checked = true;
-		readInput.addEventListener("change", () => {
-			if (readInput.checked) {
-				if (!this.permissions.includes(TokenPermission.READ)) {
-					this.permissions.push(TokenPermission.READ);
-				}
-			} else {
-				this.permissions = this.permissions.filter((p) => p !== TokenPermission.READ);
-			}
-		});
-		readCheckbox.createSpan({ text: " Read" });
-
-		checkboxContainer.createEl("br");
-
-		const writeCheckbox = checkboxContainer.createEl("label");
-		writeCheckbox.addClass("mcp-checkbox-label");
-		const writeInput = writeCheckbox.createEl("input", { type: "checkbox" });
-		writeInput.addEventListener("change", () => {
-			if (writeInput.checked) {
-				if (!this.permissions.includes(TokenPermission.WRITE)) {
-					this.permissions.push(TokenPermission.WRITE);
-				}
-			} else {
-				this.permissions = this.permissions.filter((p) => p !== TokenPermission.WRITE);
-			}
-		});
-		writeCheckbox.createSpan({ text: " Write" });
-
-		new Setting(contentEl)
-			.addButton((btn) =>
-				btn.setButtonText("Cancel").onClick(() => {
-					this.close();
-				})
-			)
-			.addButton((btn) =>
-				btn
-					.setButtonText("Create")
-					.setCta()
-					.onClick(() => {
-						if (!this.name.trim()) {
-							new Notice("Token name is required");
-							return;
-						}
-						if (this.permissions.length === 0) {
-							new Notice("At least one permission is required");
-							return;
-						}
-						this.onSubmit(this.name, this.permissions);
-						this.close();
-					})
-			);
-	}
-
-	onClose() {
-		const { contentEl } = this;
-		contentEl.empty();
-	}
-}
-
-class ConfigureTokenModal extends Modal {
-	private permissions: TokenPermission[];
-	private activeTab: "permissions" | "features" | "directories" = "permissions";
-
-	constructor(
-		private plugin: ObsidianMCPPlugin,
-		private token: AuthToken,
-		private onSubmit: () => void
-	) {
-		super(plugin.app);
-		this.permissions = [...token.permissions];
-	}
-
-	onOpen() {
-		const { contentEl } = this;
-		contentEl.empty();
-		contentEl.addClass("mcp-configure-token-modal");
-
-		contentEl.createEl("h2", { text: `Configure Token: ${this.token.name}` });
-
-		// Tab navigation
-		const tabNavEl = contentEl.createDiv({ cls: "mcp-tab-nav" });
-		this.createTabButton(tabNavEl, "permissions", "Permissions");
-		this.createTabButton(tabNavEl, "features", "Features");
-		this.createTabButton(tabNavEl, "directories", "Directory Access");
-
-		// Tab content
-		const tabContentEl = contentEl.createDiv({ cls: "mcp-modal-tab-content" });
-		this.renderActiveTab(tabContentEl);
-
-		// Bottom buttons
-		new Setting(contentEl)
-			.addButton((btn) =>
-				btn.setButtonText("Cancel").onClick(() => {
-					this.close();
-				})
-			)
-			.addButton((btn) =>
-				btn
-					.setButtonText("Save")
-					.setCta()
-					.onClick(() => {
-						if (this.permissions.length === 0) {
-							new Notice("At least one permission is required");
-							return;
-						}
-						this.token.permissions = this.permissions;
-						this.onSubmit();
-						this.close();
-					})
-			);
-	}
-
-	private createTabButton(
-		container: HTMLElement,
-		tabId: "permissions" | "features" | "directories",
-		label: string
-	): void {
-		const button = container.createEl("button", {
-			text: label,
-			cls: `mcp-tab-button ${this.activeTab === tabId ? "mcp-tab-button-active" : ""}`,
-		});
-
-		button.addEventListener("click", () => {
-			this.activeTab = tabId;
-			this.onOpen();
-		});
-	}
-
-	private renderActiveTab(container: HTMLElement): void {
-		switch (this.activeTab) {
-			case "permissions":
-				this.renderPermissionsTab(container);
-				break;
-			case "features":
-				this.renderFeaturesTab(container);
-				break;
-			case "directories":
-				this.renderDirectoriesTab(container);
-				break;
-		}
-	}
-
-	private renderPermissionsTab(container: HTMLElement): void {
-		const permSetting = new Setting(container)
-			.setName("Permissions")
-			.setDesc("Select the permissions this token should have");
-
-		const checkboxContainer = permSetting.controlEl.createDiv();
-
-		const readCheckbox = checkboxContainer.createEl("label");
-		readCheckbox.addClass("mcp-checkbox-label");
-		const readInput = readCheckbox.createEl("input", { type: "checkbox" });
-		readInput.checked = this.permissions.includes(TokenPermission.READ);
-		readInput.addEventListener("change", () => {
-			if (readInput.checked) {
-				if (!this.permissions.includes(TokenPermission.READ)) {
-					this.permissions.push(TokenPermission.READ);
-				}
-			} else {
-				this.permissions = this.permissions.filter((p) => p !== TokenPermission.READ);
-			}
-		});
-		readCheckbox.createSpan({ text: " Read" });
-
-		checkboxContainer.createEl("br");
-
-		const writeCheckbox = checkboxContainer.createEl("label");
-		writeCheckbox.addClass("mcp-checkbox-label");
-		const writeInput = writeCheckbox.createEl("input", { type: "checkbox" });
-		writeInput.checked = this.permissions.includes(TokenPermission.WRITE);
-		writeInput.addEventListener("change", () => {
-			if (writeInput.checked) {
-				if (!this.permissions.includes(TokenPermission.WRITE)) {
-					this.permissions.push(TokenPermission.WRITE);
-				}
-			} else {
-				this.permissions = this.permissions.filter((p) => p !== TokenPermission.WRITE);
-			}
-		});
-		writeCheckbox.createSpan({ text: " Write" });
-	}
-
-	private renderFeaturesTab(container: HTMLElement): void {
-		container.createEl("p", {
-			text: "Enable or disable specific tools for this token",
-			cls: "setting-item-description",
-		});
-
-		new Setting(container)
-			.setName("File Access")
-			.setDesc("Enable reading files, listing directories, and retrieving file metadata")
-			.addToggle((toggle) =>
-				toggle.setValue(this.token.enabledTools.file_access).onChange((value) => {
-					this.token.enabledTools.file_access = value;
-				})
-			);
-
-		new Setting(container)
-			.setName("Content Modification")
-			.setDesc("Enable modifying file content ⚠️ Allows direct changes to vault")
-			.addToggle((toggle) =>
-				toggle.setValue(this.token.enabledTools.update_content).onChange((value) => {
-					this.token.enabledTools.update_content = value;
-				})
-			);
-
-		new Setting(container)
-			.setName("Vault Search")
-			.setDesc("Search for text in vault files")
-			.addToggle((toggle) =>
-				toggle.setValue(this.token.enabledTools.search).onChange((value) => {
-					this.token.enabledTools.search = value;
-				})
-			);
-
-		const isDataviewEnabled = this.plugin.app.plugins.enabledPlugins.has("dataview");
-		new Setting(container)
-			.setName("Dataview Integration")
-			.setDesc(isDataviewEnabled ? "Execute Dataview queries" : "Dataview plugin is not enabled")
-			.addToggle((toggle) =>
-				toggle
-					.setValue(isDataviewEnabled && this.token.enabledTools.dataview_query)
-					.setDisabled(!isDataviewEnabled)
-					.onChange((value) => {
-						this.token.enabledTools.dataview_query = value;
-					})
-			);
-
-		const isQuickAddEnabled = this.plugin.app.plugins.enabledPlugins.has("quickadd");
-		new Setting(container)
-			.setName("QuickAdd Integration")
-			.setDesc(
-				isQuickAddEnabled ? "Execute QuickAdd macros and choices" : "QuickAdd plugin is not enabled"
-			)
-			.addToggle((toggle) =>
-				toggle
-					.setValue(isQuickAddEnabled && this.token.enabledTools.quickadd)
-					.setDisabled(!isQuickAddEnabled)
-					.onChange((value) => {
-						this.token.enabledTools.quickadd = value;
-					})
-			);
-	}
-
-	private renderDirectoriesTab(container: HTMLElement): void {
-		container.createEl("p", {
-			text: "Configure which directories this token can access. Rules are applied in order.",
-			cls: "setting-item-description",
-		});
-
-		new Setting(container)
-			.setName("Root Permission")
-			.setDesc("Default permission for all files not covered by rules below")
-			.addToggle((toggle) =>
-				toggle.setValue(this.token.directoryPermissions.rootPermission).onChange((value) => {
-					this.token.directoryPermissions.rootPermission = value;
-				})
-			);
-
-		// Simple rules list display for now
-		if (this.token.directoryPermissions.rules.length > 0) {
-			container.createEl("h4", { text: "Directory Rules" });
-			const rulesList = container.createEl("div", { cls: "mcp-simple-rules-list" });
-			this.token.directoryPermissions.rules.forEach((rule) => {
-				const ruleEl = rulesList.createEl("div", { cls: "mcp-simple-rule-item" });
-				ruleEl.createEl("code", { text: rule.path });
-				ruleEl.createEl("span", { text: ` - ${rule.allowed ? "Allowed" : "Blocked"}` });
-			});
-		} else {
-			container.createEl("p", {
-				text: "No directory rules configured. All files follow the root permission.",
-				cls: "setting-item-description",
-			});
-		}
-	}
-
-	onClose() {
-		const { contentEl } = this;
-		contentEl.empty();
-	}
 }
 
 class TokenDisplayModal extends Modal {

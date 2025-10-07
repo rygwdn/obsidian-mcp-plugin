@@ -275,6 +275,17 @@
 	background: var(--background-secondary);
 	border-radius: 6px;
 	border: 1px solid var(--background-modifier-border);
+	cursor: pointer;
+	transition: background-color 0.2s ease;
+}
+
+.mcp-token-item:hover {
+	background: var(--background-modifier-hover);
+}
+
+.mcp-token-selected {
+	border-color: var(--interactive-accent);
+	background: var(--background-modifier-border);
 }
 
 .mcp-token-header {
@@ -420,4 +431,41 @@
 	background: var(--background-primary);
 	padding: 2px 6px;
 	border-radius: 3px;
+}
+
+/* Token Configuration Section */
+.mcp-token-config-section {
+	margin-top: 20px;
+	padding: 16px;
+	border-radius: 8px;
+	display: none;
+}
+
+.mcp-token-config-visible {
+	display: block;
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+}
+
+.mcp-token-config-buttons {
+	display: flex;
+	gap: 12px;
+	margin-top: 20px;
+	padding-top: 16px;
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+.mcp-button-primary {
+	background-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+.mcp-button-primary:hover {
+	background-color: var(--interactive-accent-hover);
+}
+
+.mcp-button-container {
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
