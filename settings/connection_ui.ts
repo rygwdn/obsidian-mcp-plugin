@@ -1,8 +1,4 @@
-import {
-	createInfoBox,
-	createCopyableCode,
-	createCollapsibleDetailsSection,
-} from "./ui_components";
+import { createInfoBox, createCopyableCode } from "./ui_components";
 import ObsidianMCPPlugin from "../main";
 
 interface ConnectionSettings {
@@ -35,10 +31,7 @@ export function createConnectionInfoSection(
 
 	const httpEndpointUrl = `${settings.protocol}://${settings.host}:${settings.port}/mcp`;
 
-	displayBasicConnectionInfo(infoBox, httpEndpointUrl, settings);
-
-	const detailsEl = createCollapsibleDetailsSection(infoBox, "Example Configuration");
-	addHttpConfig(detailsEl, httpEndpointUrl, settings);
+	displayBasicConnectionInfo(infoBox, httpEndpointUrl);
 }
 
 function createServerDisabledWarning(container: HTMLElement): void {
@@ -57,36 +50,11 @@ function createHttpWarning(container: HTMLElement): void {
 	});
 }
 
-function displayBasicConnectionInfo(
-	container: HTMLElement,
-	httpEndpointUrl: string,
-	settings: ConnectionSettings
-): void {
+function displayBasicConnectionInfo(container: HTMLElement, httpEndpointUrl: string): void {
 	const httpRow = container.createDiv({ cls: "mcp-copyable-row" });
 	httpRow.createEl("span", {
 		text: "HTTP URL",
 		cls: "mcp-copyable-inline-label",
 	});
 	createCopyableCode(httpRow, httpEndpointUrl);
-
-	if (settings.authToken) {
-		createCopyableCode(container, `Authorization: Bearer ${settings.authToken}`);
-	}
-}
-
-function addHttpConfig(
-	container: HTMLElement,
-	httpEndpointUrl: string,
-	settings: ConnectionSettings
-): void {
-	const httpConfigJson = {
-		type: "streamableHttp",
-		url: httpEndpointUrl,
-		headers: settings.authToken ? { Authorization: `Bearer ${settings.authToken}` } : {},
-	};
-
-	container
-		.createDiv({ cls: "mcp-copyable-label" })
-		.createEl("span", { text: "HTTP Configuration" });
-	createCopyableCode(container, JSON.stringify(httpConfigJson, null, 2));
 }

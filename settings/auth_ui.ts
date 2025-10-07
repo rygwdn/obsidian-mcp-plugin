@@ -1,5 +1,11 @@
 import ObsidianMCPPlugin from "../main";
-import { createSection, createButtonSetting, createMcpButton } from "./ui_components";
+import {
+	createSection,
+	createButtonSetting,
+	createMcpButton,
+	createCopyableCode,
+	createCollapsibleDetailsSection,
+} from "./ui_components";
 import { Notice, Modal, Setting, App } from "obsidian";
 import { TokenPermission, AuthToken } from "./types";
 
@@ -107,7 +113,35 @@ function updateTokenList(plugin: ObsidianMCPPlugin, containerEl: HTMLElement): v
 				}
 			},
 		});
+
+		// Add example configuration in collapsible section
+		const detailsEl = createCollapsibleDetailsSection(tokenEl, "Example Configuration");
+		addTokenExampleConfig(plugin, detailsEl, token);
 	});
+}
+
+function addTokenExampleConfig(
+	plugin: ObsidianMCPPlugin,
+	container: HTMLElement,
+	token: AuthToken
+): void {
+	const protocol = plugin.settings.server.httpsEnabled ? "https" : "http";
+	const host = plugin.settings.server.host || "127.0.0.1";
+	const port = plugin.settings.server.port;
+	const httpEndpointUrl = `${protocol}://${host}:${port}/mcp`;
+
+	const httpConfigJson = {
+		type: "streamableHttp",
+		url: httpEndpointUrl,
+		headers: {
+			Authorization: `Bearer ${token.token}`,
+		},
+	};
+
+	container
+		.createDiv({ cls: "mcp-copyable-label" })
+		.createEl("span", { text: "HTTP Configuration" });
+	createCopyableCode(container, JSON.stringify(httpConfigJson, null, 2));
 }
 
 class CreateTokenModal extends Modal {
