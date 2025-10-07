@@ -187,12 +187,15 @@ function updateConfigSection(
 	updateSection: () => void
 ): void {
 	containerEl.empty();
+	containerEl.removeClass("mcp-token-config-visible");
 
 	if (state.isCreatingNew) {
+		containerEl.addClass("mcp-token-config-visible");
 		renderCreateTokenConfig(plugin, containerEl, state, updateSection);
 	} else if (state.selectedTokenId) {
 		const token = plugin.settings.server.tokens.find((t) => t.id === state.selectedTokenId);
 		if (token) {
+			containerEl.addClass("mcp-token-config-visible");
 			renderEditTokenConfig(plugin, containerEl, token, updateSection);
 		}
 	}
@@ -204,8 +207,6 @@ function renderCreateTokenConfig(
 	state: TokenUIState,
 	updateSection: () => void
 ): void {
-	containerEl.addClass("mcp-token-config-visible");
-
 	containerEl.createEl("h3", { text: "Create New Token" });
 
 	// Token name
@@ -289,8 +290,6 @@ function renderEditTokenConfig(
 	token: AuthToken,
 	updateSection: () => void
 ): void {
-	containerEl.addClass("mcp-token-config-visible");
-
 	containerEl.createEl("h3", { text: `Configure: ${token.name}` });
 
 	// Token metadata
