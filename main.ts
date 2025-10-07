@@ -34,40 +34,16 @@ export default class ObsidianMCPPlugin extends Plugin {
 
 		serverManager.addRoute("/mcp").post(async (request, response) => {
 			try {
-				await this.mcpServer!.handleStreamingRequest(request, response);
+				await this.mcpServer!.handleHttpRequest(request, response);
 			} catch (error) {
 				this.errorResponse(response, error);
 			}
 		});
-
-		if (this.settings.enableSSE) {
-			serverManager.addRoute("/messages").post(async (request, response) => {
-				try {
-					await this.mcpServer!.handleSseRequest(request, response);
-				} catch (error) {
-					this.errorResponse(response, error);
-				}
-			});
-
-			serverManager.addRoute("/sse").get(async (request, response) => {
-				try {
-					await this.mcpServer!.handleSseRequest(request, response);
-				} catch (error) {
-					this.errorResponse(response, error);
-				}
-			});
-		}
 	}
 
 	async loadSettings() {
 		const savedData = await this.loadData();
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, savedData);
-
-		// Migration: Enable SSE for existing users who don't have this setting yet
-		// New users will get the default value (false)
-		if (savedData && Object.keys(savedData).length > 0 && savedData.enableSSE === undefined) {
-			this.settings.enableSSE = true;
-		}
 
 		// Migration: Add server settings for existing users
 		if (savedData && !savedData.server) {

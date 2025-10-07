@@ -50,7 +50,6 @@ export interface MCPPluginSettings {
 		quickadd: boolean;
 	};
 	enablePrompts: boolean;
-	enableSSE: boolean;
 	verboseLogging: boolean;
 	directoryPermissions: {
 		rules: DirectoryRule[];
@@ -80,7 +79,6 @@ export const DEFAULT_SETTINGS: MCPPluginSettings = {
 		quickadd: true,
 	},
 	enablePrompts: true,
-	enableSSE: false,
 	verboseLogging: false,
 	directoryPermissions: {
 		rules: [],

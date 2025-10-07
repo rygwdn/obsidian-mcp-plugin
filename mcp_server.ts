@@ -1,6 +1,5 @@
 import { McpServer, ToolCallback } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { searchTool } from "tools/search";
 import { updateContentTool } from "tools/update_content";
 import { dataviewQueryTool } from "tools/dataview_query";
@@ -13,36 +12,13 @@ import { VaultDailyNoteResource, VaultFileResource } from "tools/vault_file_reso
 import { getContentsTool } from "tools/get_contents";
 import type { Request, Response } from "express";
 import { logger } from "tools/logging";
-import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import type { ObsidianInterface } from "./obsidian/obsidian_interface";
-import { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types";
 import type { AuthenticatedRequest } from "./server/auth";
-
-class LegacySSEServerTransport extends SSEServerTransport {
-	async handleMessage(
-		message: unknown,
-		extra?: {
-			authInfo?: AuthInfo;
-		}
-	): Promise<void> {
-		// Force the protocol version to 2024-11-05 for SSE connections to improve compatibility with older clients
-		if (isInitializeRequest(message) && !message.params.protocolVersion.startsWith("2024")) {
-			logger.log(
-				"Legacy SSE server transport: Setting protocol version from",
-				message.params.protocolVersion,
-				"to 2024-11-05"
-			);
-			message.params.protocolVersion = "2024-11-05";
-		}
-		return await super.handleMessage(message, extra);
-	}
-}
 
 // Define which tools require write permission
 const WRITE_TOOLS = new Set(["update_content", "quickadd_execute"]);
 
 export class ObsidianMcpServer {
-	private sseTransports: Record<string, SSEServerTransport> = {};
 	private servers: McpServer[] = [];
 	private currentRequest: Request | null = null;
 
@@ -51,54 +27,8 @@ export class ObsidianMcpServer {
 		private manifest: { version: string; name: string }
 	) {}
 
-	public async handleSseRequest(request: Request, response: Response) {
-		// Check if SSE is enabled in settings
-		if (!this.obsidian.settings.enableSSE) {
-			logger.logError("SSE request failed: SSE endpoints are disabled in plugin settings");
-			response.status(404).json({
-				error: "SSE not available",
-				message: "SSE endpoints are currently disabled",
-				details: "Enable SSE in the MCP Plugin settings to use Server-Sent Events connections",
-			});
-			return;
-		}
-
-		if (request.method === "GET") {
-			const transport = new LegacySSEServerTransport("/messages", response);
-			this.sseTransports[transport.sessionId] = transport;
-
-			logger.logConnection("SSE", transport.sessionId, request);
-			const server = this.createServer();
-			this.servers.push(server);
-
-			response.on("close", () => {
-				logger.logConnectionClosed("SSE", transport.sessionId);
-				delete this.sseTransports[transport.sessionId];
-			});
-
-			await server.connect(transport);
-		} else if (request.method === "POST") {
-			const sessionId = request.query.sessionId as string | undefined;
-			if (!sessionId) {
-				logger.logError("SSE POST error: No session ID provided");
-				response.status(400).send("No session ID provided");
-				return;
-			}
-
-			const transport = this.sseTransports[sessionId];
-			if (!transport) {
-				logger.logError(`SSE POST error: No transport found for session ID: ${sessionId}`);
-				response.status(400).send("No transport found for session ID");
-				return;
-			}
-
-			logger.log(`SSE message received: ${sessionId}`);
-			await transport.handlePostMessage(request, response, request.body);
-		}
-	}
-
-	public async handleStreamingRequest(request: Request, response: Response) {
-		logger.logConnection("HTTP", "streaming", request);
+	public async handleHttpRequest(request: Request, response: Response) {
+		logger.logConnection("HTTP", "request", request);
 		this.currentRequest = request;
 
 		const transport = new StreamableHTTPServerTransport({
@@ -110,14 +40,14 @@ export class ObsidianMcpServer {
 		this.servers.push(server);
 
 		await logger.withPerformanceLogging(
-			"Streaming request",
+			"HTTP request",
 			async () => {
 				await server.connect(transport);
 				await transport.handleRequest(request, response, request.body);
 			},
 			{
-				successMessage: "Streaming request completed",
-				errorMessage: "Error handling streaming request",
+				successMessage: "HTTP request completed",
+				errorMessage: "Error handling HTTP request",
 			}
 		);
 

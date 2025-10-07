@@ -33,15 +33,12 @@ export function createConnectionInfoSection(
 		createHttpWarning(infoBox);
 	}
 
-	const streamingEndpointUrl = `${settings.protocol}://${settings.host}:${settings.port}/mcp`;
-	const sseEndpointUrl = `${settings.protocol}://${settings.host}:${settings.port}/sse`;
+	const httpEndpointUrl = `${settings.protocol}://${settings.host}:${settings.port}/mcp`;
 
-	displayBasicConnectionInfo(infoBox, streamingEndpointUrl, sseEndpointUrl, settings);
+	displayBasicConnectionInfo(infoBox, httpEndpointUrl, settings);
 
-	const detailsEl = createCollapsibleDetailsSection(infoBox, "Example Configurations");
-	addStreamingConfig(detailsEl, streamingEndpointUrl, settings);
-	addSseConfig(detailsEl, sseEndpointUrl, settings);
-	addSupergatewayConfig(detailsEl, sseEndpointUrl, settings);
+	const detailsEl = createCollapsibleDetailsSection(infoBox, "Example Configuration");
+	addHttpConfig(detailsEl, httpEndpointUrl, settings);
 }
 
 function createServerDisabledWarning(container: HTMLElement): void {
@@ -62,88 +59,34 @@ function createHttpWarning(container: HTMLElement): void {
 
 function displayBasicConnectionInfo(
 	container: HTMLElement,
-	streamingEndpointUrl: string,
-	sseEndpointUrl: string,
+	httpEndpointUrl: string,
 	settings: ConnectionSettings
 ): void {
-	const streamingRow = container.createDiv({ cls: "mcp-copyable-row" });
-	streamingRow.createEl("span", {
+	const httpRow = container.createDiv({ cls: "mcp-copyable-row" });
+	httpRow.createEl("span", {
 		text: "HTTP URL",
 		cls: "mcp-copyable-inline-label",
 	});
-	createCopyableCode(streamingRow, streamingEndpointUrl);
-
-	const sseRow = container.createDiv({ cls: "mcp-copyable-row" });
-	sseRow.createEl("span", { text: "SSE URL", cls: "mcp-copyable-inline-label" });
-	createCopyableCode(sseRow, sseEndpointUrl);
+	createCopyableCode(httpRow, httpEndpointUrl);
 
 	if (settings.authToken) {
 		createCopyableCode(container, `Authorization: Bearer ${settings.authToken}`);
 	}
 }
 
-function addStreamingConfig(
+function addHttpConfig(
 	container: HTMLElement,
-	streamingEndpointUrl: string,
+	httpEndpointUrl: string,
 	settings: ConnectionSettings
 ): void {
-	const streamingConfigJson = {
+	const httpConfigJson = {
 		type: "streamableHttp",
-		url: streamingEndpointUrl,
+		url: httpEndpointUrl,
 		headers: settings.authToken ? { Authorization: `Bearer ${settings.authToken}` } : {},
 	};
 
 	container
 		.createDiv({ cls: "mcp-copyable-label" })
-		.createEl("span", { text: "Streaming HTTP Configuration" });
-	createCopyableCode(container, JSON.stringify(streamingConfigJson, null, 2));
-}
-
-function addSseConfig(
-	container: HTMLElement,
-	sseEndpointUrl: string,
-	settings: ConnectionSettings
-): void {
-	const sseConfigJson = {
-		type: "sse",
-		url: sseEndpointUrl,
-		headers: settings.authToken ? { Authorization: `Bearer ${settings.authToken}` } : {},
-	};
-
-	container
-		.createDiv({ cls: "mcp-copyable-label" })
-		.createEl("span", { text: "SSE Configuration" });
-	createCopyableCode(container, JSON.stringify(sseConfigJson, null, 2));
-}
-
-function addSupergatewayConfig(
-	container: HTMLElement,
-	sseEndpointUrl: string,
-	settings: ConnectionSettings
-): void {
-	const supergatewayJson = {
-		type: "stdio",
-		command: "npx",
-		args: [
-			"-y",
-			"supergateway",
-			"--sse",
-			sseEndpointUrl,
-			...(settings.authToken ? ["--oauth2Bearer", settings.authToken] : []),
-		],
-		env: {
-			NODE_TLS_REJECT_UNAUTHORIZED: "0",
-		},
-	};
-
-	container
-		.createDiv({ cls: "mcp-copyable-label" })
-		.createEl("span", { text: "STDIO Configuration (using Supergateway)" });
-	createCopyableCode(container, JSON.stringify(supergatewayJson, null, 2));
-
-	container.createEl("a", {
-		text: "Learn more about supergateway",
-		href: "https://github.com/supercorp-ai/supergateway",
-		cls: "mcp-link",
-	});
+		.createEl("span", { text: "HTTP Configuration" });
+	createCopyableCode(container, JSON.stringify(httpConfigJson, null, 2));
 }
