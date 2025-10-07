@@ -81,25 +81,22 @@
 }
 
 .mcp-directory-rules-list {
-	display: grid;
-	grid-template-columns: var(--size-4-8) 1fr auto auto;
 	margin: 1rem 0;
 	border: var(--border-width) solid var(--background-modifier-border);
 	border-radius: var(--radius-s);
 }
 
 .mcp-directory-row {
-	display: contents;
-}
-
-.mcp-directory-row > * {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
 	padding: 0.5rem;
 	border-bottom: var(--border-width) solid var(--background-modifier-border);
 	min-height: var(--size-4-10);
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	height: 100%;
+}
+
+.mcp-directory-row:last-child {
+	border-bottom: none;
 }
 
 .mcp-directory-row.dragging > * {
@@ -109,12 +106,16 @@
 .mcp-drag-handle {
 	cursor: grab;
 	color: var(--text-muted);
+	flex-shrink: 0;
 }
 
 .mcp-directory-path {
 	font-family: var(--font-monospace);
 	font-size: var(--font-ui-small);
-	justify-content: start;
+	flex-grow: 1;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 .mcp-empty-rules-message {
@@ -265,13 +266,27 @@
 }
 
 /* Auth Token Styles */
+.mcp-token-header-section {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 1rem;
+}
+
+.mcp-token-header-section h2 {
+	margin: 0;
+}
+
 .mcp-token-list {
 	margin-top: 10px;
 }
 
-.mcp-token-item {
-	padding: 12px;
-	margin-bottom: 10px;
+.mcp-token-row {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 10px 12px;
+	margin-bottom: 6px;
 	background: var(--background-secondary);
 	border-radius: 6px;
 	border: 1px solid var(--background-modifier-border);
@@ -279,7 +294,7 @@
 	transition: background-color 0.2s ease;
 }
 
-.mcp-token-item:hover {
+.mcp-token-row:hover {
 	background: var(--background-modifier-hover);
 }
 
@@ -288,43 +303,56 @@
 	background: var(--background-modifier-border);
 }
 
-.mcp-token-header {
-	margin-bottom: 8px;
+.mcp-token-name {
+	flex-shrink: 0;
+	min-width: 150px;
 }
 
-.mcp-token-value-container {
+.mcp-token-key {
 	display: flex;
 	align-items: center;
-	gap: 8px;
-	margin-bottom: 8px;
+	gap: 6px;
+	flex-shrink: 0;
 }
 
-.mcp-token-value-display {
+.mcp-token-key code {
 	font-family: var(--font-monospace);
-	background: var(--background-primary);
-	padding: 4px 8px;
-	border-radius: 4px;
-	border: 1px solid var(--background-modifier-border);
-	font-size: 0.9em;
-}
-
-.mcp-token-permissions {
-	margin-bottom: 8px;
-}
-
-.mcp-token-permission-text {
-	color: var(--text-muted);
-	font-size: 0.9em;
-}
-
-.mcp-token-meta {
-	margin-bottom: 8px;
 	font-size: 0.85em;
+	color: var(--text-muted);
 }
 
-.mcp-token-actions {
+.mcp-token-copy-btn {
+	padding: 2px 6px !important;
+	font-size: 0.9em;
+}
+
+.mcp-token-features {
 	display: flex;
 	gap: 8px;
+	flex-grow: 1;
+}
+
+.mcp-token-feature-icon {
+	font-size: 1.2em;
+	cursor: help;
+}
+
+.mcp-token-row-actions {
+	display: flex;
+	gap: 6px;
+	flex-shrink: 0;
+}
+
+.mcp-icon-button {
+	padding: 4px 8px !important;
+	font-size: 1em;
+}
+
+.mcp-token-meta-section {
+	margin-bottom: 1rem;
+	padding: 0.5rem;
+	background: var(--background-secondary);
+	border-radius: 4px;
 }
 
 .mcp-button-danger {

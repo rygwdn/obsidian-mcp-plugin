@@ -1,7 +1,5 @@
 import ObsidianMCPPlugin from "../main";
 import {
-	createSection,
-	createButtonSetting,
 	createMcpButton,
 	createCopyableCode,
 	createCollapsibleDetailsSection,
@@ -18,14 +16,28 @@ interface TokenUIState {
 }
 
 export function createAuthSection(plugin: ObsidianMCPPlugin, containerEl: HTMLElement): void {
-	createSection(containerEl, "Authentication");
-
 	const state: TokenUIState = {
 		selectedTokenId: null,
 		isCreatingNew: false,
 		newTokenName: "",
 		newTokenPermissions: [TokenPermission.READ],
 	};
+
+	// Header with create button
+	const headerEl = containerEl.createDiv({ cls: "mcp-token-header-section" });
+	headerEl.createEl("h2", { text: "Authentication Tokens" });
+
+	createMcpButton(headerEl, {
+		text: "Create Token",
+		additionalClasses: "mcp-button-primary",
+		onClick: async () => {
+			state.isCreatingNew = true;
+			state.selectedTokenId = null;
+			state.newTokenName = "";
+			state.newTokenPermissions = [TokenPermission.READ];
+			updateSection();
+		},
+	});
 
 	// Warning container (will be updated dynamically)
 	const warningContainer = containerEl.createDiv();
@@ -43,21 +55,6 @@ export function createAuthSection(plugin: ObsidianMCPPlugin, containerEl: HTMLEl
 	};
 
 	updateSection();
-
-	// Add token button
-	createButtonSetting({
-		containerEl: containerEl,
-		name: "Create New Token",
-		desc: "Generate a new authentication token with specific permissions",
-		buttonText: "Create Token",
-		onClick: async () => {
-			state.isCreatingNew = true;
-			state.selectedTokenId = null;
-			state.newTokenName = "";
-			state.newTokenPermissions = [TokenPermission.READ];
-			updateSection();
-		},
-	});
 }
 
 function updateWarning(plugin: ObsidianMCPPlugin, container: HTMLElement): void {
@@ -91,11 +88,8 @@ function updateTokenList(
 
 	tokens.forEach((token) => {
 		const tokenEl = containerEl.createDiv({
-			cls: `mcp-token-item ${state.selectedTokenId === token.id ? "mcp-token-selected" : ""}`,
+			cls: `mcp-token-row ${state.selectedTokenId === token.id ? "mcp-token-selected" : ""}`,
 		});
-
-		const headerEl = tokenEl.createDiv({ cls: "mcp-token-header" });
-		headerEl.createEl("strong", { text: token.name });
 
 		// Make the token clickable to select/deselect
 		tokenEl.addEventListener("click", (e) => {
@@ -116,65 +110,60 @@ function updateTokenList(
 			updateSection();
 		});
 
-		// Token value display with copy button
-		const tokenValueEl = tokenEl.createDiv({ cls: "mcp-token-value-container" });
+		// Token name
+		const nameEl = tokenEl.createDiv({ cls: "mcp-token-name" });
+		nameEl.createEl("strong", { text: token.name });
+
+		// Token value with copy
+		const keyEl = tokenEl.createDiv({ cls: "mcp-token-key" });
 		const prefix = token.token.substring(0, 8);
 		const suffix = token.token.substring(token.token.length - 8);
-		tokenValueEl.createEl("code", {
-			text: `${prefix}...${suffix}`,
-			cls: "mcp-token-value-display",
-		});
+		keyEl.createEl("code", { text: `${prefix}...${suffix}` });
 
-		const copyButton = createMcpButton(tokenValueEl, {
-			text: "📋 Copy",
-			onClick: () => {
+		const copyButton = createMcpButton(keyEl, {
+			text: "📋",
+			additionalClasses: "mcp-token-copy-btn",
+			onClick: (e) => {
+				e.stopPropagation();
 				navigator.clipboard.writeText(token.token).then(() => {
-					copyButton.setText("✓ Copied!");
+					copyButton.setText("✓");
 					setTimeout(() => {
-						copyButton.setText("📋 Copy");
+						copyButton.setText("📋");
 					}, 2000);
 				});
 			},
 		});
 
-		const permissionsEl = tokenEl.createDiv({ cls: "mcp-token-permissions" });
-		permissionsEl.createEl("span", {
-			text: `Permissions: ${token.permissions.join(", ")}`,
-			cls: "mcp-token-permission-text",
-		});
+		// Feature icons
+		const featuresEl = tokenEl.createDiv({ cls: "mcp-token-features" });
 
-		const metaEl = tokenEl.createDiv({ cls: "mcp-token-meta" });
-		metaEl.createEl("span", {
-			text: `Created: ${new Date(token.createdAt).toLocaleString()}`,
-			cls: "setting-item-description",
-		});
+		// Map enabled tools to icons
+		const iconMap: Record<string, string> = {
+			file_access: "📄",
+			update_content: "✏️",
+			search: "🔍",
+			dataview_query: "📊",
+			quickadd: "⚡",
+		};
 
-		if (token.lastUsed) {
-			metaEl.createEl("span", {
-				text: ` | Last used: ${new Date(token.lastUsed).toLocaleString()}`,
-				cls: "setting-item-description",
-			});
+		for (const [toolKey, enabled] of Object.entries(token.enabledTools)) {
+			if (enabled && iconMap[toolKey]) {
+				featuresEl.createSpan({
+					text: iconMap[toolKey],
+					cls: "mcp-token-feature-icon",
+					attr: { title: toolKey.replace(/_/g, " ") },
+				});
+			}
 		}
 
-		const actionsEl = tokenEl.createDiv({ cls: "mcp-token-actions" });
+		// Actions
+		const actionsEl = tokenEl.createDiv({ cls: "mcp-token-row-actions" });
 
 		createMcpButton(actionsEl, {
-			text: state.selectedTokenId === token.id ? "Hide Config" : "Configure",
-			onClick: async () => {
-				if (state.selectedTokenId === token.id) {
-					state.selectedTokenId = null;
-				} else {
-					state.selectedTokenId = token.id;
-					state.isCreatingNew = false;
-				}
-				updateSection();
-			},
-		});
-
-		createMcpButton(actionsEl, {
-			text: "Delete",
-			additionalClasses: "mcp-button-danger",
-			onClick: async () => {
+			text: "🗑",
+			additionalClasses: "mcp-button-danger mcp-icon-button",
+			onClick: async (e) => {
+				e.stopPropagation();
 				if (
 					confirm(
 						`Are you sure you want to delete the token "${token.name}"? This cannot be undone.`
@@ -188,10 +177,6 @@ function updateTokenList(
 				}
 			},
 		});
-
-		// Add example configuration in collapsible section
-		const detailsEl = createCollapsibleDetailsSection(tokenEl, "Example Configuration");
-		addTokenExampleConfig(plugin, detailsEl, token);
 	});
 }
 
@@ -232,11 +217,6 @@ function renderCreateTokenConfig(
 				state.newTokenName = value;
 			})
 	);
-
-	// Permissions
-	renderPermissionsConfig(containerEl, state.newTokenPermissions, (permissions) => {
-		state.newTokenPermissions = permissions;
-	});
 
 	// Features (using default settings as template)
 	const tempToken: AuthToken = {
@@ -313,16 +293,28 @@ function renderEditTokenConfig(
 
 	containerEl.createEl("h3", { text: `Configure: ${token.name}` });
 
-	// Permissions
-	renderPermissionsConfig(containerEl, token.permissions, (permissions) => {
-		token.permissions = permissions;
+	// Token metadata
+	const metaEl = containerEl.createDiv({ cls: "mcp-token-meta-section" });
+	metaEl.createEl("p", {
+		text: `Created: ${new Date(token.createdAt).toLocaleString()}`,
+		cls: "setting-item-description",
 	});
+	if (token.lastUsed) {
+		metaEl.createEl("p", {
+			text: `Last used: ${new Date(token.lastUsed).toLocaleString()}`,
+			cls: "setting-item-description",
+		});
+	}
 
 	// Features
 	renderFeaturesConfig(plugin, containerEl, token);
 
 	// Directories
 	renderDirectoriesConfig(plugin, containerEl, token, updateSection);
+
+	// Example configuration in collapsible section
+	const detailsEl = createCollapsibleDetailsSection(containerEl, "Example Configuration");
+	addTokenExampleConfig(plugin, detailsEl, token);
 
 	// Save button
 	const buttonContainer = containerEl.createDiv({ cls: "mcp-token-config-buttons" });
@@ -331,67 +323,11 @@ function renderEditTokenConfig(
 		text: "Save Changes",
 		additionalClasses: "mcp-button-primary",
 		onClick: async () => {
-			if (token.permissions.length === 0) {
-				new Notice("At least one permission is required");
-				return;
-			}
 			await plugin.saveSettings();
 			new Notice("Token configuration updated");
 			updateSection();
 		},
 	});
-}
-
-function renderPermissionsConfig(
-	containerEl: HTMLElement,
-	permissions: TokenPermission[],
-	onChange: (permissions: TokenPermission[]) => void
-): void {
-	const permSetting = new Setting(containerEl)
-		.setName("Permissions")
-		.setDesc("Select the permissions this token should have");
-
-	const checkboxContainer = permSetting.controlEl.createDiv();
-
-	const readCheckbox = checkboxContainer.createEl("label");
-	readCheckbox.addClass("mcp-checkbox-label");
-	const readInput = readCheckbox.createEl("input", { type: "checkbox" });
-	readInput.checked = permissions.includes(TokenPermission.READ);
-	readInput.addEventListener("change", () => {
-		if (readInput.checked) {
-			if (!permissions.includes(TokenPermission.READ)) {
-				permissions.push(TokenPermission.READ);
-			}
-		} else {
-			const index = permissions.indexOf(TokenPermission.READ);
-			if (index > -1) {
-				permissions.splice(index, 1);
-			}
-		}
-		onChange(permissions);
-	});
-	readCheckbox.createSpan({ text: " Read" });
-
-	checkboxContainer.createEl("br");
-
-	const writeCheckbox = checkboxContainer.createEl("label");
-	writeCheckbox.addClass("mcp-checkbox-label");
-	const writeInput = writeCheckbox.createEl("input", { type: "checkbox" });
-	writeInput.checked = permissions.includes(TokenPermission.WRITE);
-	writeInput.addEventListener("change", () => {
-		if (writeInput.checked) {
-			if (!permissions.includes(TokenPermission.WRITE)) {
-				permissions.push(TokenPermission.WRITE);
-			}
-		} else {
-			const index = permissions.indexOf(TokenPermission.WRITE);
-			if (index > -1) {
-				permissions.splice(index, 1);
-			}
-		}
-		onChange(permissions);
-	});
-	writeCheckbox.createSpan({ text: " Write" });
 }
 
 function renderFeaturesConfig(
