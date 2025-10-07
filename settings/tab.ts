@@ -9,7 +9,9 @@ import {
 import { createPromptsInstructions } from "./prompts_ui";
 import { createAuthSection } from "./auth_ui";
 import type { ObsidianInterface } from "../obsidian/obsidian_interface";
-import { App, Notice, PluginSettingTab } from "obsidian";
+import { App, Notice, PluginSettingTab, Setting } from "obsidian";
+import * as fs from "fs";
+import * as path from "path";
 
 export class MCPSettingTab extends PluginSettingTab {
 	containerEl: HTMLElement;
@@ -200,6 +202,48 @@ export class MCPSettingTab extends PluginSettingTab {
 				certStatusEl.setText(`Certificate valid until ${certInfo.notAfter.toLocaleDateString()}`);
 			}
 		}
+
+		new Setting(container)
+			.setName("Install Certificate")
+			.setDesc("Open the certificate file to install it in your system keychain")
+			.addButton((button) =>
+				button.setButtonText("Open Certificate").onClick(async () => {
+					try {
+						const cert = this.plugin.settings.server.crypto?.cert;
+						if (!cert) {
+							new Notice("No certificate available");
+							return;
+						}
+
+						// Use Obsidian's native file system to write temp file
+						const adapter = this.app.vault.adapter;
+						const tempPath = `${this.plugin.manifest.id}-cert.pem`;
+
+						// Get config directory path
+						let configDir: string;
+						if ("getBasePath" in adapter && typeof adapter.getBasePath === "function") {
+							configDir = adapter.getBasePath();
+						} else {
+							configDir = adapter.getResourcePath("");
+						}
+
+						// Write cert to temp file in config directory
+						const certPath = path.join(configDir, "..", tempPath);
+
+						fs.writeFileSync(certPath, cert, "utf-8");
+
+						// Open file with default application
+						// eslint-disable-next-line @typescript-eslint/no-require-imports
+						const { shell } = require("electron");
+						await shell.openPath(certPath);
+
+						new Notice("Certificate file opened");
+					} catch (error) {
+						console.error("Error opening certificate:", error);
+						new Notice("Failed to open certificate file");
+					}
+				})
+			);
 
 		createButtonSetting({
 			containerEl: container,
