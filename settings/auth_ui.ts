@@ -65,6 +65,27 @@ function updateTokenList(plugin: ObsidianMCPPlugin, containerEl: HTMLElement): v
 		const headerEl = tokenEl.createDiv({ cls: "mcp-token-header" });
 		headerEl.createEl("strong", { text: token.name });
 
+		// Token value display with copy button
+		const tokenValueEl = tokenEl.createDiv({ cls: "mcp-token-value-container" });
+		const prefix = token.token.substring(0, 8);
+		const suffix = token.token.substring(token.token.length - 8);
+		tokenValueEl.createEl("code", {
+			text: `${prefix}...${suffix}`,
+			cls: "mcp-token-value-display",
+		});
+
+		const copyButton = createMcpButton(tokenValueEl, {
+			text: "📋 Copy",
+			onClick: () => {
+				navigator.clipboard.writeText(token.token).then(() => {
+					copyButton.setText("✓ Copied!");
+					setTimeout(() => {
+						copyButton.setText("📋 Copy");
+					}, 2000);
+				});
+			},
+		});
+
 		const permissionsEl = tokenEl.createDiv({ cls: "mcp-token-permissions" });
 		permissionsEl.createEl("span", {
 			text: `Permissions: ${token.permissions.join(", ")}`,

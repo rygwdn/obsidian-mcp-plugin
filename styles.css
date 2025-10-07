@@ -281,6 +281,22 @@
 	margin-bottom: 8px;
 }
 
+.mcp-token-value-container {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 8px;
+}
+
+.mcp-token-value-display {
+	font-family: var(--font-monospace);
+	background: var(--background-primary);
+	padding: 4px 8px;
+	border-radius: 4px;
+	border: 1px solid var(--background-modifier-border);
+	font-size: 0.9em;
+}
+
 .mcp-token-permissions {
 	margin-bottom: 8px;
 }
