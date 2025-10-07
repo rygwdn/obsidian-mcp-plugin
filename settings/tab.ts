@@ -256,7 +256,7 @@ export class MCPSettingTab extends PluginSettingTab {
 		let instructions = "";
 
 		if (platform === "darwin") {
-			instructions = `<strong>macOS:</strong> Double-click the opened certificate file. In Keychain Access, look for "Obsidian MCP Plugin" certificate, double-click it, expand "Trust", and set "When using this certificate" to "Always Trust".`;
+			instructions = `<strong>macOS:</strong> When Keychain Access opens, <strong>drag the certificate file from Finder into the "System" keychain</strong> (not "login"). You may need to authenticate with your password. Then, find "Obsidian MCP Plugin" in the System keychain, double-click it, expand "Trust", and set "When using this certificate" to "Always Trust". Authenticate again to save.`;
 		} else if (platform === "win32") {
 			instructions = `<strong>Windows:</strong> Right-click the opened certificate file, select "Install Certificate", choose "Current User" or "Local Machine", select "Place all certificates in the following store", click "Browse" and select "Trusted Root Certification Authorities", then click "Finish".`;
 		} else {
