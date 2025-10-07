@@ -205,7 +205,7 @@ export class MCPSettingTab extends PluginSettingTab {
 
 		new Setting(container)
 			.setName("Install Certificate")
-			.setDesc("Open the certificate file to install it in your system keychain")
+			.setDesc("Install the self-signed certificate to trust HTTPS connections")
 			.addButton((button) =>
 				button.setButtonText("Open Certificate").onClick(async () => {
 					try {
@@ -217,7 +217,7 @@ export class MCPSettingTab extends PluginSettingTab {
 
 						// Use Obsidian's native file system to write temp file
 						const adapter = this.app.vault.adapter;
-						const tempPath = `${this.plugin.manifest.id}-cert.pem`;
+						const tempPath = `obsidian-mcp-plugin-cert.pem`;
 
 						// Get config directory path
 						let configDir: string;
@@ -244,6 +244,26 @@ export class MCPSettingTab extends PluginSettingTab {
 					}
 				})
 			);
+
+		// Add OS-specific installation instructions
+		const instructionsEl = container.createDiv({ cls: "mcp-cert-instructions" });
+		instructionsEl.style.marginLeft = "48px";
+		instructionsEl.style.marginTop = "8px";
+		instructionsEl.style.fontSize = "0.9em";
+		instructionsEl.style.color = "var(--text-muted)";
+
+		const platform = process.platform;
+		let instructions = "";
+
+		if (platform === "darwin") {
+			instructions = `<strong>macOS:</strong> Double-click the opened certificate file. In Keychain Access, look for "Obsidian MCP Plugin" certificate, double-click it, expand "Trust", and set "When using this certificate" to "Always Trust".`;
+		} else if (platform === "win32") {
+			instructions = `<strong>Windows:</strong> Right-click the opened certificate file, select "Install Certificate", choose "Current User" or "Local Machine", select "Place all certificates in the following store", click "Browse" and select "Trusted Root Certification Authorities", then click "Finish".`;
+		} else {
+			instructions = `<strong>Linux:</strong> Copy the certificate to /usr/local/share/ca-certificates/ and run: <code>sudo update-ca-certificates</code>`;
+		}
+
+		instructionsEl.innerHTML = instructions;
 
 		createButtonSetting({
 			containerEl: container,

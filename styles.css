@@ -557,3 +557,14 @@
 .mcp-button-secondary:hover {
 	background-color: var(--background-modifier-hover);
 }
+
+.mcp-cert-instructions {
+	line-height: 1.5;
+}
+
+.mcp-cert-instructions code {
+	font-family: var(--font-monospace);
+	background: var(--background-primary);
+	padding: 2px 4px;
+	border-radius: 3px;
+}

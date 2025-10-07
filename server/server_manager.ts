@@ -168,6 +168,14 @@ export class ServerManager {
 				name: "commonName",
 				value: CERT_NAME,
 			},
+			{
+				name: "organizationName",
+				value: "Obsidian MCP Plugin",
+			},
+			{
+				name: "organizationalUnitName",
+				value: "Self-Signed Certificate",
+			},
 		];
 		const certificate = pki.createCertificate();
 		certificate.setIssuer(attrs);
