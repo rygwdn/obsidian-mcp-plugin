@@ -6,7 +6,6 @@ import {
 	createToggleSetting,
 	createButtonSetting,
 } from "./ui_components";
-import { createConnectionInfoSection } from "./connection_ui";
 import { createPromptsInstructions } from "./prompts_ui";
 import { addFeaturesSection } from "./tools_ui";
 import { createDirectoryPermissionsSection } from "./directory_permissions_ui";
@@ -76,10 +75,7 @@ export class MCPSettingTab extends PluginSettingTab {
 	}
 
 	private renderServerTab(container: HTMLElement): void {
-		createConnectionInfoSection(this.plugin, container);
 		this.addServerSettings(container);
-		this.addBasicSettings(container);
-		this.addPromptsSettings(container);
 	}
 
 	private renderTokensTab(container: HTMLElement): void {
