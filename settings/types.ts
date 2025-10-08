@@ -88,7 +88,7 @@ export const DEFAULT_SETTINGS: MCPPluginSettings = {
 		enabled: true,
 		port: 27123,
 		host: "127.0.0.1",
-		httpsEnabled: true,
+		httpsEnabled: false,
 		crypto: null,
 		subjectAltNames: "",
 		tokens: [],

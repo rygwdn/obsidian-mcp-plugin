@@ -161,18 +161,19 @@ export class MCPSettingTab extends PluginSettingTab {
 
 		createToggleSetting({
 			containerEl: container,
-			name: "Enable HTTPS",
-			desc: "Use HTTPS with self-signed certificate (recommended for MCP)",
+			name: "Enable HTTPS (Experimental)",
+			desc: "Use HTTPS with self-signed certificate. Requires manual certificate installation.",
 			getValue: () => this.plugin.settings.server.httpsEnabled,
 			setValue: async (value) => {
 				this.plugin.settings.server.httpsEnabled = value;
 				await this.plugin.saveSettings();
 				await this.plugin.getServerManager().restart();
-				this.updateServerStatus(statusEl);
+				this.display();
 			},
 			saveSettings: async () => {
 				// Saving is handled in setValue
 			},
+			warningText: " ⚠️ Experimental feature",
 		});
 
 		if (this.plugin.settings.server.httpsEnabled) {
@@ -180,7 +181,10 @@ export class MCPSettingTab extends PluginSettingTab {
 		}
 	}
 
-	private addCertificateSettings(container: HTMLElement, statusEl: HTMLElement): void {
+	private async addCertificateSettings(
+		container: HTMLElement,
+		statusEl: HTMLElement
+	): Promise<void> {
 		const certInfo = this.plugin.getServerManager().getCertificateInfo();
 
 		if (certInfo) {
@@ -190,14 +194,37 @@ export class MCPSettingTab extends PluginSettingTab {
 			certStatusEl.style.marginLeft = "48px";
 			certStatusEl.style.marginTop = "-10px";
 
-			if (certInfo.daysRemaining < 0) {
-				certStatusEl.addClass("mcp-warning");
-				certStatusEl.setText(`⚠️ Certificate expired ${Math.abs(certInfo.daysRemaining)} days ago`);
-			} else if (certInfo.daysRemaining < 30) {
-				certStatusEl.addClass("mcp-warning");
-				certStatusEl.setText(`⚠️ Certificate expires in ${certInfo.daysRemaining} days`);
+			// Check if certificate is trusted
+			const isTrusted = await this.checkCertificateTrust();
+
+			if (isTrusted) {
+				certStatusEl.createSpan({
+					text: "✓ Certificate is trusted by system",
+					cls: "mcp-success-text",
+				});
+				certStatusEl.createEl("br");
 			} else {
-				certStatusEl.setText(`Certificate valid until ${certInfo.notAfter.toLocaleDateString()}`);
+				certStatusEl.createSpan({
+					text: "⚠️ Certificate is not trusted - install it below",
+					cls: "mcp-warning-text",
+				});
+				certStatusEl.createEl("br");
+			}
+
+			if (certInfo.daysRemaining < 0) {
+				certStatusEl.createSpan({
+					text: `Certificate expired ${Math.abs(certInfo.daysRemaining)} days ago`,
+					cls: "mcp-warning-text",
+				});
+			} else if (certInfo.daysRemaining < 30) {
+				certStatusEl.createSpan({
+					text: `Certificate expires in ${certInfo.daysRemaining} days`,
+					cls: "mcp-warning-text",
+				});
+			} else {
+				certStatusEl.createSpan({
+					text: `Valid until ${certInfo.notAfter.toLocaleDateString()}`,
+				});
 			}
 		}
 
@@ -281,6 +308,30 @@ export class MCPSettingTab extends PluginSettingTab {
 				new Notice("Subject Alternative Names saved. Regenerate certificate to apply changes.");
 			},
 		});
+	}
+
+	private async checkCertificateTrust(): Promise<boolean> {
+		try {
+			const protocol = this.plugin.settings.server.httpsEnabled ? "https" : "http";
+			const host = this.plugin.settings.server.host || "127.0.0.1";
+			const port = this.plugin.settings.server.port;
+			const url = `${protocol}://${host}:${port}/mcp`;
+
+			// Try to make a request to the HTTPS endpoint
+			const response = await fetch(url, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ jsonrpc: "2.0", method: "initialize", params: {}, id: 1 }),
+			});
+
+			// If we get here without error, certificate is trusted
+			return response.ok || response.status === 401 || response.status === 403;
+		} catch {
+			// Certificate trust errors typically manifest as network errors
+			return false;
+		}
 	}
 
 	private updateServerStatus(statusEl: HTMLElement): void {

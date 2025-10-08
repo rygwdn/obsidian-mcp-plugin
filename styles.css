@@ -10,6 +10,11 @@
 	font-weight: var(--font-weight-bold);
 }
 
+.mcp-success-text {
+	color: var(--color-green);
+	font-weight: var(--font-weight-bold);
+}
+
 .mcp-copyable-row {
 	display: flex;
 	align-items: center;
