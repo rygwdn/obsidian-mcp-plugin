@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.6.0] - 2025-01-07
+
 ### BREAKING CHANGES
 
 - **Self-Contained Server**: Removed dependency on Obsidian Local REST API plugin. The MCP plugin
@@ -9,34 +11,58 @@
   dependencies.
 - **Authentication Required**: All API requests now require Bearer token authentication. Create at
   least one token in settings to enable access.
+- **HTTP Transport**: Changed MCP transport type from `streamableHttp` to standard `http`. Update
+  your MCP client configuration accordingly.
+- **SSE Removed**: Server-Sent Events support has been removed in favor of standard HTTP-only
+  transport.
 
 ### Added
 
-- Built-in HTTP/HTTPS server with Express
-- Automatic self-signed certificate generation for HTTPS connections
-- Server configuration UI with real-time status display
-- Certificate management (regenerate, view expiry, import from Local REST API)
-- Support for Subject Alternative Names in certificates
-- Option to run HTTP server (without TLS) for local testing
-- Migration support: can import existing certificates from Local REST API plugin
-- **Authentication system with token-based access control**
-  - Multiple token support with individual permissions
+- **Built-in HTTP/HTTPS server with Express**
+  - Self-contained server with configurable host and port
+  - HTTP mode (default) for simple local setup
+  - HTTPS mode (experimental) with self-signed certificates
+  - Real-time server status display in settings
+  - Deferred startup to minimize Obsidian load time
+
+- **Token-based authentication with granular permissions**
+  - Multiple token support with individual configurations
+  - Per-token tool enablement (file access, search, content modification, dataview, quickadd)
+  - Per-token directory permissions with allow/deny rules
   - Read and Write permission levels
-  - Token management UI (create, edit permissions, delete)
-  - Automatic permission enforcement for write operations
   - Token usage tracking (last used timestamp)
+  - Simplified token UI with compact rows and feature icons
+
+- **Certificate management for HTTPS**
+  - Automatic self-signed certificate generation
+  - Certificate download via temporary HTTP server (30-second window)
+  - OS-specific installation instructions (macOS, Windows, Linux)
+  - Certificate trust status detection
+  - Certificate expiry monitoring
+  - Subject Alternative Names support for custom hostnames/IPs
+
+- **Tabbed settings UI**
+  - Organized into Tokens, Server, Vault, and Advanced tabs
+  - Inline token configuration (no modal required)
+  - Copyable token values with one-click copy button
+  - Feature icons matching configuration section order
+  - Example MCP configurations for each token
 
 ### Changed
 
-- Server settings now managed directly in plugin configuration
-- Connection UI updated to show plugin's own server status instead of Local REST API
-- Simplified architecture with direct control over server lifecycle
-- Build configuration updated to use `platform: "node"` for proper Node.js module handling
-- Write operations (`update_content`, `quickadd_execute`) now require Write permission
+- HTTPS disabled by default in favor of HTTP for easier setup
+- HTTPS marked as experimental with warning indicator
+- Settings UI refreshes automatically when toggling HTTPS
+- Directory permissions UI no longer jumps when modified
+- Token configuration now shown inline instead of modal
+- Certificate filename changed to `obsidian-mcp-plugin.pem`
+- macOS certificate instructions emphasize System keychain requirement
 
 ### Removed
 
 - Dependency on `obsidian-local-rest-api` package (now optional for certificate import only)
+- Server-Sent Events (SSE) support
+- Connection info section from server tab
 
 ## [0.5.2] - 2025-05-19
 
