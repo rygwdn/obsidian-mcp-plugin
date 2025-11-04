@@ -332,6 +332,9 @@ function renderEditTokenConfig(
 	const exampleContent = exampleSection.createDiv({ cls: "mcp-example-content" });
 	addTokenExampleConfig(plugin, exampleContent, token);
 
+	// Add Cursor install button
+	addCursorInstallButton(plugin, exampleSection, token);
+
 	// Features
 	renderFeaturesConfig(plugin, containerEl, token);
 
@@ -625,6 +628,44 @@ function addTokenExampleConfig(
 		.createDiv({ cls: "mcp-copyable-label" })
 		.createEl("span", { text: "HTTP Configuration" });
 	createCopyableCode(container, JSON.stringify(httpConfigJson, null, 2));
+}
+
+function generateCursorInstallLink(httpEndpointUrl: string, authToken: string): string {
+	const config = {
+		url: httpEndpointUrl,
+		headers: {
+			Authorization: `Bearer ${authToken}`,
+		},
+	};
+
+	const configJson = JSON.stringify(config);
+	const configBase64 = btoa(configJson);
+	const serverName = "obsidian-mcp";
+
+	return `cursor://anysphere.cursor-deeplink/mcp/install?name=${encodeURIComponent(serverName)}&config=${encodeURIComponent(configBase64)}`;
+}
+
+function addCursorInstallButton(
+	plugin: ObsidianMCPPlugin,
+	container: HTMLElement,
+	token: AuthToken
+): void {
+	const protocol = plugin.settings.server.httpsEnabled ? "https" : "http";
+	const host = plugin.settings.server.host || "127.0.0.1";
+	const port = plugin.settings.server.port;
+	const httpEndpointUrl = `${protocol}://${host}:${port}/mcp`;
+
+	const buttonContainer = container.createDiv({ cls: "mcp-button-container" });
+	buttonContainer.style.marginTop = "1rem";
+
+	createMcpButton(buttonContainer, {
+		text: "Add to Cursor",
+		additionalClasses: "mcp-button-primary",
+		onClick: () => {
+			const cursorLink = generateCursorInstallLink(httpEndpointUrl, token.token);
+			window.open(cursorLink, "_self");
+		},
+	});
 }
 
 class TokenDisplayModal extends Modal {
