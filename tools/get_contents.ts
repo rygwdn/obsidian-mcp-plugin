@@ -42,7 +42,8 @@ export const getContentsTool: ToolRegistration = {
 			}
 
 			const path = await resolveUriToPath(obsidian, args.uri as string);
-			const url = new URL(`file://${path}`);
+			const encodedPath = encodeURI(path);
+			const url = new URL(`file:///${encodedPath}`);
 
 			["depth", "startOffset", "endOffset"].forEach((key) => {
 				if (args[key] !== undefined) {

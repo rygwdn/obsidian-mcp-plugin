@@ -37,6 +37,8 @@ describe("VaultFileResource", () => {
 			"daily_notes/2023-05-09.md": "Daily note content for today",
 			"daily_notes/2023-05-08.md": "Daily note content for yesterday",
 			"daily_notes/2023-05-10.md": "Daily note content for tomorrow",
+			"file with spaces.md": "Content of file with spaces",
+			"folder with spaces/nested file.md": "Content of nested file with spaces",
 		});
 
 		obsidian.dailyNotes = {
@@ -174,6 +176,34 @@ describe("VaultFileResource", () => {
 			expect(result.contents).toHaveLength(1);
 			expect(result.contents[0].mimeType).toBe("text/directory");
 			expect(result.contents[0].text).toContain("test3.md");
+		});
+
+		it("should handle URL-encoded file names with spaces", async () => {
+			const result = await resource.handler(new URL("file:///file%20with%20spaces.md"));
+
+			expect(result.contents).toHaveLength(1);
+			expect(result.contents[0].text).toBe("Content of file with spaces");
+			expect(result.contents[0].uri).toBe("file:///file%20with%20spaces.md");
+			expect(result.contents[0].mimeType).toBe("text/markdown");
+		});
+
+		it("should handle URL-encoded folder paths with spaces", async () => {
+			const result = await resource.handler(
+				new URL("file:///folder%20with%20spaces/nested%20file.md")
+			);
+
+			expect(result.contents).toHaveLength(1);
+			expect(result.contents[0].text).toBe("Content of nested file with spaces");
+			expect(result.contents[0].uri).toBe("file:///folder%20with%20spaces/nested%20file.md");
+			expect(result.contents[0].mimeType).toBe("text/markdown");
+		});
+
+		it("should handle URL-encoded directory listing", async () => {
+			const result = await resource.handler(new URL("file:///folder%20with%20spaces"));
+
+			expect(result.contents).toHaveLength(1);
+			expect(result.contents[0].mimeType).toBe("text/directory");
+			expect(result.contents[0].text).toContain("nested file.md");
 		});
 	});
 });
@@ -325,6 +355,8 @@ describe("getContentsTool", () => {
 			"daily_notes/2023-05-09.md": "Daily note content for today",
 			"daily_notes/2023-05-08.md": "Daily note content for yesterday",
 			"daily_notes/2023-05-10.md": "Daily note content for tomorrow",
+			"file with spaces.md": "Content of file with spaces",
+			"folder with spaces/nested file.md": "Content of nested file with spaces",
 		});
 
 		obsidian.dailyNotes = {
@@ -345,7 +377,9 @@ describe("getContentsTool", () => {
 		});
 
 		it("should throw error for invalid URI protocol", async () => {
-			await expect(handler({ uri: "something:///test" })).rejects.toThrow("Invalid URL");
+			await expect(handler({ uri: "something:///test" })).rejects.toThrow(
+				"File not found: something:///test"
+			);
 		});
 	});
 
@@ -364,6 +398,16 @@ describe("getContentsTool", () => {
 			});
 
 			expect(result).toMatchInlineSnapshot(`"56789ABCDE"`);
+		});
+
+		it("should handle URL-encoded file names with spaces", async () => {
+			const result = await handler({ uri: "file:///file%20with%20spaces.md" });
+			expect(result).toBe("Content of file with spaces");
+		});
+
+		it("should handle URL-encoded folder paths with spaces", async () => {
+			const result = await handler({ uri: "file:///folder%20with%20spaces/nested%20file.md" });
+			expect(result).toBe("Content of nested file with spaces");
 		});
 	});
 

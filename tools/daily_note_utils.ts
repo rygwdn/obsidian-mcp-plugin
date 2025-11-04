@@ -18,7 +18,7 @@ export async function resolveUriToPath(
 		);
 	}
 
-	let filePath = url.pathname;
+	let filePath = decodeURIComponent(url.pathname);
 	filePath = filePath.replace(/^\/*|\/*$/g, "");
 
 	if (url.protocol === "daily:") {
