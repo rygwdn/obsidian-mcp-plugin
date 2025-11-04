@@ -2,14 +2,24 @@
 
 ## [Unreleased]
 
-## [0.6.1] - 2025-01-07
+## [0.7.0] - 2025-11-04
+
+### Added
+
+- feat: add Cursor install button to token configuration for one-click setup
+
+### Changed
+
+- chore: rename plugin from "MCP API for Obsidian" to "MCP Server"
+
+## [0.6.1] - 2025-11-04
 
 ### Fixed
 
 - fix: properly decode URL-encoded file paths with spaces and special characters in resources
 - fix: handle GET requests to /mcp endpoint for better client compatibility
 
-## [0.6.0] - 2025-01-07
+## [0.6.0] - 2025-10-07
 
 ### BREAKING CHANGES
 

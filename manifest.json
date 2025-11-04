@@ -1,7 +1,7 @@
 {
 	"id": "obsidian-mcp-plugin",
 	"name": "MCP Server",
-	"version": "0.6.1",
+	"version": "0.7.0",
 	"minAppVersion": "1.7.7",
 	"description": "Provides a Model Context Protocol (MCP) server for Obsidian",
 	"author": "Ryan Wooden",

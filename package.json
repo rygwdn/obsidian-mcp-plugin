@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-mcp-plugin",
-	"version": "0.6.1",
+	"version": "0.7.0",
 	"description": "Provides a Model Context Protocol (MCP) server for Obsidian",
 	"type": "module",
 	"main": "main.js",
