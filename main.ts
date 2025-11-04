@@ -32,7 +32,7 @@ export default class ObsidianMCPPlugin extends Plugin {
 
 		const serverManager = this.getServerManager();
 
-		serverManager.addRoute("/mcp").post(async (request, response) => {
+		serverManager.addRoute("/mcp").all(async (request, response) => {
 			try {
 				await this.mcpServer!.handleHttpRequest(request, response);
 			} catch (error) {
