@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [0.6.1] - 2025-01-07
+
+### Fixed
+
+- fix: properly decode URL-encoded file paths with spaces and special characters in resources
+- fix: handle GET requests to /mcp endpoint for better client compatibility
+
 ## [0.6.0] - 2025-01-07
 
 ### BREAKING CHANGES
