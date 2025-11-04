@@ -19,7 +19,7 @@ Once all requirements are met:
    ```json
    {
      "id": "obsidian-mcp-plugin",
-     "name": "MCP API for Obsidian",
+     "name": "MCP Server",
      "author": "Ryan Wooden",
      "description": "Provides a Model Context Protocol (MCP) endpoint via Obsidian Local REST API",
      "repo": "rygwdn/obsidian-mcp-plugin",
@@ -27,7 +27,7 @@ Once all requirements are met:
    }
    ```
 
-3. Create a pull request with title: "Add plugin: MCP API for Obsidian"
+3. Create a pull request with title: "Add plugin: MCP Server"
 4. Complete all items in the PR template checklist:
    - [ ] The GitHub repository name matches the plugin ID
    - [ ] The plugin meets all Obsidian developer policies

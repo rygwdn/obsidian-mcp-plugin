@@ -32,7 +32,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG=$(git describe --tags --abbrev=0)
-          PLUGIN_NAME="MCP API for Obsidian"
+          PLUGIN_NAME="MCP Server"
           VERSION=$(echo $TAG | sed 's/^v//')
 
           # Extract changelog for this version
