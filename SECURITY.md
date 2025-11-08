@@ -118,7 +118,7 @@ The plugin provides granular control over what connected AI assistants can acces
 
 ## File Access Permissions
 
-The MCP plugin provides access to vault files based on the Local REST API's permissions model:
+The MCP plugin provides access to vault files with granular permissions:
 
 - By default, all files in your vault are accessible to MCP-enabled tools
 - File access is determined by the tools that are enabled in the plugin settings
@@ -141,11 +141,11 @@ The MCP plugin provides access to vault files based on the Local REST API's perm
   - Your Obsidian vault
   - The local MCP server (this plugin)
   - Your AI assistant application (Claude, GPT, etc.)
-- All data transmission is handled via HTTPS through the Local REST API plugin
-- All communications stay on your local network unless you've explicitly configured the Local REST API
-  plugin for external access
-- The Local REST API plugin uses self-signed certificates by default which provides encryption but not
+- All data transmission is handled via HTTPS through the plugin's built-in server
+- All communications stay on your local network by default (localhost binding)
+- The plugin uses self-signed certificates by default which provides encryption but not
   server verification
+- External access requires explicitly changing the host binding in settings
 
 ### External Services
 

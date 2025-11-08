@@ -21,7 +21,7 @@ Once all requirements are met:
      "id": "obsidian-mcp-plugin",
      "name": "MCP Server",
      "author": "Ryan Wooden",
-     "description": "Provides a Model Context Protocol (MCP) endpoint via Obsidian Local REST API",
+     "description": "Provides a Model Context Protocol (MCP) server for Obsidian",
      "repo": "rygwdn/obsidian-mcp-plugin",
      "branch": "main"
    }
@@ -35,19 +35,20 @@ Once all requirements are met:
    - [ ] The plugin ID is unique and not in use
    - [ ] The plugin name, author, and description match the manifest
    - [ ] The README.md contains appropriate installation and usage instructions
-   - [ ] Specify mobile support (likely No, as it's marked desktopOnly)
-   - [ ] List required plugins (Obsidian Local REST API)
-   - [ ] Disclose if it connects to external services (Yes - via Local REST API)
-   - [ ] Disclose requested permissions (Yes - network access)
+   - [ ] Specify mobile support (No - marked as desktopOnly in manifest)
+   - [ ] List required plugins (None - self-contained plugin)
+   - [ ] Disclose if it connects to external services (No - local server only, but allows external clients to connect)
+   - [ ] Disclose requested permissions (Yes - network access for local server)
 
 ## Special Considerations
 
 Since this plugin:
 
-1. Depends on another plugin (Obsidian Local REST API)
-2. Creates a server endpoint
-3. Allows external access to vault contents
-4. Uses network connectivity
+1. Creates a self-contained server endpoint (built-in HTTP/HTTPS server)
+2. Allows external access to vault contents (via local server)
+3. Uses network connectivity (local server with optional external access)
+4. Requires authentication (Bearer token-based)
+5. Provides granular permissions (Read/Write, per-token tool access)
 
 These aspects must be clearly documented in:
 
