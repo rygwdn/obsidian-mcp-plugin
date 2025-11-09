@@ -85,8 +85,8 @@ export const DEFAULT_SETTINGS: MCPPluginSettings = {
 		rootPermission: true,
 	},
 	server: {
-		enabled: true,
-		port: 27123,
+		enabled: false,
+		port: 27125,
 		host: "127.0.0.1",
 		httpsEnabled: false,
 		crypto: null,

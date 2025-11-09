@@ -42,6 +42,11 @@ export class ServerManager {
 			return;
 		}
 
+		if (this.settings.server.tokens.length === 0) {
+			logger.log("[MCP Server] Server requires at least one authentication token to start");
+			return;
+		}
+
 		await this.ensureCertificate();
 
 		if (this.settings.server.httpsEnabled) {
@@ -83,10 +88,17 @@ export class ServerManager {
 		return this.secureServer !== null || this.insecureServer !== null;
 	}
 
+	private getPort(): number {
+		if (this.settings.server.httpsEnabled) {
+			return 27126;
+		}
+		return this.settings.server.port;
+	}
+
 	public getServerUrl(): string {
 		const protocol = this.settings.server.httpsEnabled ? "https" : "http";
 		const host = this.settings.server.host || DEFAULT_BINDING_HOST;
-		const port = this.settings.server.port;
+		const port = this.getPort();
 		return `${protocol}://${host}:${port}`;
 	}
 
@@ -108,14 +120,11 @@ export class ServerManager {
 		);
 
 		await new Promise<void>((resolve, reject) => {
-			this.secureServer!.listen(
-				this.settings.server.port,
-				this.settings.server.host || DEFAULT_BINDING_HOST,
-				() => {
-					logger.log(`[MCP Server] HTTPS server listening on ${this.getServerUrl()}`);
-					resolve();
-				}
-			);
+			const port = this.getPort();
+			this.secureServer!.listen(port, this.settings.server.host || DEFAULT_BINDING_HOST, () => {
+				logger.log(`[MCP Server] HTTPS server listening on ${this.getServerUrl()}`);
+				resolve();
+			});
 
 			this.secureServer!.on("error", (error) => {
 				logger.logError("[MCP Server] HTTPS server error:", error);
@@ -128,14 +137,11 @@ export class ServerManager {
 		this.insecureServer = http.createServer(this.app);
 
 		await new Promise<void>((resolve, reject) => {
-			this.insecureServer!.listen(
-				this.settings.server.port,
-				this.settings.server.host || DEFAULT_BINDING_HOST,
-				() => {
-					logger.log(`[MCP Server] HTTP server listening on ${this.getServerUrl()}`);
-					resolve();
-				}
-			);
+			const port = this.getPort();
+			this.insecureServer!.listen(port, this.settings.server.host || DEFAULT_BINDING_HOST, () => {
+				logger.log(`[MCP Server] HTTP server listening on ${this.getServerUrl()}`);
+				resolve();
+			});
 
 			this.insecureServer!.on("error", (error) => {
 				logger.logError("[MCP Server] HTTP server error:", error);

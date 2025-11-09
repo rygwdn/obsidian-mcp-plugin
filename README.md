@@ -38,8 +38,9 @@ Reviewers Auto-update Tester):
 3. Enable the plugin in Obsidian settings.
 4. **Create an authentication token** in the Authentication section of the plugin settings. Choose
    the appropriate permissions (Read for queries, Write for modifications).
-5. The plugin will automatically start its server. Your Obsidian vault will now provide an MCP
-   endpoint at `https://127.0.0.1:27123/mcp` (or your configured port).
+5. The plugin will automatically start its server once you create your first token. Your Obsidian
+   vault will now provide an MCP endpoint at `http://127.0.0.1:27125/mcp` (HTTP) or
+   `https://127.0.0.1:27126/mcp` (HTTPS). By default, the server uses HTTP on port 27125.
 6. Copy the generated token and use it in your MCP client configuration as a Bearer token.
 
 ### Migration from Local REST API
@@ -69,12 +70,15 @@ Include your token in the Authorization header:
 ```json
 {
  "type": "streamableHttp",
- "url": "https://127.0.0.1:27123/mcp",
+ "url": "http://127.0.0.1:27125/mcp",
  "headers": {
   "Authorization": "Bearer YOUR_TOKEN_HERE"
  }
 }
 ```
+
+**Note:** The server defaults to HTTP (not HTTPS). You can enable HTTPS in the Server Configuration
+settings if needed.
 
 ### Managing Tokens
 

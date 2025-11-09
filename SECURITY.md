@@ -12,8 +12,9 @@ MCP server. Please review the security implications carefully before use.
 
 - The MCP server runs directly within the Obsidian plugin on your local machine
 - By default, the server only accepts connections from localhost (127.0.0.1)
-- HTTPS is enabled by default with automatically generated self-signed certificates
-- The server can optionally run in HTTP mode for local testing, but HTTPS is strongly recommended
+- **The server defaults to HTTP (not HTTPS)** for local connections
+- HTTPS can be enabled in settings with automatically generated self-signed certificates
+- **The server will not start until at least one authentication token is created**
 - External connections require changing the host binding in settings, which you should only enable if
   you fully understand the security implications
 
@@ -27,6 +28,7 @@ MCP server. Please review the security implications carefully before use.
 
 ### Authentication
 
+- **The server will not start until at least one authentication token is created**
 - **All requests require Bearer token authentication**
 - Tokens are cryptographically secure random strings (32 bytes, base64url encoded)
 - Each token can have specific permissions (Read, Write)
@@ -44,7 +46,8 @@ MCP server. Please review the security implications carefully before use.
 ### Network Security Considerations
 
 - Default binding to localhost (127.0.0.1) provides strong isolation
-- HTTPS encryption protects tokens in transit
+- **By default, the server uses HTTP (not HTTPS)** - tokens are transmitted in plain text over localhost
+- HTTPS encryption can be enabled in settings to protect tokens in transit
 - **IMPORTANT**: Do not expose the server to external networks without additional security measures
 - For remote access, use secure tunneling:
   - VPN for secure network-level access
@@ -141,10 +144,10 @@ The MCP plugin provides access to vault files with granular permissions:
   - Your Obsidian vault
   - The local MCP server (this plugin)
   - Your AI assistant application (Claude, GPT, etc.)
-- All data transmission is handled via HTTPS through the plugin's built-in server
-- All communications stay on your local network by default (localhost binding)
-- The plugin uses self-signed certificates by default which provides encryption but not
+- **By default, data transmission is handled via HTTP (not HTTPS)** through the plugin's built-in server
+- HTTPS can be enabled in settings, which uses self-signed certificates that provide encryption but not
   server verification
+- All communications stay on your local network by default (localhost binding)
 - External access requires explicitly changing the host binding in settings
 
 ### External Services

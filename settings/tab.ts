@@ -99,10 +99,23 @@ export class MCPSettingTab extends PluginSettingTab {
 		const statusEl = container.createDiv({ cls: "mcp-server-status" });
 		this.updateServerStatus(statusEl);
 
+		// Show message if no tokens exist
+		if (this.plugin.settings.server.tokens.length === 0) {
+			const messageEl = container.createDiv({ cls: "mcp-server-message" });
+			messageEl.style.marginBottom = "1rem";
+			messageEl.style.padding = "0.75rem";
+			messageEl.style.backgroundColor = "var(--background-modifier-border)";
+			messageEl.style.borderRadius = "4px";
+			messageEl.createEl("p", {
+				text: "ℹ️ The server will start automatically once you create an authentication token. Go to the 'Tokens' tab to create your first token.",
+				cls: "setting-item-description",
+			});
+		}
+
 		createToggleSetting({
 			containerEl: container,
 			name: "Enable Server",
-			desc: "Enable the MCP server",
+			desc: "Enable the MCP server (requires at least one authentication token)",
 			getValue: () => this.plugin.settings.server.enabled,
 			setValue: async (value) => {
 				this.plugin.settings.server.enabled = value;
@@ -114,6 +127,7 @@ export class MCPSettingTab extends PluginSettingTab {
 					await serverManager.stop();
 				}
 				this.updateServerStatus(statusEl);
+				this.display(); // Refresh to update message
 			},
 			saveSettings: async () => {
 				// Saving is handled in setValue
@@ -123,8 +137,8 @@ export class MCPSettingTab extends PluginSettingTab {
 		createTextSetting({
 			containerEl: container,
 			name: "Port",
-			desc: "Port number for the MCP server",
-			placeholder: "27123",
+			desc: "Port number for the MCP server (HTTP: 27125, HTTPS: 27126)",
+			placeholder: "27125",
 			getValue: () => this.plugin.settings.server.port.toString(),
 			setValue: async (value) => {
 				const port = parseInt(value, 10);
@@ -349,10 +363,22 @@ export class MCPSettingTab extends PluginSettingTab {
 		} else {
 			statusEl.addClass("mcp-server-stopped");
 			statusEl.removeClass("mcp-server-running");
-			statusEl.createEl("span", {
-				text: "⚠ Server not running",
-				cls: "mcp-warning-text",
-			});
+			if (this.plugin.settings.server.enabled && this.plugin.settings.server.tokens.length === 0) {
+				statusEl.createEl("span", {
+					text: "⚠ Server not running - requires at least one authentication token",
+					cls: "mcp-warning-text",
+				});
+			} else if (this.plugin.settings.server.enabled) {
+				statusEl.createEl("span", {
+					text: "⚠ Server not running",
+					cls: "mcp-warning-text",
+				});
+			} else {
+				statusEl.createEl("span", {
+					text: "⚠ Server not running - disabled in settings",
+					cls: "mcp-warning-text",
+				});
+			}
 		}
 	}
 

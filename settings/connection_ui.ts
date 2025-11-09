@@ -19,10 +19,12 @@ export function createConnectionInfoSection(
 		return;
 	}
 
+	// Use port 27126 for HTTPS, otherwise use configured port (default 27125)
+	const port = plugin.settings.server.httpsEnabled ? 27126 : plugin.settings.server.port;
 	const settings: ConnectionSettings = {
 		protocol: plugin.settings.server.httpsEnabled ? "https" : "http",
 		host: plugin.settings.server.host || "127.0.0.1",
-		port: plugin.settings.server.port,
+		port: port,
 	};
 
 	if (!plugin.settings.server.httpsEnabled) {
