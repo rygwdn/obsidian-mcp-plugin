@@ -1,5 +1,5 @@
 import type { TFile } from "../obsidian/obsidian_types";
-import { z, ZodType } from "zod";
+import { z } from "zod";
 import { McpServer, RegisteredPrompt } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { GetPromptResult } from "@modelcontextprotocol/sdk/types.js";
 import { logger } from "./logging";
@@ -30,7 +30,7 @@ export class VaultPrompt {
 		return this.metadata?.frontmatter?.["description"] || "";
 	}
 
-	public get args(): Record<string, ZodType> {
+	public get args(): Record<string, z.ZodTypeAny> {
 		const args = this.metadata?.frontmatter?.["args"] || [];
 		if (!args) {
 			return {};
@@ -53,7 +53,7 @@ export class VaultPrompt {
 		return {};
 	}
 
-	public async handler(args: Record<string, string>): Promise<GetPromptResult> {
+	public async handler(args: Record<string, string | undefined>): Promise<GetPromptResult> {
 		return logger.withPromptLogging(this.name, async () => {
 			const frontmatterPosition = this.metadata?.frontmatterPosition?.end.offset;
 			let content = await this.obsidian.cachedRead(this.file);
@@ -61,21 +61,30 @@ export class VaultPrompt {
 				content = content.slice(frontmatterPosition).trimStart();
 			}
 			for (const key in args) {
-				content = content.replace(new RegExp(`{{${key}}}`, "g"), args[key]);
+				const value = args[key];
+				if (value !== undefined) {
+					content = content.replace(new RegExp(`{{${key}}}`, "g"), value);
+				}
 			}
 
 			return {
 				messages: [{ role: "user" as const, content: { type: "text" as const, text: content } }],
 			};
-		})(args);
+		})(args as Record<string, string>);
 	}
 
 	public async register(server: McpServer) {
 		logger.logPromptRegistration(this.name, this.description, Object.keys(this.args));
 
-		this.registration = server.prompt(this.name, this.description, this.args, async (args) => {
-			return await this.handler(args);
-		});
+		this.registration = server.prompt(
+			this.name,
+			this.description,
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- zod 4.x types incompatible with MCP SDK zod 3.x types
+			this.args as any,
+			async (args: Record<string, string | undefined>) => {
+				return await this.handler(args);
+			}
+		);
 	}
 
 	public update() {
@@ -83,7 +92,8 @@ export class VaultPrompt {
 
 		this.registration?.update({
 			description: this.description,
-			argsSchema: this.args,
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- zod 4.x types incompatible with MCP SDK zod 3.x types
+			argsSchema: this.args as any,
 		});
 	}
 }

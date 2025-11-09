@@ -91,7 +91,7 @@ export const quickAddExecuteTool: ToolRegistration = {
 		choice: z.string().optional().describe("The name or ID of the QuickAdd choice to execute"),
 		template: z.string().optional().describe("The template content to format"),
 		variables: z
-			.record(z.union([z.string(), z.number(), z.boolean()]))
+			.record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
 			.optional()
 			.describe("Optional variables to pass to the QuickAdd choice or template"),
 	},
