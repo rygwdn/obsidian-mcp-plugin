@@ -137,8 +137,8 @@ export class MCPSettingTab extends PluginSettingTab {
 		createTextSetting({
 			containerEl: container,
 			name: "Port",
-			desc: "Port number for the MCP server",
-			placeholder: "27123",
+			desc: "Port number for the MCP server (HTTP: 27125, HTTPS: 27126)",
+			placeholder: "27125",
 			getValue: () => this.plugin.settings.server.port.toString(),
 			setValue: async (value) => {
 				const port = parseInt(value, 10);

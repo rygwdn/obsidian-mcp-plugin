@@ -624,7 +624,8 @@ function addTokenExampleConfig(
 ): void {
 	const protocol = plugin.settings.server.httpsEnabled ? "https" : "http";
 	const host = plugin.settings.server.host || "127.0.0.1";
-	const port = plugin.settings.server.port;
+	// Use port 27126 for HTTPS, otherwise use configured port (default 27125)
+	const port = plugin.settings.server.httpsEnabled ? 27126 : plugin.settings.server.port;
 	const httpEndpointUrl = `${protocol}://${host}:${port}/mcp`;
 
 	const httpConfigJson = {
@@ -663,7 +664,8 @@ function addCursorInstallButton(
 ): void {
 	const protocol = plugin.settings.server.httpsEnabled ? "https" : "http";
 	const host = plugin.settings.server.host || "127.0.0.1";
-	const port = plugin.settings.server.port;
+	// Use port 27126 for HTTPS, otherwise use configured port (default 27125)
+	const port = plugin.settings.server.httpsEnabled ? 27126 : plugin.settings.server.port;
 	const httpEndpointUrl = `${protocol}://${host}:${port}/mcp`;
 
 	const buttonContainer = container.createDiv({ cls: "mcp-button-container" });
