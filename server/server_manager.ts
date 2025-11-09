@@ -42,6 +42,11 @@ export class ServerManager {
 			return;
 		}
 
+		if (this.settings.server.tokens.length === 0) {
+			logger.log("[MCP Server] Server requires at least one authentication token to start");
+			return;
+		}
+
 		await this.ensureCertificate();
 
 		if (this.settings.server.httpsEnabled) {

@@ -3,6 +3,7 @@ import { createMcpButton, createCopyableCode } from "./ui_components";
 import { Notice, Modal, Setting, App } from "obsidian";
 import { TokenPermission, AuthToken, DirectoryRule } from "./types";
 import { showDirectoryTreeModal } from "./directory_tree_modal";
+import { logger } from "../tools/logging";
 
 interface TokenUIState {
 	selectedTokenId: string | null;
@@ -58,7 +59,7 @@ function updateWarning(plugin: ObsidianMCPPlugin, container: HTMLElement): void 
 	if (plugin.settings.server.tokens.length === 0) {
 		const warningEl = container.createDiv({ cls: "mcp-warning" });
 		warningEl.createEl("p", {
-			text: "⚠️ No authentication tokens configured. The server will deny all requests. Create at least one token to enable access.",
+			text: "⚠️ No authentication tokens configured. The server will not start until you create at least one token. Create a token below to enable the server.",
 			cls: "mcp-warning-text",
 		});
 	}
@@ -273,6 +274,16 @@ function renderCreateTokenConfig(
 			state.isCreatingNew = false;
 			state.selectedTokenId = null;
 			updateSection();
+
+			// Auto-start server if enabled and this is the first token
+			if (plugin.settings.server.enabled && plugin.settings.server.tokens.length === 1) {
+				try {
+					await plugin.getServerManager().start();
+					new Notice("Server started automatically");
+				} catch (error) {
+					logger.logError("Failed to auto-start server after token creation:", error);
+				}
+			}
 
 			// Show token to user (only time they'll see it)
 			new TokenDisplayModal(plugin.app, newToken).open();

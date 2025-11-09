@@ -71,6 +71,11 @@ export default class ObsidianMCPPlugin extends Plugin {
 				return;
 			}
 
+			if (this.settings.server.tokens.length === 0) {
+				logger.log("[MCP Server] Server requires at least one authentication token to start");
+				return;
+			}
+
 			try {
 				await this.getServerManager().start();
 			} catch (error) {
