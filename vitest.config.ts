@@ -1,6 +1,12 @@
 import { defineConfig } from "vitest/config";
+import { resolve } from "path";
 
 export default defineConfig({
+	resolve: {
+		alias: {
+			"settings/types": resolve(__dirname, "settings/types.ts"),
+		},
+	},
 	test: {
 		environment: "node",
 		include: ["**/*.test.ts"],

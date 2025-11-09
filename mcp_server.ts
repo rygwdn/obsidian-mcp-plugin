@@ -156,7 +156,14 @@ export class ObsidianMcpServer {
 		};
 
 		if (toolReg.schema) {
-			server.tool(toolName, toolReg.description, toolReg.schema, toolReg.annotations, handler);
+			server.tool(
+				toolName,
+				toolReg.description,
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any -- zod 4.x types incompatible with MCP SDK zod 3.x types
+				toolReg.schema as any,
+				toolReg.annotations,
+				handler
+			);
 		} else {
 			server.tool(toolName, toolReg.description, toolReg.annotations, handler);
 		}
