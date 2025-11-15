@@ -6,65 +6,79 @@ import { dataviewQueryTool } from "tools/dataview_query";
 import { getFileMetadataTool, FileMetadataResource } from "tools/file_metadata";
 import { quickAddListTool, quickAddExecuteTool } from "tools/quickadd";
 import { ToolRegistration } from "tools/types";
-import { DEFAULT_SETTINGS, TokenPermission } from "./settings/types";
-import { registerPrompts } from "tools/prompts";
+import { DEFAULT_SETTINGS } from "./settings/types";
 import { VaultDailyNoteResource, VaultFileResource } from "tools/vault_file_resource";
 import { getContentsTool } from "tools/get_contents";
 import type { Request, Response } from "express";
 import { logger } from "tools/logging";
 import type { ObsidianInterface } from "./obsidian/obsidian_interface";
 import type { AuthenticatedRequest } from "./server/auth";
-
-// Define which tools require write permission
-const WRITE_TOOLS = new Set(["update_content", "quickadd_execute"]);
+import type { TokenTracker } from "./server/connection_tracker";
+import crypto from "crypto";
+import { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types";
 
 export class ObsidianMcpServer {
-	private servers: McpServer[] = [];
-	private currentRequest: Request | null = null;
+	private transports: StreamableHTTPServerTransport[] = [];
 
 	constructor(
 		private obsidian: ObsidianInterface,
-		private manifest: { version: string; name: string }
+		private manifest: { version: string; name: string },
+		private tokenTracker: TokenTracker
 	) {}
 
 	public async handleHttpRequest(request: Request, response: Response) {
-		logger.logConnection("HTTP", "request", request);
-		this.currentRequest = request;
+		const authReq = request as AuthenticatedRequest;
 
-		const transport = new StreamableHTTPServerTransport({
-			sessionIdGenerator: undefined,
-			enableJsonResponse: true,
-		});
+		const reqSession = request.header("mcp-session-id");
+		let transport = this.transports.find((transport) => transport.sessionId === reqSession);
 
-		const server = this.createServer();
-		this.servers.push(server);
+		if (!transport) {
+			const server = this.createServer(authReq);
+			transport = new StreamableHTTPServerTransport({
+				sessionIdGenerator: () => crypto.randomBytes(16).toString("hex"),
+				enableJsonResponse: true,
+			});
+			await server.connect(transport);
+			this.transports.push(transport);
+		}
 
-		await logger.withPerformanceLogging(
-			"HTTP request",
-			async () => {
-				await server.connect(transport);
-				await transport.handleRequest(request, response, request.body);
-			},
-			{
-				successMessage: "HTTP request completed",
-				errorMessage: "Error handling HTTP request",
-			}
-		);
-
-		this.currentRequest = null;
+		try {
+			await logger.withPerformanceLogging(
+				"HTTP request",
+				async () => {
+					(authReq as AuthenticatedRequest & { auth: AuthInfo }).auth = {
+						token: reqSession || "unknown",
+						clientId: "client",
+						scopes: ["*"],
+						extra: { request: authReq },
+					} satisfies AuthInfo;
+					await transport.handleRequest(authReq, response, authReq.body);
+				},
+				{
+					successMessage: `HTTP request completed: ${transport.sessionId} ${JSON.stringify(request.body)} ${JSON.stringify(request.headers)}`,
+					errorMessage: `Error handling HTTP request ${transport.sessionId} ${JSON.stringify(request.body)}`,
+				}
+			);
+		} catch (error) {
+			this.tokenTracker.trackActionFromRequest(authReq, {
+				type: "error",
+				name: "HTTP Request Error",
+				success: false,
+				error: error instanceof Error ? error.message : String(error),
+			});
+			throw error;
+		}
 	}
 
 	public async close() {
 		logger.log("Shutting down MCP server");
-		for (const server of this.servers) {
-			if (server.isConnected()) {
-				await server.close();
-			}
+		for (const transport of this.transports) {
+			await transport.close();
 		}
 		logger.log("MCP server closed");
 	}
 
-	private createServer() {
+	private createServer(request: AuthenticatedRequest) {
 		logger.log(`Initializing MCP server v${this.manifest.version}`);
 		const vaultDescription =
 			this.obsidian.settings.vaultDescription ?? DEFAULT_SETTINGS.vaultDescription;
@@ -75,14 +89,15 @@ export class ObsidianMcpServer {
 		);
 
 		server.server.onerror = (error) => {
-			logger.logError("Server Error:", error);
+			this.tokenTracker.trackActionFromRequest(request, {
+				type: "error",
+				name: "Server Error",
+				success: false,
+				error: error instanceof Error ? error.message : String(error),
+			});
 		};
 
 		this.registerTools(server);
-
-		if (this.obsidian.settings.enablePrompts) {
-			registerPrompts(this.obsidian, server);
-		}
 
 		return server;
 	}
@@ -117,32 +132,26 @@ export class ObsidianMcpServer {
 	}
 
 	private registerTool(server: McpServer, toolReg: ToolRegistration) {
-		const toolNamePrefix = this.obsidian.settings.toolNamePrefix;
-		const toolName = toolNamePrefix ? `${toolNamePrefix}_${toolReg.name}` : toolReg.name;
-		logger.logToolRegistration(toolName);
+		const toolName = toolReg.name;
 
-		const requiresWrite = WRITE_TOOLS.has(toolReg.name);
+		const handler: ToolCallback = async (...args) => {
+			const extra = args[args.length - 1];
+			const trackerParams = {
+				type: "tool",
+				name: toolName,
+				details: { args },
+			} as const;
 
-		const wrappedToolHandler = logger.withToolLogging(
-			toolName,
-			async (args: Record<string, unknown>) => {
-				// Check permissions if this tool requires write access
-				if (requiresWrite && this.currentRequest) {
-					const authReq = this.currentRequest as AuthenticatedRequest;
-					if (!authReq.hasPermission(TokenPermission.WRITE)) {
-						throw new Error("Permission denied: This operation requires write permission");
-					}
-				}
-
-				return await toolReg.handler(this.obsidian)(args);
-			}
-		);
-
-		const handler: ToolCallback = async (args) => {
 			try {
-				const data = await wrappedToolHandler(args);
+				const data = await toolReg.handler(this.obsidian)(...args);
+				this.tokenTracker.trackActionFromExtra(extra, { ...trackerParams, success: true });
 				return { content: [{ type: "text", text: data }] };
 			} catch (error) {
+				this.tokenTracker.trackActionFromExtra(extra, {
+					...trackerParams,
+					success: false,
+					error: error.toString(),
+				});
 				return {
 					isError: true,
 					content: [

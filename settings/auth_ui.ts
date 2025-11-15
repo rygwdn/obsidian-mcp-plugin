@@ -1,7 +1,7 @@
 import ObsidianMCPPlugin from "../main";
 import { createMcpButton, createCopyableCode } from "./ui_components";
 import { Notice, Modal, Setting, App } from "obsidian";
-import { TokenPermission, AuthToken, DirectoryRule } from "./types";
+import { AuthToken, DirectoryRule } from "./types";
 import { showDirectoryTreeModal } from "./directory_tree_modal";
 import { logger } from "../tools/logging";
 
@@ -9,7 +9,6 @@ interface TokenUIState {
 	selectedTokenId: string | null;
 	isCreatingNew: boolean;
 	newTokenName: string;
-	newTokenPermissions: TokenPermission[];
 }
 
 export function createAuthSection(plugin: ObsidianMCPPlugin, containerEl: HTMLElement): void {
@@ -17,7 +16,6 @@ export function createAuthSection(plugin: ObsidianMCPPlugin, containerEl: HTMLEl
 		selectedTokenId: null,
 		isCreatingNew: false,
 		newTokenName: "",
-		newTokenPermissions: [TokenPermission.READ],
 	};
 
 	// Header with create button
@@ -31,7 +29,6 @@ export function createAuthSection(plugin: ObsidianMCPPlugin, containerEl: HTMLEl
 			state.isCreatingNew = true;
 			state.selectedTokenId = null;
 			state.newTokenName = "";
-			state.newTokenPermissions = [TokenPermission.READ];
 			updateSection();
 		},
 	});
@@ -221,7 +218,6 @@ function renderCreateTokenConfig(
 		id: "temp",
 		name: state.newTokenName,
 		token: "",
-		permissions: state.newTokenPermissions,
 		createdAt: Date.now(),
 		enabledTools: {
 			file_access: true,
@@ -258,13 +254,9 @@ function renderCreateTokenConfig(
 				new Notice("Token name is required");
 				return;
 			}
-			if (state.newTokenPermissions.length === 0) {
-				new Notice("At least one permission is required");
-				return;
-			}
 
 			const authManager = plugin.getServerManager().getAuthManager();
-			const newToken = authManager.createToken(state.newTokenName, state.newTokenPermissions);
+			const newToken = authManager.createToken(state.newTokenName);
 
 			// Apply the configured settings
 			newToken.enabledTools = tempToken.enabledTools;
@@ -702,10 +694,6 @@ class TokenDisplayModal extends Modal {
 
 		contentEl.createEl("p", {
 			text: `Token Name: ${this.token.name}`,
-		});
-
-		contentEl.createEl("p", {
-			text: `Permissions: ${this.token.permissions.join(", ")}`,
 		});
 
 		const tokenContainer = contentEl.createDiv({ cls: "mcp-token-display" });

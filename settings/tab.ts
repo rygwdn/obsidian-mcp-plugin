@@ -13,7 +13,9 @@ import { App, Notice, PluginSettingTab, Setting } from "obsidian";
 
 export class MCPSettingTab extends PluginSettingTab {
 	containerEl: HTMLElement;
-	private activeTab: "tokens" | "server" | "vault" | "advanced" = "tokens";
+	private activeTab: "tokens" | "server" | "vault" | "debug" = "tokens";
+	private debugRefreshInterval: number | null = null;
+	private debugContentContainer: HTMLElement | null = null;
 
 	constructor(
 		app: App,
@@ -21,6 +23,11 @@ export class MCPSettingTab extends PluginSettingTab {
 		public obsidian: ObsidianInterface
 	) {
 		super(app, plugin);
+	}
+
+	hide(): void {
+		this.stopDebugRefresh();
+		super.hide();
 	}
 
 	display(): void {
@@ -34,7 +41,7 @@ export class MCPSettingTab extends PluginSettingTab {
 		this.createTabButton(tabNavEl, "tokens", "Tokens");
 		this.createTabButton(tabNavEl, "server", "Server");
 		this.createTabButton(tabNavEl, "vault", "Vault");
-		this.createTabButton(tabNavEl, "advanced", "Advanced");
+		this.createTabButton(tabNavEl, "debug", "Debug");
 
 		// Create tab content container
 		const tabContentEl = containerEl.createDiv({ cls: "mcp-tab-content" });
@@ -45,7 +52,7 @@ export class MCPSettingTab extends PluginSettingTab {
 
 	private createTabButton(
 		container: HTMLElement,
-		tabId: "tokens" | "server" | "vault" | "advanced",
+		tabId: "tokens" | "server" | "vault" | "debug",
 		label: string
 	): void {
 		const button = container.createEl("button", {
@@ -60,6 +67,9 @@ export class MCPSettingTab extends PluginSettingTab {
 	}
 
 	private renderActiveTab(container: HTMLElement): void {
+		this.stopDebugRefresh();
+		this.debugContentContainer = null;
+
 		switch (this.activeTab) {
 			case "tokens":
 				this.renderTokensTab(container);
@@ -70,9 +80,26 @@ export class MCPSettingTab extends PluginSettingTab {
 			case "vault":
 				this.renderVaultTab(container);
 				break;
-			case "advanced":
-				this.renderAdvancedTab(container);
+			case "debug":
+				this.renderDebugTab(container);
+				this.startDebugRefresh();
 				break;
+		}
+	}
+
+	private startDebugRefresh(): void {
+		this.stopDebugRefresh();
+		this.debugRefreshInterval = window.setInterval(() => {
+			if (this.activeTab === "debug" && this.debugContentContainer) {
+				this.updateDebugContent(this.debugContentContainer);
+			}
+		}, 500);
+	}
+
+	private stopDebugRefresh(): void {
+		if (this.debugRefreshInterval !== null) {
+			window.clearInterval(this.debugRefreshInterval);
+			this.debugRefreshInterval = null;
 		}
 	}
 
@@ -87,10 +114,6 @@ export class MCPSettingTab extends PluginSettingTab {
 	private renderVaultTab(container: HTMLElement): void {
 		this.addBasicSettings(container);
 		this.addPromptsSettings(container);
-	}
-
-	private renderAdvancedTab(container: HTMLElement): void {
-		this.addAdvancedSection(container);
 	}
 
 	private addServerSettings(container: HTMLElement): void {
@@ -124,7 +147,7 @@ export class MCPSettingTab extends PluginSettingTab {
 				if (value) {
 					try {
 						await serverManager.start();
-					} catch (error) {
+					} catch {
 						// Error is already stored in ServerManager and will be displayed in status
 					}
 				} else {
@@ -142,7 +165,8 @@ export class MCPSettingTab extends PluginSettingTab {
 			.setName("Port")
 			.setDesc("Port number for the MCP server (HTTP: 27125, HTTPS: 27126)")
 			.addText((text) => {
-				text.setPlaceholder("27125")
+				text
+					.setPlaceholder("27125")
 					.setValue(this.plugin.settings.server.port.toString())
 					.onChange(async (value) => {
 						const port = parseInt(value, 10);
@@ -161,13 +185,13 @@ export class MCPSettingTab extends PluginSettingTab {
 						}
 						this.plugin.settings.server.port = port;
 						await this.plugin.saveSettings();
-						
+
 						// Clear any previous error display
 						portSetting.descEl.empty();
 						portSetting.descEl.createSpan({
 							text: "Port number for the MCP server (HTTP: 27125, HTTPS: 27126)",
 						});
-						
+
 						try {
 							await this.plugin.getServerManager().restart();
 							this.updateServerStatus(statusEl);
@@ -175,7 +199,7 @@ export class MCPSettingTab extends PluginSettingTab {
 							const serverManager = this.plugin.getServerManager();
 							const lastError = serverManager.getLastError();
 							const errorMessage = this.formatServerError(lastError || error);
-							
+
 							portSetting.descEl.empty();
 							portSetting.descEl.createSpan({
 								text: "Port number for the MCP server (HTTP: 27125, HTTPS: 27126)",
@@ -201,7 +225,7 @@ export class MCPSettingTab extends PluginSettingTab {
 				await this.plugin.saveSettings();
 				try {
 					await this.plugin.getServerManager().restart();
-				} catch (error) {
+				} catch {
 					// Error is already stored in ServerManager and will be displayed in status
 				}
 				this.updateServerStatus(statusEl);
@@ -221,7 +245,7 @@ export class MCPSettingTab extends PluginSettingTab {
 				await this.plugin.saveSettings();
 				try {
 					await this.plugin.getServerManager().restart();
-				} catch (error) {
+				} catch {
 					// Error is already stored in ServerManager and will be displayed in status
 				}
 				this.display();
@@ -405,7 +429,7 @@ export class MCPSettingTab extends PluginSettingTab {
 		} else {
 			statusEl.addClass("mcp-server-stopped");
 			statusEl.removeClass("mcp-server-running");
-			
+
 			// Check for startup errors
 			const lastError = serverManager.getLastError();
 			if (lastError && this.plugin.settings.server.enabled) {
@@ -414,7 +438,10 @@ export class MCPSettingTab extends PluginSettingTab {
 					text: `❌ Server failed to start: ${errorMessage}`,
 					cls: "mcp-error-text",
 				});
-			} else if (this.plugin.settings.server.enabled && this.plugin.settings.server.tokens.length === 0) {
+			} else if (
+				this.plugin.settings.server.enabled &&
+				this.plugin.settings.server.tokens.length === 0
+			) {
 				statusEl.createEl("span", {
 					text: "⚠ Server not running - requires at least one authentication token",
 					cls: "mcp-warning-text",
@@ -437,16 +464,16 @@ export class MCPSettingTab extends PluginSettingTab {
 		if (!error) {
 			return "Unknown error";
 		}
-		
+
 		const errorObj = error instanceof Error ? error : new Error(String(error));
 		const message = errorObj.message || String(error);
-		
+
 		// Format EADDRINUSE errors more user-friendly
 		if (message.includes("EADDRINUSE") || message.includes("address already in use")) {
 			const port = this.plugin.settings.server.port;
 			return `Port ${port} is already in use. Please choose a different port.`;
 		}
-		
+
 		return message;
 	}
 
@@ -480,33 +507,8 @@ export class MCPSettingTab extends PluginSettingTab {
 		createPromptsInstructions(container);
 	}
 
-	private addAdvancedSection(container: HTMLElement): void {
-		createSection(container, "Advanced");
-
-		createTextSetting({
-			containerEl: container,
-			name: "Tool Name Prefix",
-			desc: "Optional prefix for all tool names",
-			placeholder: "vault",
-			getValue: () => this.plugin.settings.toolNamePrefix,
-			setValue: (value) => {
-				this.plugin.settings.toolNamePrefix = value;
-				updateExampleText(value);
-			},
-			saveSettings: () => this.plugin.saveSettings(),
-		});
-
-		const exampleContainer = container.createEl("div", {
-			cls: "setting-item-description",
-			attr: { style: "margin-top: -10px; margin-left: 48px; font-style: italic;" },
-		});
-
-		const updateExampleText = (prefix: string) => {
-			const exampleTool = prefix ? `${prefix}_search` : "search";
-			exampleContainer.setText(`Example: "${exampleTool}" (${prefix ? "with" : "without"} prefix)`);
-		};
-
-		updateExampleText(this.plugin.settings.toolNamePrefix);
+	private renderDebugTab(container: HTMLElement): void {
+		createSection(container, "Debug");
 
 		createToggleSetting({
 			containerEl: container,
@@ -515,6 +517,172 @@ export class MCPSettingTab extends PluginSettingTab {
 			getValue: () => this.plugin.settings.verboseLogging,
 			setValue: (value) => (this.plugin.settings.verboseLogging = value),
 			saveSettings: () => this.plugin.saveSettings(),
+		});
+
+		createSection(container, "Token Debugging");
+
+		const desc = container.createDiv({ cls: "setting-item-description mcp-debug-description" });
+		desc.createSpan({
+			text: "View tokens and the actions they've performed. This information is useful for debugging MCP client interactions. The view auto-updates every 500ms.",
+		});
+
+		const debugContent = container.createDiv({ cls: "mcp-debug-content" });
+		this.debugContentContainer = debugContent;
+		this.updateDebugContent(debugContent);
+
+		createButtonSetting({
+			containerEl: container,
+			name: "Clear Token History",
+			desc: "Clear all token history. New tokens will be tracked as they occur.",
+			buttonText: "Clear",
+			onClick: () => {
+				this.plugin.tokenTracker.clear();
+				new Notice("Token history cleared");
+			},
+		});
+	}
+
+	private updateDebugContent(container: HTMLElement): void {
+		// Save scroll position on the main container (which is what actually scrolls)
+		const scrollTop = this.containerEl.scrollTop;
+
+		// Clear and rebuild content
+		container.empty();
+
+		const tokens = this.plugin.tokenTracker.getAllTokens(50);
+
+		if (tokens.length === 0) {
+			const emptyEl = container.createDiv({ cls: "mcp-debug-empty" });
+			emptyEl.createSpan({
+				text: "No tokens yet. Tokens will appear here when clients connect to the MCP server.",
+			});
+			// Restore scroll position after DOM update
+			requestAnimationFrame(() => {
+				this.containerEl.scrollTop = scrollTop;
+			});
+			return;
+		}
+
+		const tokensList = container.createDiv({ cls: "mcp-debug-connections" });
+
+		for (const token of tokens) {
+			const tokenEl = tokensList.createDiv({
+				cls: "mcp-debug-connection",
+			});
+
+			const header = tokenEl.createDiv({ cls: "mcp-debug-connection-header" });
+
+			const headerLeft = header.createDiv();
+			headerLeft.createSpan({
+				text: token.tokenName,
+				cls: "mcp-debug-connection-id",
+			});
+
+			const headerRight = header.createDiv({ cls: "mcp-debug-timestamp" });
+			headerRight.createSpan({
+				text: `Last activity: ${new Date(token.lastActivityAt).toLocaleString()}`,
+			});
+
+			const details = tokenEl.createDiv({ cls: "mcp-debug-connection-details" });
+
+			const timeRow = details.createDiv();
+			timeRow.createSpan({ text: "Connected: ", cls: "mcp-debug-label" });
+			timeRow.createSpan({
+				text: new Date(token.connectedAt).toLocaleString(),
+			});
+
+			if (token.actions.length > 0) {
+				const actionsHeader = tokenEl.createDiv({ cls: "mcp-debug-actions-header" });
+				actionsHeader.createSpan({ text: `Actions (${token.actions.length}):` });
+
+				const actionsList = tokenEl.createDiv({ cls: "mcp-debug-actions" });
+
+				const recentActions = token.actions.slice(-20).reverse();
+
+				for (const action of recentActions) {
+					const actionClass = `mcp-debug-action ${
+						!action.success ? (action.type === "error" ? "is-error" : "is-warning") : ""
+					}`;
+					const actionEl = actionsList.createDiv({ cls: actionClass });
+
+					const actionLine = actionEl.createDiv({ cls: "mcp-debug-action-line" });
+
+					const actionLeft = actionLine.createDiv();
+					actionLeft.createSpan({
+						text: action.type.toUpperCase(),
+						cls: "mcp-debug-action-type",
+					});
+
+					actionLeft.createSpan({ text: action.name });
+
+					// Add params on same line if non-empty
+					if (action.details?.params && Object.keys(action.details.params).length > 0) {
+						const paramsText = JSON.stringify(action.details.params);
+						const paramsSpan = actionLeft.createSpan({
+							cls: "mcp-debug-params-inline",
+						});
+						paramsSpan.createEl("code", {
+							text: ` ${paramsText}`,
+						});
+					}
+
+					const actionRight = actionLine.createDiv({ cls: "mcp-debug-action-time" });
+					actionRight.createSpan({
+						text: new Date(action.timestamp).toLocaleTimeString(),
+					});
+
+					if (action.duration !== undefined) {
+						actionRight.createSpan({
+							text: ` (${action.duration.toFixed(0)}ms)`,
+							cls: "mcp-debug-duration",
+						});
+					}
+
+					// Meta row with IP, UA, and Request ID
+					if (action.ip || action.userAgent || action.details?.requestId !== undefined) {
+						const metaEl = actionEl.createDiv({ cls: "mcp-debug-action-meta" });
+						if (action.details?.requestId !== undefined) {
+							metaEl.createSpan({
+								text: `Request ID: ${action.details.requestId}`,
+								cls: "mcp-debug-meta-item",
+							});
+						}
+						if (action.ip) {
+							metaEl.createSpan({ text: `IP: ${action.ip}`, cls: "mcp-debug-meta-item" });
+						}
+						if (action.userAgent) {
+							const uaText =
+								action.userAgent.length > 60
+									? action.userAgent.substring(0, 60) + "..."
+									: action.userAgent;
+							metaEl.createSpan({
+								text: `UA: ${uaText}`,
+								cls: "mcp-debug-meta-item",
+							});
+						}
+					}
+
+					if (!action.success && action.error) {
+						const errorEl = actionEl.createDiv({ cls: "mcp-debug-action-error" });
+						errorEl.createSpan({ text: `Error: ${action.error}` });
+					}
+				}
+
+				if (token.actions.length > 20) {
+					const moreEl = actionsList.createDiv({ cls: "mcp-debug-action-more" });
+					moreEl.createSpan({
+						text: `... and ${token.actions.length - 20} more actions`,
+					});
+				}
+			} else {
+				const noActions = tokenEl.createDiv({ cls: "mcp-debug-no-actions" });
+				noActions.createSpan({ text: "No actions recorded" });
+			}
+		}
+
+		// Restore scroll position after DOM update
+		requestAnimationFrame(() => {
+			this.containerEl.scrollTop = scrollTop;
 		});
 	}
 }

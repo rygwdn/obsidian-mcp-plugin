@@ -7,12 +7,14 @@ import { logger } from "./tools/logging";
 import type { ObsidianInterface } from "./obsidian/obsidian_interface";
 import { ObsidianImpl } from "./obsidian/obsidian_impl";
 import { ServerManager } from "./server/server_manager";
+import { TokenTracker } from "./server/connection_tracker";
 
 export default class ObsidianMCPPlugin extends Plugin {
 	private serverManager: ServerManager | null = null;
 	private mcpServer: ObsidianMcpServer | null = null;
 	public settings: MCPPluginSettings;
 	public obsidianInterface: ObsidianInterface | null = null;
+	public tokenTracker: TokenTracker;
 
 	private errorResponse(response: Response, error: Error) {
 		logger.logError("Error handling MCP request:", error);
@@ -28,7 +30,11 @@ export default class ObsidianMCPPlugin extends Plugin {
 
 	async registerRoutes() {
 		this.obsidianInterface = new ObsidianImpl(this.app, this);
-		this.mcpServer = new ObsidianMcpServer(this.obsidianInterface, this.manifest);
+		this.mcpServer = new ObsidianMcpServer(
+			this.obsidianInterface,
+			this.manifest,
+			this.tokenTracker
+		);
 
 		const serverManager = this.getServerManager();
 
@@ -55,10 +61,16 @@ export default class ObsidianMCPPlugin extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
+		if (this.serverManager) {
+			this.serverManager.updateSettings(this.settings);
+		}
 	}
 
 	async onload() {
 		await this.loadSettings();
+
+		this.tokenTracker = new TokenTracker();
+		logger.tokenTracker = this.tokenTracker;
 
 		await this.registerRoutes();
 
@@ -95,7 +107,7 @@ export default class ObsidianMCPPlugin extends Plugin {
 
 	public getServerManager(): ServerManager {
 		if (!this.serverManager) {
-			this.serverManager = new ServerManager(this.settings);
+			this.serverManager = new ServerManager(this.settings, this.tokenTracker);
 		}
 		return this.serverManager;
 	}

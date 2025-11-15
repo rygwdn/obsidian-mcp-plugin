@@ -1,12 +1,13 @@
 import * as https from "https";
 import * as http from "http";
-import express, { Express } from "express";
+import express, { Express, Request, Response, NextFunction } from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
 import forge, { pki } from "node-forge";
 import { MCPPluginSettings, CryptoSettings } from "../settings/types";
 import { logger } from "../tools/logging";
-import { AuthManager } from "./auth";
+import { AuthManager, AuthenticatedRequest } from "./auth";
+import type { TokenTracker } from "./connection_tracker";
 
 const DEFAULT_BINDING_HOST = "127.0.0.1";
 const CERT_NAME = "Obsidian MCP Plugin";
@@ -17,11 +18,13 @@ export class ServerManager {
 	private app: Express;
 	private settings: MCPPluginSettings;
 	private authManager: AuthManager;
+	private tokenTracker: TokenTracker | null = null;
 	private lastError: Error | null = null;
 
-	constructor(settings: MCPPluginSettings) {
+	constructor(settings: MCPPluginSettings, tokenTracker?: TokenTracker) {
 		this.settings = settings;
 		this.authManager = new AuthManager(settings);
+		this.tokenTracker = tokenTracker || null;
 		this.app = express();
 		this.setupExpressMiddleware();
 	}
@@ -31,6 +34,52 @@ export class ServerManager {
 		this.app.use(bodyParser.json({ limit: "50mb" }));
 		this.app.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
 		this.app.use(this.authManager.middleware());
+		this.app.use(this.jsonRpcTrackingMiddleware());
+	}
+
+	private jsonRpcTrackingMiddleware() {
+		return (req: Request, res: Response, next: NextFunction) => {
+			if (!this.tokenTracker) {
+				return next();
+			}
+
+			if (req.path !== "/mcp" || req.method !== "POST") {
+				return next();
+			}
+
+			const authReq = req as AuthenticatedRequest;
+
+			try {
+				const body = req.body;
+				if (!body) {
+					return next();
+				}
+
+				const requests = Array.isArray(body) ? body : [body];
+
+				for (const request of requests) {
+					if (request && typeof request === "object" && request.jsonrpc === "2.0") {
+						if (!request.method) {
+							continue;
+						}
+
+						this.tokenTracker.trackActionFromRequest(authReq, {
+							type: "jsonrpc",
+							name: request.method,
+							success: true,
+							details: {
+								params: request.params || {},
+								requestId: request.id,
+							},
+						});
+					}
+				}
+			} catch (error) {
+				logger.logError("[ServerManager] Error tracking JSON-RPC request:", error);
+			}
+
+			next();
+		};
 	}
 
 	public addRoute(path: string): express.IRoute {
@@ -130,7 +179,7 @@ export class ServerManager {
 		}
 
 		await Promise.all(cleanupPromises);
-		
+
 		// Ensure servers are set to null after cleanup
 		this.secureServer = null;
 		this.insecureServer = null;
@@ -152,6 +201,11 @@ export class ServerManager {
 
 	public clearError(): void {
 		this.lastError = null;
+	}
+
+	public updateSettings(settings: MCPPluginSettings): void {
+		this.settings = settings;
+		this.authManager.updateSettings(settings);
 	}
 
 	private getPort(): number {
@@ -220,6 +274,7 @@ export class ServerManager {
 				logger.log(`[MCP Server] HTTP server listening on ${this.getServerUrl()}`);
 				resolve();
 			});
+			// this.insecureServer!.on("")
 
 			this.insecureServer!.on("error", (error) => {
 				logger.logError("[MCP Server] HTTP server error:", error);
@@ -237,6 +292,8 @@ export class ServerManager {
 				}
 				reject(error);
 			});
+
+			// TODO: add a middleware that watches request and response and tracks the jsonrpc method and parameters in the tokentracker?
 		});
 	}
 

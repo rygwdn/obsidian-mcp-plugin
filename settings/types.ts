@@ -13,16 +13,10 @@ export interface CryptoSettings {
 	publicKey: string;
 }
 
-export enum TokenPermission {
-	READ = "read",
-	WRITE = "write",
-}
-
 export interface AuthToken {
 	id: string;
 	name: string;
 	token: string;
-	permissions: TokenPermission[];
 	createdAt: number;
 	lastUsed?: number;
 	enabledTools: {
@@ -40,7 +34,6 @@ export interface AuthToken {
 
 export interface MCPPluginSettings {
 	promptsFolder: string;
-	toolNamePrefix: string;
 	vaultDescription: string;
 	enabledTools: {
 		file_access: boolean; // Combined setting for file listing and content access
@@ -68,7 +61,6 @@ export interface MCPPluginSettings {
 
 export const DEFAULT_SETTINGS: MCPPluginSettings = {
 	promptsFolder: "prompts",
-	toolNamePrefix: "",
 	vaultDescription:
 		"This vault contains personal notes on various topics including work projects, research, and daily journals. It's organized with folders for each major area and uses tags for cross-referencing.",
 	enabledTools: {

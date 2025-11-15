@@ -1,9 +1,14 @@
 import type { TFile } from "../obsidian/obsidian_types";
 import { z, ZodType } from "zod";
 import { McpServer, RegisteredPrompt } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { GetPromptResult } from "@modelcontextprotocol/sdk/types.js";
+import {
+	GetPromptResult,
+	ServerNotification,
+	ServerRequest,
+} from "@modelcontextprotocol/sdk/types.js";
 import { logger } from "./logging";
 import type { ObsidianInterface } from "../obsidian/obsidian_interface";
+import { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol";
 
 export class VaultPrompt {
 	public registration: RegisteredPrompt | undefined;
@@ -53,8 +58,11 @@ export class VaultPrompt {
 		return {};
 	}
 
-	public async handler(args: Record<string, string>): Promise<GetPromptResult> {
-		return logger.withPromptLogging(this.name, async () => {
+	public async handler(
+		args: Record<string, string>,
+		extra: RequestHandlerExtra<ServerRequest, ServerNotification>
+	): Promise<GetPromptResult> {
+		return logger.withPromptLogging(this.name, extra, async () => {
 			const frontmatterPosition = this.metadata?.frontmatterPosition?.end.offset;
 			let content = await this.obsidian.cachedRead(this.file);
 			if (frontmatterPosition) {
@@ -71,11 +79,14 @@ export class VaultPrompt {
 	}
 
 	public async register(server: McpServer) {
-		logger.logPromptRegistration(this.name, this.description, Object.keys(this.args));
-
-		this.registration = server.prompt(this.name, this.description, this.args, async (args) => {
-			return await this.handler(args);
-		});
+		this.registration = server.prompt(
+			this.name,
+			this.description,
+			this.args,
+			async (args, extra) => {
+				return await this.handler(args, extra);
+			}
+		);
 	}
 
 	public update() {

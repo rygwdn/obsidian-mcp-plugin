@@ -32,8 +32,6 @@ export class VaultFileResource {
 	}
 
 	public register(server: McpServer) {
-		logger.logResourceRegistration(this.resourceName);
-
 		server.resource(
 			this.resourceName,
 			this.template,

@@ -1,15 +1,18 @@
 import { Request, Response, NextFunction } from "express";
-import { MCPPluginSettings, TokenPermission, AuthToken } from "../settings/types";
+import { MCPPluginSettings, AuthToken } from "../settings/types";
 import { logger } from "../tools/logging";
 import crypto from "crypto";
 
 export interface AuthenticatedRequest extends Request {
 	token?: AuthToken;
-	hasPermission: (permission: TokenPermission) => boolean;
 }
 
 export class AuthManager {
-	constructor(private settings: MCPPluginSettings) {}
+	constructor(protected settings: MCPPluginSettings) {}
+
+	public updateSettings(settings: MCPPluginSettings): void {
+		this.settings = settings;
+	}
 
 	/**
 	 * Express middleware to validate Bearer token authentication
@@ -51,12 +54,8 @@ export class AuthManager {
 			// Update last used timestamp
 			token.lastUsed = Date.now();
 
-			// Attach token and permission check to request
 			const authReq = req as AuthenticatedRequest;
 			authReq.token = token;
-			authReq.hasPermission = (permission: TokenPermission) => {
-				return token.permissions.includes(permission);
-			};
 
 			logger.log(`[Auth] Authenticated: ${token.name}`);
 			next();
@@ -73,12 +72,11 @@ export class AuthManager {
 	/**
 	 * Create a new auth token
 	 */
-	public createToken(name: string, permissions: TokenPermission[]): AuthToken {
+	public createToken(name: string): AuthToken {
 		const token: AuthToken = {
 			id: crypto.randomUUID(),
 			name,
 			token: AuthManager.generateToken(),
-			permissions,
 			createdAt: Date.now(),
 			enabledTools: {
 				file_access: true,
@@ -94,7 +92,7 @@ export class AuthManager {
 		};
 
 		this.settings.server.tokens.push(token);
-		logger.log(`[Auth] Created token: ${name} with permissions: ${permissions.join(", ")}`);
+		logger.log(`[Auth] Created token: ${name}`);
 
 		return token;
 	}
@@ -115,27 +113,12 @@ export class AuthManager {
 	}
 
 	/**
-	 * Update token permissions
-	 */
-	public updateTokenPermissions(id: string, permissions: TokenPermission[]): boolean {
-		const token = this.settings.server.tokens.find((t) => t.id === id);
-		if (!token) {
-			return false;
-		}
-
-		token.permissions = permissions;
-		logger.log(`[Auth] Updated token ${token.name} permissions: ${permissions.join(", ")}`);
-		return true;
-	}
-
-	/**
 	 * Get all tokens (without exposing the actual token values)
 	 */
 	public getTokens(): Omit<AuthToken, "token">[] {
 		return this.settings.server.tokens.map((t) => ({
 			id: t.id,
 			name: t.name,
-			permissions: t.permissions,
 			createdAt: t.createdAt,
 			lastUsed: t.lastUsed,
 			enabledTools: t.enabledTools,

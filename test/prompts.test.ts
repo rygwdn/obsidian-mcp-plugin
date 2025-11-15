@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach, Mock } from "vitest";
 import { MockObsidian } from "./mock_obsidian";
 import { registerPrompts, VaultPrompt } from "../tools/prompts";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol";
+import { ServerRequest, ServerNotification } from "@modelcontextprotocol/sdk/types.js";
 
 describe("prompt tools", () => {
 	let obsidian: MockObsidian;
@@ -101,7 +103,14 @@ describe("prompt tools", () => {
 				obsidian
 			);
 
-			const result = await prompt.handler({ param1: "test", param2: "value" });
+			const abortController = new AbortController();
+			const extra: RequestHandlerExtra<ServerRequest, ServerNotification> = {
+				signal: abortController.signal,
+				requestId: "test-request-id",
+				sendNotification: vi.fn(),
+				sendRequest: vi.fn(),
+			};
+			const result = await prompt.handler({ param1: "test", param2: "value" }, extra);
 
 			expect(result.messages[0].content.text).toBe("This is a test prompt with a value parameter.");
 		});

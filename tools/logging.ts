@@ -1,6 +1,12 @@
+import { ReadResourceTemplateCallback } from "@modelcontextprotocol/sdk/server/mcp";
+import { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol";
+import { ServerNotification, ServerRequest } from "@modelcontextprotocol/sdk/types";
+import { TokenTracker } from "server/connection_tracker";
+
 export class Logger {
 	private prefix: string;
 	public getVerboseSetting: (() => boolean) | null = null;
+	public tokenTracker: TokenTracker | null = null;
 
 	constructor(prefix: string = "[MCP]") {
 		this.prefix = prefix;
@@ -47,18 +53,6 @@ export class Logger {
 		}
 	}
 
-	logToolRegistration(toolName: string): void {
-		this.log(`Registering tool: ${toolName}`);
-	}
-
-	logResourceRegistration(resourceName: string): void {
-		this.log(`Registering resource: ${resourceName}`);
-	}
-
-	logPromptRegistration(promptName: string, description: string, args: string[]): void {
-		this.log(`Registering prompt: ${promptName}`, { description, args });
-	}
-
 	logConnection(
 		connectionType: string,
 		sessionId: string,
@@ -76,42 +70,56 @@ export class Logger {
 		this.log(`${connectionType}:${sessionId}: connection closed`);
 	}
 
-	withToolLogging<T>(
-		toolName: string,
-		handler: (...args: unknown[]) => Promise<T>
-	): (...args: unknown[]) => Promise<T> {
-		return async (...args: unknown[]) => {
-			this.log(`Tool called: ${toolName}`, ...args);
-			return this.withPerformanceLogging(toolName, () => handler(...args), {
-				successMessage: `Tool completed: ${toolName}`,
-				errorMessage: `Error in tool: ${toolName}`,
-			});
-		};
-	}
-
-	withResourceLogging<T>(
+	withResourceLogging<_T>(
 		resourceName: string,
-		handler: (...args: unknown[]) => Promise<T>
-	): (...args: unknown[]) => Promise<T> {
-		return async (...args: unknown[]) => {
-			this.log(`Resource requested: ${resourceName}`, ...args);
-			return this.withPerformanceLogging(resourceName, () => handler(...args), {
-				successMessage: `Resource request completed: ${resourceName}`,
-				errorMessage: `Error in resource: ${resourceName}`,
-			});
+		handler: ReadResourceTemplateCallback
+	): ReadResourceTemplateCallback {
+		return async (uri, variables, extra) => {
+			this.log(`Resource requested: ${resourceName}`, { uri, variables, extra });
+			return this.withPerformanceLogging(
+				resourceName,
+				async () => {
+					const result = await handler(uri, variables, extra);
+					this.tokenTracker?.trackActionFromExtra(extra, {
+						type: "resource",
+						name: resourceName,
+						success: result.isError ? false : true,
+						details: { uri, variables, extra },
+					});
+					return result;
+				},
+				{
+					successMessage: `Resource request completed: ${resourceName} ${uri} ${variables}`,
+					errorMessage: `Error in resource: ${resourceName} ${uri} ${variables}`,
+				}
+			);
 		};
 	}
 
 	withPromptLogging<T>(
 		promptName: string,
+		extra: RequestHandlerExtra<ServerRequest, ServerNotification>,
 		handler: (...args: unknown[]) => Promise<T>
 	): (...args: unknown[]) => Promise<T> {
 		return async (...args: unknown[]) => {
 			this.log(`Prompt requested: ${promptName}`, ...args);
-			return this.withPerformanceLogging(promptName, () => handler(...args), {
-				successMessage: `Prompt processed: ${promptName}`,
-				errorMessage: `Error processing prompt: ${promptName}`,
-			});
+			return this.withPerformanceLogging(
+				promptName,
+				async () => {
+					const result = await handler(...args);
+					this.tokenTracker?.trackActionFromExtra(extra, {
+						type: "prompt",
+						name: promptName,
+						success: true,
+						details: { args },
+					});
+					return result;
+				},
+				{
+					successMessage: `Prompt processed: ${promptName}`,
+					errorMessage: `Error processing prompt: ${promptName}`,
+				}
+			);
 		};
 	}
 }

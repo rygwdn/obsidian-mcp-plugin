@@ -578,3 +578,172 @@
 	padding: 2px 4px;
 	border-radius: 3px;
 }
+
+/* Debug Tab Styles */
+.mcp-debug-empty {
+	padding: 2rem;
+	text-align: center;
+	color: var(--text-muted);
+}
+
+.mcp-debug-connections {
+	/* Container for all connections */
+}
+
+.mcp-debug-connection {
+	margin-bottom: 1.5rem;
+	padding: 1rem;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	background-color: var(--background-primary);
+}
+
+.mcp-debug-connection-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 0.75rem;
+}
+
+.mcp-debug-connection-id {
+	font-family: monospace;
+	font-size: 0.9em;
+	color: var(--text-muted);
+}
+
+.mcp-debug-connection-header .mcp-debug-status-badge {
+	margin-right: 0.5rem;
+	font-weight: bold;
+}
+
+.mcp-debug-connection-header .mcp-debug-timestamp {
+	font-size: 0.9em;
+	color: var(--text-muted);
+}
+
+.mcp-debug-connection-details {
+	margin-bottom: 0.75rem;
+	font-size: 0.9em;
+}
+
+.mcp-debug-label {
+	font-weight: var(--font-weight-semibold);
+}
+
+.mcp-debug-value {
+	font-family: var(--font-monospace);
+}
+
+.mcp-debug-actions-header {
+	margin-top: 0.75rem;
+	margin-bottom: 0.5rem;
+	font-weight: bold;
+}
+
+.mcp-debug-actions {
+	max-height: 300px;
+	overflow-y: auto;
+	font-size: 0.85em;
+	font-family: monospace;
+}
+
+.mcp-debug-action {
+	padding: 0.25rem 0.5rem;
+	margin-bottom: 0.25rem;
+	border-left: 3px solid var(--color-green);
+	background-color: var(--background-secondary);
+}
+
+.mcp-debug-action.is-error {
+	border-left-color: var(--color-red);
+}
+
+.mcp-debug-action.is-warning {
+	border-left-color: var(--color-yellow);
+}
+
+.mcp-debug-action-line {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.mcp-debug-action-line > div:first-child {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	overflow: hidden;
+}
+
+.mcp-debug-params-inline {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+}
+
+.mcp-debug-params-inline code {
+	font-size: 0.85em;
+	color: var(--text-muted);
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	display: inline-block;
+}
+
+.mcp-debug-action-type {
+	margin-right: 0.5rem;
+	font-size: 0.75em;
+	padding: 0.1rem 0.3rem;
+	border-radius: 3px;
+	background-color: var(--background-modifier-border);
+}
+
+.mcp-debug-action-time {
+	font-size: 0.8em;
+	color: var(--text-muted);
+}
+
+.mcp-debug-action-meta {
+	margin-top: 0.25rem;
+	padding-left: 1rem;
+	font-size: 0.8em;
+	color: var(--text-muted);
+	display: flex;
+	gap: 1rem;
+	flex-wrap: wrap;
+}
+
+.mcp-debug-meta-item {
+	font-family: var(--font-monospace);
+}
+
+.mcp-debug-action-error {
+	margin-top: 0.25rem;
+	padding-left: 1rem;
+	color: var(--color-red);
+	font-size: 0.9em;
+}
+
+.mcp-debug-action-more {
+	padding: 0.5rem;
+	text-align: center;
+	color: var(--text-muted);
+	font-style: italic;
+}
+
+.mcp-debug-no-actions {
+	margin-top: 0.75rem;
+	font-style: italic;
+	color: var(--text-muted);
+}
+
+.mcp-debug-refresh-button {
+	margin-bottom: 1rem;
+}
+
+.mcp-debug-description {
+	margin-bottom: 1rem;
+}

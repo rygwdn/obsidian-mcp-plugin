@@ -79,8 +79,6 @@ export class FileMetadataResource {
 	constructor(private obsidian: ObsidianInterface) {}
 
 	public register(server: McpServer) {
-		logger.logResourceRegistration("metadata");
-
 		server.resource(
 			"metadata",
 			this.template,
