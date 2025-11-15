@@ -10,6 +10,11 @@
 	font-weight: var(--font-weight-bold);
 }
 
+.mcp-error-text {
+	color: var(--text-error);
+	font-weight: var(--font-weight-bold);
+}
+
 .mcp-success-text {
 	color: var(--color-green);
 	font-weight: var(--font-weight-bold);

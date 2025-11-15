@@ -17,6 +17,7 @@ export class ServerManager {
 	private app: Express;
 	private settings: MCPPluginSettings;
 	private authManager: AuthManager;
+	private lastError: Error | null = null;
 
 	constructor(settings: MCPPluginSettings) {
 		this.settings = settings;
@@ -37,6 +38,9 @@ export class ServerManager {
 	}
 
 	public async start(): Promise<void> {
+		// Clear any previous error
+		this.lastError = null;
+
 		if (!this.settings.server.enabled) {
 			logger.log("[MCP Server] Server disabled in settings");
 			return;
@@ -47,12 +51,19 @@ export class ServerManager {
 			return;
 		}
 
-		await this.ensureCertificate();
+		try {
+			await this.ensureCertificate();
 
-		if (this.settings.server.httpsEnabled) {
-			await this.startSecureServer();
-		} else {
-			await this.startInsecureServer();
+			if (this.settings.server.httpsEnabled) {
+				await this.startSecureServer();
+			} else {
+				await this.startInsecureServer();
+			}
+		} catch (error) {
+			this.lastError = error instanceof Error ? error : new Error(String(error));
+			// Attempt to close any partially started servers
+			await this.cleanupFailedStart();
+			throw error;
 		}
 	}
 
@@ -78,6 +89,53 @@ export class ServerManager {
 		}
 	}
 
+	private async cleanupFailedStart(): Promise<void> {
+		// Attempt to close any servers that might have been partially started
+		const cleanupPromises: Promise<void>[] = [];
+
+		if (this.secureServer) {
+			cleanupPromises.push(
+				new Promise<void>((resolve) => {
+					try {
+						this.secureServer?.close(() => {
+							logger.log("[MCP Server] Cleaned up failed secure server");
+							resolve();
+						});
+						// If close callback doesn't fire, resolve after a timeout
+						setTimeout(() => resolve(), 100);
+					} catch (error) {
+						logger.logError("[MCP Server] Error cleaning up secure server:", error);
+						resolve();
+					}
+				})
+			);
+		}
+
+		if (this.insecureServer) {
+			cleanupPromises.push(
+				new Promise<void>((resolve) => {
+					try {
+						this.insecureServer?.close(() => {
+							logger.log("[MCP Server] Cleaned up failed insecure server");
+							resolve();
+						});
+						// If close callback doesn't fire, resolve after a timeout
+						setTimeout(() => resolve(), 100);
+					} catch (error) {
+						logger.logError("[MCP Server] Error cleaning up insecure server:", error);
+						resolve();
+					}
+				})
+			);
+		}
+
+		await Promise.all(cleanupPromises);
+		
+		// Ensure servers are set to null after cleanup
+		this.secureServer = null;
+		this.insecureServer = null;
+	}
+
 	public async restart(): Promise<void> {
 		logger.log("[MCP Server] Restarting server");
 		await this.stop();
@@ -86,6 +144,14 @@ export class ServerManager {
 
 	public isRunning(): boolean {
 		return this.secureServer !== null || this.insecureServer !== null;
+	}
+
+	public getLastError(): Error | null {
+		return this.lastError;
+	}
+
+	public clearError(): void {
+		this.lastError = null;
 	}
 
 	private getPort(): number {
@@ -128,6 +194,18 @@ export class ServerManager {
 
 			this.secureServer!.on("error", (error) => {
 				logger.logError("[MCP Server] HTTPS server error:", error);
+				// Attempt to close the server before rejecting
+				const server = this.secureServer;
+				this.secureServer = null;
+				if (server) {
+					try {
+						server.close(() => {
+							logger.log("[MCP Server] Closed failed secure server");
+						});
+					} catch (closeError) {
+						logger.logError("[MCP Server] Error closing failed secure server:", closeError);
+					}
+				}
 				reject(error);
 			});
 		});
@@ -145,6 +223,18 @@ export class ServerManager {
 
 			this.insecureServer!.on("error", (error) => {
 				logger.logError("[MCP Server] HTTP server error:", error);
+				// Attempt to close the server before rejecting
+				const server = this.insecureServer;
+				this.insecureServer = null;
+				if (server) {
+					try {
+						server.close(() => {
+							logger.log("[MCP Server] Closed failed insecure server");
+						});
+					} catch (closeError) {
+						logger.logError("[MCP Server] Error closing failed insecure server:", closeError);
+					}
+				}
 				reject(error);
 			});
 		});

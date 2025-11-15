@@ -122,7 +122,11 @@ export class MCPSettingTab extends PluginSettingTab {
 				await this.plugin.saveSettings();
 				const serverManager = this.plugin.getServerManager();
 				if (value) {
-					await serverManager.start();
+					try {
+						await serverManager.start();
+					} catch (error) {
+						// Error is already stored in ServerManager and will be displayed in status
+					}
 				} else {
 					await serverManager.stop();
 				}
@@ -134,27 +138,57 @@ export class MCPSettingTab extends PluginSettingTab {
 			},
 		});
 
-		createTextSetting({
-			containerEl: container,
-			name: "Port",
-			desc: "Port number for the MCP server (HTTP: 27125, HTTPS: 27126)",
-			placeholder: "27125",
-			getValue: () => this.plugin.settings.server.port.toString(),
-			setValue: async (value) => {
-				const port = parseInt(value, 10);
-				if (isNaN(port) || port < 1 || port > 65535) {
-					new Notice("Invalid port number");
-					return;
-				}
-				this.plugin.settings.server.port = port;
-				await this.plugin.saveSettings();
-				await this.plugin.getServerManager().restart();
-				this.updateServerStatus(statusEl);
-			},
-			saveSettings: async () => {
-				// Saving is handled in setValue
-			},
-		});
+		const portSetting = new Setting(container)
+			.setName("Port")
+			.setDesc("Port number for the MCP server (HTTP: 27125, HTTPS: 27126)")
+			.addText((text) => {
+				text.setPlaceholder("27125")
+					.setValue(this.plugin.settings.server.port.toString())
+					.onChange(async (value) => {
+						const port = parseInt(value, 10);
+						if (isNaN(port) || port < 1 || port > 65535) {
+							portSetting.descEl.empty();
+							portSetting.descEl.createSpan({
+								text: "Port number for the MCP server (HTTP: 27125, HTTPS: 27126)",
+							});
+							portSetting.descEl.createEl("br");
+							portSetting.descEl.createSpan({
+								text: "❌ Invalid port number",
+								cls: "mcp-error-text",
+							});
+							new Notice("Invalid port number");
+							return;
+						}
+						this.plugin.settings.server.port = port;
+						await this.plugin.saveSettings();
+						
+						// Clear any previous error display
+						portSetting.descEl.empty();
+						portSetting.descEl.createSpan({
+							text: "Port number for the MCP server (HTTP: 27125, HTTPS: 27126)",
+						});
+						
+						try {
+							await this.plugin.getServerManager().restart();
+							this.updateServerStatus(statusEl);
+						} catch (error) {
+							const serverManager = this.plugin.getServerManager();
+							const lastError = serverManager.getLastError();
+							const errorMessage = this.formatServerError(lastError || error);
+							
+							portSetting.descEl.empty();
+							portSetting.descEl.createSpan({
+								text: "Port number for the MCP server (HTTP: 27125, HTTPS: 27126)",
+							});
+							portSetting.descEl.createEl("br");
+							portSetting.descEl.createSpan({
+								text: `❌ ${errorMessage}`,
+								cls: "mcp-error-text",
+							});
+							this.updateServerStatus(statusEl);
+						}
+					});
+			});
 
 		createTextSetting({
 			containerEl: container,
@@ -165,7 +199,11 @@ export class MCPSettingTab extends PluginSettingTab {
 			setValue: async (value) => {
 				this.plugin.settings.server.host = value;
 				await this.plugin.saveSettings();
-				await this.plugin.getServerManager().restart();
+				try {
+					await this.plugin.getServerManager().restart();
+				} catch (error) {
+					// Error is already stored in ServerManager and will be displayed in status
+				}
 				this.updateServerStatus(statusEl);
 			},
 			saveSettings: async () => {
@@ -181,7 +219,11 @@ export class MCPSettingTab extends PluginSettingTab {
 			setValue: async (value) => {
 				this.plugin.settings.server.httpsEnabled = value;
 				await this.plugin.saveSettings();
-				await this.plugin.getServerManager().restart();
+				try {
+					await this.plugin.getServerManager().restart();
+				} catch (error) {
+					// Error is already stored in ServerManager and will be displayed in status
+				}
 				this.display();
 			},
 			saveSettings: async () => {
@@ -363,7 +405,16 @@ export class MCPSettingTab extends PluginSettingTab {
 		} else {
 			statusEl.addClass("mcp-server-stopped");
 			statusEl.removeClass("mcp-server-running");
-			if (this.plugin.settings.server.enabled && this.plugin.settings.server.tokens.length === 0) {
+			
+			// Check for startup errors
+			const lastError = serverManager.getLastError();
+			if (lastError && this.plugin.settings.server.enabled) {
+				const errorMessage = this.formatServerError(lastError);
+				statusEl.createEl("span", {
+					text: `❌ Server failed to start: ${errorMessage}`,
+					cls: "mcp-error-text",
+				});
+			} else if (this.plugin.settings.server.enabled && this.plugin.settings.server.tokens.length === 0) {
 				statusEl.createEl("span", {
 					text: "⚠ Server not running - requires at least one authentication token",
 					cls: "mcp-warning-text",
@@ -380,6 +431,23 @@ export class MCPSettingTab extends PluginSettingTab {
 				});
 			}
 		}
+	}
+
+	private formatServerError(error: Error | unknown): string {
+		if (!error) {
+			return "Unknown error";
+		}
+		
+		const errorObj = error instanceof Error ? error : new Error(String(error));
+		const message = errorObj.message || String(error);
+		
+		// Format EADDRINUSE errors more user-friendly
+		if (message.includes("EADDRINUSE") || message.includes("address already in use")) {
+			const port = this.plugin.settings.server.port;
+			return `Port ${port} is already in use. Please choose a different port.`;
+		}
+		
+		return message;
 	}
 
 	private addBasicSettings(container: HTMLElement): void {
