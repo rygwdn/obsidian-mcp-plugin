@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ToolRegistration } from "./types";
 import type { ObsidianInterface, QuickAddChoice } from "../obsidian/obsidian_interface";
+import { AuthenticatedRequest } from "server/auth";
 
 /**
  * Extracts variable names from a template string based on QuickAdd template syntax
@@ -64,12 +65,17 @@ export const quickAddListTool: ToolRegistration = {
 		openWorldHint: false,
 	},
 	schema: undefined,
-	handler: (obsidian: ObsidianInterface) => async (_args: Record<string, unknown>) => {
-		if (!obsidian.quickAdd) {
+	handler: async (
+		obsidian: ObsidianInterface,
+		request: AuthenticatedRequest,
+		_args: Record<string, unknown>
+	) => {
+		const quickAdd = obsidian.getQuickAdd(request);
+		if (!quickAdd) {
 			throw new Error("QuickAdd plugin is not enabled");
 		}
 
-		const choices = obsidian.quickAdd.getChoices();
+		const choices = quickAdd.getChoices();
 		if (choices.length === 0) {
 			return "No QuickAdd choices found";
 		}
@@ -95,49 +101,49 @@ export const quickAddExecuteTool: ToolRegistration = {
 			.optional()
 			.describe("Optional variables to pass to the QuickAdd choice or template"),
 	},
-	handler:
-		(obsidian: ObsidianInterface) =>
-		async (args: Record<string, unknown>): Promise<string> => {
-			const { choice, template, variables } = args as {
-				choice?: string;
-				template?: string;
-				variables?: Record<string, unknown>;
-			};
+	handler: async (
+		obsidian: ObsidianInterface,
+		request: AuthenticatedRequest,
+		args: {
+			choice?: string;
+			template?: string;
+			variables?: Record<string, unknown>;
+		}
+	) => {
+		const { choice, template, variables } = args;
 
-			if (!obsidian.quickAdd) {
-				throw new Error("QuickAdd plugin is not enabled");
+		const quickAdd = obsidian.getQuickAdd(request);
+		if (!quickAdd) {
+			throw new Error("QuickAdd plugin is not enabled");
+		}
+
+		if ((choice && template) || (!choice && !template)) {
+			throw new Error("You must provide exactly one of 'choice' or 'template' parameters");
+		}
+
+		if (choice) {
+			const choices = quickAdd.getChoices();
+			const targetChoice = choices.find((c) => c.id === choice || c.name === choice);
+
+			if (!targetChoice) {
+				const availableChoices = formatChoicesAsMarkdown(choices);
+				throw new Error(
+					`QuickAdd choice not found: ${choice}. Available choices:\n\n${availableChoices}`
+				);
 			}
 
-			if ((choice && template) || (!choice && !template)) {
-				throw new Error("You must provide exactly one of 'choice' or 'template' parameters");
+			try {
+				await quickAdd.executeChoice(targetChoice.name, variables as Record<string, string>);
+				return `Successfully executed QuickAdd choice: **${targetChoice.name}**`;
+			} catch (error) {
+				throw new Error(`Error executing QuickAdd choice: ${error.message}`);
 			}
-
-			if (choice) {
-				const choices = obsidian.quickAdd.getChoices();
-				const targetChoice = choices.find((c) => c.id === choice || c.name === choice);
-
-				if (!targetChoice) {
-					const availableChoices = formatChoicesAsMarkdown(choices);
-					throw new Error(
-						`QuickAdd choice not found: ${choice}. Available choices:\n\n${availableChoices}`
-					);
-				}
-
-				try {
-					await obsidian.quickAdd.executeChoice(
-						targetChoice.name,
-						variables as Record<string, string>
-					);
-					return `Successfully executed QuickAdd choice: **${targetChoice.name}**`;
-				} catch (error) {
-					throw new Error(`Error executing QuickAdd choice: ${error.message}`);
-				}
-			} else {
-				try {
-					return await obsidian.quickAdd.formatTemplate(template!, variables, true);
-				} catch (error) {
-					throw new Error(`Error formatting template: ${error.message}`);
-				}
+		} else {
+			try {
+				return await quickAdd.formatTemplate(template!, variables, true);
+			} catch (error) {
+				throw new Error(`Error formatting template: ${error.message}`);
 			}
-		},
+		}
+	},
 };

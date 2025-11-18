@@ -1,15 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import {
-	isFileAccessible,
-	isFileModifiable,
-	isDirectoryAccessible,
-	getFileFrontmatterPermissions,
-} from "../tools/permissions";
-import { MockObsidian } from "./mock_obsidian";
+import { isDirectoryAccessible, getFileFrontmatterPermissions } from "../tools/permissions";
+import { MockObsidian, createMockRequest } from "./mock_obsidian";
 import { DEFAULT_SETTINGS } from "../settings/types";
 
 describe("Permissions functionality", () => {
 	let obsidian: MockObsidian;
+	let request: ReturnType<typeof createMockRequest>;
 
 	beforeEach(() => {
 		// Setup fake timers and set a fixed date
@@ -18,8 +14,9 @@ describe("Permissions functionality", () => {
 
 		vi.clearAllMocks();
 
-		// Create MockObsidian with custom settings for directory permissions
-		obsidian = new MockObsidian({
+		// Create MockObsidian
+		obsidian = new MockObsidian();
+		request = createMockRequest(obsidian, {
 			directoryPermissions: {
 				rules: [
 					{
@@ -50,76 +47,26 @@ describe("Permissions functionality", () => {
 
 	describe("getFileFrontmatterPermissions", () => {
 		it("should return undefined for files without frontmatter permissions", async () => {
-			const file = await obsidian.getFileByPath("normal.md", "read");
+			const file = await obsidian.getFileByPath("normal.md", "read", request);
 			const permissions = getFileFrontmatterPermissions(obsidian, file);
 			expect(permissions.mcp_access).toBeUndefined();
 			expect(permissions.mcp_readonly).toBeUndefined();
 		});
 
 		it("should return false for mcp_access when set to false in frontmatter", async () => {
-			const file = await obsidian.getFileByPath("blocked.md", "read");
+			// Get file directly from mock to bypass permission checks (we're testing frontmatter parsing, not permissions)
+			const file = obsidian.markdownFiles.get("blocked.md");
+			if (!file) {
+				throw new Error("File not found: blocked.md");
+			}
 			const permissions = getFileFrontmatterPermissions(obsidian, file);
 			expect(permissions.mcp_access).toBe(false);
 		});
 
 		it("should return true for mcp_readonly when set to true in frontmatter", async () => {
-			const file = await obsidian.getFileByPath("readonly.md", "read");
+			const file = await obsidian.getFileByPath("readonly.md", "read", request);
 			const permissions = getFileFrontmatterPermissions(obsidian, file);
 			expect(permissions.mcp_readonly).toBe(true);
-		});
-	});
-
-	describe("isFileAccessible", () => {
-		it("should allow access to normal files", async () => {
-			const file = await obsidian.getFileByPath("normal.md", "read");
-			expect(isFileAccessible(obsidian, file)).toBe(true);
-		});
-
-		it("should deny access to files with mcp_access: false", async () => {
-			const file = await obsidian.getFileByPath("blocked.md", "read");
-			expect(isFileAccessible(obsidian, file)).toBe(false);
-		});
-
-		it("should allow access to read-only files", async () => {
-			const file = await obsidian.getFileByPath("readonly.md", "read");
-			expect(isFileAccessible(obsidian, file)).toBe(true);
-		});
-
-		it("should deny access to files in blocked directories", async () => {
-			const file = await obsidian.getFileByPath("blocked-dir/file.md", "read");
-			expect(isFileAccessible(obsidian, file)).toBe(false);
-		});
-
-		it("should allow access to explicitly allowed files even in blocked directories", async () => {
-			const file = await obsidian.getFileByPath("blocked-dir/explicit-allow.md", "read");
-			expect(isFileAccessible(obsidian, file)).toBe(true);
-		});
-	});
-
-	describe("isFileModifiable", () => {
-		it("should allow modification of normal files", async () => {
-			const file = await obsidian.getFileByPath("normal.md", "read");
-			expect(isFileModifiable(obsidian, file)).toBe(true);
-		});
-
-		it("should deny modification of read-only files", async () => {
-			const file = await obsidian.getFileByPath("readonly.md", "read");
-			expect(isFileModifiable(obsidian, file)).toBe(false);
-		});
-
-		it("should deny modification of blocked files", async () => {
-			const file = await obsidian.getFileByPath("blocked.md", "read");
-			expect(isFileModifiable(obsidian, file)).toBe(false);
-		});
-
-		it("should deny modification of files in blocked directories", async () => {
-			const file = await obsidian.getFileByPath("blocked-dir/file.md", "read");
-			expect(isFileModifiable(obsidian, file)).toBe(false);
-		});
-
-		it("should allow modification of explicitly allowed files in blocked directories", async () => {
-			const file = await obsidian.getFileByPath("blocked-dir/explicit-allow.md", "read");
-			expect(isFileModifiable(obsidian, file)).toBe(true);
 		});
 	});
 

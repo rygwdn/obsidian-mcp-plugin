@@ -28,12 +28,7 @@ describe("DailyNoteUtils", () => {
 		vi.clearAllMocks();
 
 		// Create and configure the test interface
-		obsidian = new MockObsidian({
-			enabledTools: {
-				dataview_query: true,
-				quickadd: true,
-			},
-		});
+		obsidian = new MockObsidian();
 
 		// Add test files
 		obsidian.setFiles({

@@ -1,7 +1,5 @@
-import { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol";
 import { logger } from "../tools/logging";
 import { AuthenticatedRequest } from "./auth";
-import { ServerNotification, ServerRequest } from "@modelcontextprotocol/sdk/types";
 
 interface ActionParams {
 	type: "tool" | "resource" | "prompt" | "error" | "jsonrpc";
@@ -53,18 +51,6 @@ export class TokenTracker {
 		logger.log(`Token established: ${tokenName}`);
 
 		return token;
-	}
-
-	public trackActionFromExtra(
-		extra: RequestHandlerExtra<ServerRequest, ServerNotification>,
-		action: ActionParams
-	): void {
-		const request = extra.authInfo?.extra?.request as AuthenticatedRequest;
-		if (!request) {
-			logger.logError("request not found in extra", extra);
-			return;
-		}
-		this.trackActionFromRequest(request, action);
 	}
 
 	public trackActionFromRequest(request: AuthenticatedRequest, action: ActionParams): void {

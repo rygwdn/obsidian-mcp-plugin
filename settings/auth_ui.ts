@@ -688,11 +688,6 @@ class TokenDisplayModal extends Modal {
 		contentEl.createEl("h2", { text: "Token Created Successfully" });
 
 		contentEl.createEl("p", {
-			text: "⚠️ Save this token now. You won't be able to see it again!",
-			cls: "mcp-warning-text",
-		});
-
-		contentEl.createEl("p", {
 			text: `Token Name: ${this.token.name}`,
 		});
 

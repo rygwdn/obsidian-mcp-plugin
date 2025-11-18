@@ -13,7 +13,7 @@ import type { Request, Response } from "express";
 import { logger } from "tools/logging";
 import type { ObsidianInterface } from "./obsidian/obsidian_interface";
 import type { AuthenticatedRequest } from "./server/auth";
-import type { TokenTracker } from "./server/connection_tracker";
+import { getRequest } from "./server/auth";
 import crypto from "crypto";
 import { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types";
 
@@ -22,8 +22,7 @@ export class ObsidianMcpServer {
 
 	constructor(
 		private obsidian: ObsidianInterface,
-		private manifest: { version: string; name: string },
-		private tokenTracker: TokenTracker
+		private manifest: { version: string; name: string }
 	) {}
 
 	public async handleHttpRequest(request: Request, response: Response) {
@@ -60,7 +59,7 @@ export class ObsidianMcpServer {
 				}
 			);
 		} catch (error) {
-			this.tokenTracker.trackActionFromRequest(authReq, {
+			authReq.trackAction({
 				type: "error",
 				name: "HTTP Request Error",
 				success: false,
@@ -89,7 +88,7 @@ export class ObsidianMcpServer {
 		);
 
 		server.server.onerror = (error) => {
-			this.tokenTracker.trackActionFromRequest(request, {
+			request.trackAction({
 				type: "error",
 				name: "Server Error",
 				success: false,
@@ -97,13 +96,13 @@ export class ObsidianMcpServer {
 			});
 		};
 
-		this.registerTools(server);
+		this.registerTools(server, request);
 
 		return server;
 	}
 
-	private registerTools(server: McpServer) {
-		const enabledTools = this.obsidian.settings.enabledTools;
+	private registerTools(server: McpServer, request: AuthenticatedRequest) {
+		const enabledTools = request.token.enabledTools;
 
 		if (enabledTools.file_access) {
 			new VaultFileResource(this.obsidian).register(server);
@@ -121,11 +120,11 @@ export class ObsidianMcpServer {
 			this.registerTool(server, updateContentTool);
 		}
 
-		if (enabledTools.dataview_query && this.obsidian.dataview) {
+		if (enabledTools.dataview_query && this.obsidian.getDataview(request)) {
 			this.registerTool(server, dataviewQueryTool);
 		}
 
-		if (this.obsidian.quickAdd && enabledTools.quickadd) {
+		if (this.obsidian.getQuickAdd(request) && enabledTools.quickadd) {
 			this.registerTool(server, quickAddListTool);
 			this.registerTool(server, quickAddExecuteTool);
 		}
@@ -136,6 +135,8 @@ export class ObsidianMcpServer {
 
 		const handler: ToolCallback = async (...args) => {
 			const extra = args[args.length - 1];
+			const request = getRequest(extra);
+
 			const trackerParams = {
 				type: "tool",
 				name: toolName,
@@ -143,11 +144,14 @@ export class ObsidianMcpServer {
 			} as const;
 
 			try {
-				const data = await toolReg.handler(this.obsidian)(...args);
-				this.tokenTracker.trackActionFromExtra(extra, { ...trackerParams, success: true });
+				const data = await toolReg.handler(this.obsidian, request, args[0]);
+				request.trackAction({
+					...trackerParams,
+					success: true,
+				});
 				return { content: [{ type: "text", text: data }] };
 			} catch (error) {
-				this.tokenTracker.trackActionFromExtra(extra, {
+				request.trackAction({
 					...trackerParams,
 					success: false,
 					error: error.toString(),

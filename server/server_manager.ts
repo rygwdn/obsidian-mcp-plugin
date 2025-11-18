@@ -25,6 +25,9 @@ export class ServerManager {
 		this.settings = settings;
 		this.authManager = new AuthManager(settings);
 		this.tokenTracker = tokenTracker || null;
+		if (tokenTracker) {
+			this.authManager.setTokenTracker(tokenTracker);
+		}
 		this.app = express();
 		this.setupExpressMiddleware();
 	}
@@ -63,7 +66,7 @@ export class ServerManager {
 							continue;
 						}
 
-						this.tokenTracker.trackActionFromRequest(authReq, {
+						authReq.trackAction({
 							type: "jsonrpc",
 							name: request.method,
 							success: true,
@@ -292,8 +295,6 @@ export class ServerManager {
 				}
 				reject(error);
 			});
-
-			// TODO: add a middleware that watches request and response and tracks the jsonrpc method and parameters in the tokentracker?
 		});
 	}
 

@@ -25,7 +25,7 @@
 		"fix": "npm run lint:fix; npm run markdownlint:fix; npm run format",
 		"markdownlint": "markdownlint-cli2 --config .markdownlint.json \"**/*.md\" \"!node_modules/**/*.md\"",
 		"markdownlint:fix": "markdownlint-cli2 --config .markdownlint.json --fix \"**/*.md\" \"!node_modules/**/*.md\"",
-		"check": "npm-run-all -p lint format:check check-types check-test-types markdownlint -s test",
+		"check": "npm-run-all --aggregate-output --continue-on-error --parallel lint format:check check-types check-test-types markdownlint && npm run test",
 		"inspect": "npx @modelcontextprotocol/inspector",
 		"install-plugin": "npm run build && node scripts/install.js"
 	},

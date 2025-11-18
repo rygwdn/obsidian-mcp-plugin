@@ -1,5 +1,7 @@
 import type { TFile } from "../obsidian/obsidian_types";
 import type { ObsidianInterface } from "../obsidian/obsidian_interface";
+import { AuthToken } from "settings/types";
+import { AuthenticatedRequest } from "../server/auth";
 
 export function getFileFrontmatterPermissions(
 	obsidian: ObsidianInterface,
@@ -18,28 +20,6 @@ export function getFileFrontmatterPermissions(
 	return permissions;
 }
 
-export function isFileAccessible(
-	obsidian: ObsidianInterface,
-	file: TFile,
-	permissions?: { mcp_access?: boolean; mcp_readonly?: boolean }
-): boolean {
-	permissions = permissions || getFileFrontmatterPermissions(obsidian, file);
-	if (permissions.mcp_access === false) return false;
-	if (permissions.mcp_access === true) return true;
-
-	const parentPath = file.path.includes("/")
-		? file.path.substring(0, file.path.lastIndexOf("/"))
-		: "/";
-
-	return isDirectoryAccessible(parentPath, obsidian.settings);
-}
-
-export function isFileModifiable(obsidian: ObsidianInterface, file: TFile): boolean {
-	const permissions = getFileFrontmatterPermissions(obsidian, file);
-	if (permissions.mcp_readonly === true) return false;
-	return isFileAccessible(obsidian, file, permissions);
-}
-
 export function isDirectoryAccessible(
 	dirPath: string,
 	settings: {
@@ -55,4 +35,45 @@ export function isDirectoryAccessible(
 	}
 
 	return rootPermission;
+}
+
+/**
+ * Check if a file is accessible using token-specific directory permissions
+ */
+export function isFileAccessibleWithToken(
+	obsidian: ObsidianInterface,
+	file: TFile,
+	token: AuthToken,
+	_request: AuthenticatedRequest
+): boolean {
+	const permissions = getFileFrontmatterPermissions(obsidian, file);
+	if (permissions.mcp_access === false) return false;
+	if (permissions.mcp_access === true) return true;
+
+	const parentPath = file.path.includes("/")
+		? file.path.substring(0, file.path.lastIndexOf("/"))
+		: "/";
+
+	return isDirectoryAccessible(parentPath, { directoryPermissions: token.directoryPermissions });
+}
+
+/**
+ * Check if a file is modifiable using token-specific directory permissions
+ */
+export function isFileModifiableWithToken(
+	obsidian: ObsidianInterface,
+	file: TFile,
+	token: AuthToken,
+	_request: AuthenticatedRequest
+): boolean {
+	const permissions = getFileFrontmatterPermissions(obsidian, file);
+	if (permissions.mcp_readonly === true) return false;
+	return isFileAccessibleWithToken(obsidian, file, token, _request);
+}
+
+/**
+ * Check if a directory is accessible using token-specific directory permissions
+ */
+export function isDirectoryAccessibleWithToken(dirPath: string, token: AuthToken): boolean {
+	return isDirectoryAccessible(dirPath, { directoryPermissions: token.directoryPermissions });
 }

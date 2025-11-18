@@ -1,6 +1,7 @@
 import { ReadResourceTemplateCallback } from "@modelcontextprotocol/sdk/server/mcp";
 import { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol";
 import { ServerNotification, ServerRequest } from "@modelcontextprotocol/sdk/types";
+import { getRequest } from "server/auth";
 import { TokenTracker } from "server/connection_tracker";
 
 export class Logger {
@@ -80,7 +81,8 @@ export class Logger {
 				resourceName,
 				async () => {
 					const result = await handler(uri, variables, extra);
-					this.tokenTracker?.trackActionFromExtra(extra, {
+					const request = getRequest(extra);
+					request.trackAction({
 						type: "resource",
 						name: resourceName,
 						success: result.isError ? false : true,
@@ -107,7 +109,8 @@ export class Logger {
 				promptName,
 				async () => {
 					const result = await handler(...args);
-					this.tokenTracker?.trackActionFromExtra(extra, {
+					const request = getRequest(extra);
+					request.trackAction({
 						type: "prompt",
 						name: promptName,
 						success: true,

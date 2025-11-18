@@ -35,19 +35,7 @@ export interface AuthToken {
 export interface MCPPluginSettings {
 	promptsFolder: string;
 	vaultDescription: string;
-	enabledTools: {
-		file_access: boolean; // Combined setting for file listing and content access
-		search: boolean;
-		update_content: boolean;
-		dataview_query: boolean;
-		quickadd: boolean;
-	};
-	enablePrompts: boolean;
 	verboseLogging: boolean;
-	directoryPermissions: {
-		rules: DirectoryRule[];
-		rootPermission: boolean;
-	};
 	server: {
 		enabled: boolean;
 		port: number;
@@ -63,19 +51,7 @@ export const DEFAULT_SETTINGS: MCPPluginSettings = {
 	promptsFolder: "prompts",
 	vaultDescription:
 		"This vault contains personal notes on various topics including work projects, research, and daily journals. It's organized with folders for each major area and uses tags for cross-referencing.",
-	enabledTools: {
-		file_access: true,
-		search: true,
-		update_content: true,
-		dataview_query: true,
-		quickadd: true,
-	},
-	enablePrompts: true,
 	verboseLogging: false,
-	directoryPermissions: {
-		rules: [],
-		rootPermission: true,
-	},
 	server: {
 		enabled: false,
 		port: 27125,

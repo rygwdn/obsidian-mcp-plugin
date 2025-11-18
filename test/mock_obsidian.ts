@@ -8,38 +8,36 @@ import {
 	QuickAddInterface,
 	SearchResult,
 } from "../obsidian/obsidian_interface";
-import { DEFAULT_SETTINGS, MCPPluginSettings } from "settings/types";
+import { DEFAULT_SETTINGS, MCPPluginSettings, AuthToken } from "settings/types";
+import { AuthenticatedRequest, AUTHENTICATED_REQUEST_KEY } from "../server/auth";
+import { isFileAccessibleWithToken, isFileModifiableWithToken } from "../tools/permissions";
+import { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol";
+import { ServerRequest, ServerNotification } from "@modelcontextprotocol/sdk/types";
+import { vi } from "vitest";
 
 export class MockObsidian implements ObsidianInterface {
 	public markdownFiles: Map<string, MockFile> = new Map();
 	public settings: MCPPluginSettings;
 
-	constructor(
-		settingsOverride: Partial<Omit<MCPPluginSettings, "enabledTools">> & {
-			enabledTools?: Partial<MCPPluginSettings["enabledTools"]>;
-		} = {}
-	) {
+	constructor(settingsOverride: Partial<MCPPluginSettings> = {}) {
 		this.settings = {
 			...DEFAULT_SETTINGS,
 			...settingsOverride,
-			enabledTools: {
-				...DEFAULT_SETTINGS.enabledTools,
-				...settingsOverride.enabledTools,
-			},
-			directoryPermissions: {
-				...DEFAULT_SETTINGS.directoryPermissions,
-				...settingsOverride.directoryPermissions,
-			},
 		};
 	}
 
-	async search(query: string, fuzzy: boolean, folder?: string): Promise<SearchResult[]> {
+	async search(
+		query: string,
+		fuzzy: boolean,
+		folder: string | undefined,
+		request: AuthenticatedRequest
+	): Promise<SearchResult[]> {
 		const results: SearchResult[] = [];
-		for (const file of this.getMarkdownFiles()) {
+		for (const file of this.getMarkdownFiles(request)) {
 			if (folder && !file.path.startsWith(folder)) {
 				continue;
 			}
-			const cachedContents = await this.cachedRead(file);
+			const cachedContents = await this.cachedRead(file, request);
 			const result = cachedContents.matchAll(new RegExp(query, "gi"));
 			const matches = Array.from(result).map(
 				(match) => [match.index, match.index + match[0].length] satisfies [number, number]
@@ -51,7 +49,7 @@ export class MockObsidian implements ObsidianInterface {
 		return results;
 	}
 
-	async checkFile(filePath: string): Promise<CheckFileResult> {
+	async checkFile(filePath: string, request: AuthenticatedRequest): Promise<CheckFileResult> {
 		const file = this.markdownFiles.get(filePath);
 		if (!file) {
 			return { exists: false };
@@ -59,8 +57,8 @@ export class MockObsidian implements ObsidianInterface {
 		return {
 			exists: true,
 			file,
-			isAccessible: true,
-			isModifiable: true,
+			isAccessible: isFileAccessibleWithToken(this, file, request.token, request),
+			isModifiable: isFileModifiableWithToken(this, file, request.token, request),
 		};
 	}
 
@@ -70,10 +68,17 @@ export class MockObsidian implements ObsidianInterface {
 		}
 	}
 
-	getMarkdownFiles(): TFile[] {
-		return Array.from(this.markdownFiles.values()).filter((file) => file.path.endsWith(".md"));
+	getMarkdownFiles(request: AuthenticatedRequest): TFile[] {
+		return Array.from(this.markdownFiles.values())
+			.filter((file) => file.path.endsWith(".md"))
+			.filter((file) => isFileAccessibleWithToken(this, file, request.token, request));
 	}
-	getFileByPath(path: string, permissions: "read" | "write" | "create"): Promise<TFile> {
+
+	async getFileByPath(
+		path: string,
+		permissions: "read" | "write" | "create",
+		request: AuthenticatedRequest
+	): Promise<TFile> {
 		// Check if path is a directory (has files under it)
 		const isDirectory = Array.from(this.markdownFiles.keys()).some((existingPath) =>
 			existingPath.startsWith(path + "/")
@@ -93,33 +98,80 @@ export class MockObsidian implements ObsidianInterface {
 			}
 			throw new Error(`File not found: ${path}`);
 		}
+
+		if (!isFileAccessibleWithToken(this, file, request.token, request)) {
+			throw new Error(`Access denied: ${path}`);
+		}
+
+		if (permissions === "write" && !isFileModifiableWithToken(this, file, request.token, request)) {
+			throw new Error(`File is read-only: ${path}`);
+		}
+
 		return Promise.resolve(file);
 	}
-	cachedRead(file: TFile): Promise<string> {
+
+	cachedRead(file: TFile, request: AuthenticatedRequest): Promise<string> {
+		if (!isFileAccessibleWithToken(this, file, request.token, request)) {
+			throw new Error(`Access denied: ${file.path}`);
+		}
 		return Promise.resolve((file as MockFile).contents);
 	}
-	read(file: TFile): Promise<string> {
+
+	read(file: TFile, request: AuthenticatedRequest): Promise<string> {
+		if (!isFileAccessibleWithToken(this, file, request.token, request)) {
+			throw new Error(`Access denied: ${file.path}`);
+		}
 		return Promise.resolve((file as MockFile).contents);
 	}
-	create(path: string, data: string): Promise<TFile> {
+
+	async create(path: string, data: string, _request: AuthenticatedRequest): Promise<TFile> {
 		const file = new MockFile(path, data, false, this);
 		this.markdownFiles.set(path, file);
 		return Promise.resolve(file);
 	}
-	modify(file: TFile, data: string): Promise<void> {
+
+	async modify(file: TFile, data: string, request: AuthenticatedRequest): Promise<void> {
+		if (!isFileModifiableWithToken(this, file, request.token, request)) {
+			throw new Error(`File is read-only: ${file.path}`);
+		}
 		(file as MockFile).contents = data;
 		return Promise.resolve();
 	}
-	createFolder(path: string): Promise<void> {
+
+	async createFolder(path: string, _request: AuthenticatedRequest): Promise<void> {
 		const file = new MockFile(path, "", true, this);
 		this.markdownFiles.set(path, file);
 		return Promise.resolve();
 	}
 	getFileCache(file: TFile): CachedMetadata | null {
+		// Note: Permission checks should be done before calling this method
+		// to avoid circular dependencies. This method just returns the cache.
 		if (file instanceof MockFile) {
 			return file.getMetadata();
 		} else {
 			throw new Error(`Unexpected file type in getFileCache: ${file}`);
+		}
+	}
+
+	unsafeGetPromptFiles(settings: MCPPluginSettings): TFile[] {
+		return Array.from(this.markdownFiles.values())
+			.filter((file) => file.path.endsWith(".md"))
+			.filter((file) => file.path.startsWith(settings.promptsFolder));
+	}
+
+	getFilesForAnyToken(_settings: MCPPluginSettings): TFile[] {
+		// For mock, return all markdown files since we don't have real token checking
+		return Array.from(this.markdownFiles.values()).filter((file) => file.path.endsWith(".md"));
+	}
+
+	unsafeGetPromptFileCache(settings: MCPPluginSettings, file: TFile): CachedMetadata | null {
+		if (!file.path.startsWith(settings.promptsFolder)) {
+			return null;
+		}
+		if (file instanceof MockFile) {
+			return file.getMetadata();
+		} else {
+			throw new Error(`Unexpected file type in unsafeGetPromptFileCache: ${file}`);
 		}
 	}
 
@@ -145,9 +197,26 @@ export class MockObsidian implements ObsidianInterface {
 	}
 
 	clearFiles(): void {
-		for (const file of this.getMarkdownFiles()) {
+		const allFiles = Array.from(this.markdownFiles.values()).filter((file) =>
+			file.path.endsWith(".md")
+		);
+		for (const file of allFiles) {
 			this.deleteFile(file.path);
 		}
+	}
+
+	getQuickAdd(request: AuthenticatedRequest): QuickAddInterface | null {
+		if (!request.token.enabledTools.quickadd) {
+			return null;
+		}
+		return this.quickAdd;
+	}
+
+	getDataview(request: AuthenticatedRequest): DataviewInterface | null {
+		if (!request.token.enabledTools.dataview_query) {
+			return null;
+		}
+		return this.dataview;
 	}
 
 	quickAdd: QuickAddInterface | null;
@@ -228,4 +297,63 @@ export class MockFile implements TFile, TFolder {
 		public isFolder: boolean = false,
 		public obsidian: MockObsidian
 	) {}
+}
+
+/**
+ * Create a mock AuthenticatedRequest for testing
+ * @param obsidian The ObsidianInterface instance
+ * @param tokenOverride Optional token to override default mock token
+ * @returns A mock AuthenticatedRequest with permission methods
+ */
+export function createMockRequest(
+	obsidian: ObsidianInterface,
+	tokenOverride?: Partial<AuthToken>
+): AuthenticatedRequest {
+	const defaultToken: AuthToken = {
+		id: "test-token-id",
+		name: "Test Token",
+		token: "test-token-value",
+		createdAt: Date.now(),
+		enabledTools: {
+			file_access: true,
+			search: true,
+			update_content: true,
+			dataview_query: true,
+			quickadd: true,
+		},
+		directoryPermissions: {
+			rules: [],
+			rootPermission: true,
+		},
+		...tokenOverride,
+	};
+
+	const request: AuthenticatedRequest = {
+		[AUTHENTICATED_REQUEST_KEY]: true,
+		token: defaultToken,
+		trackAction: () => {
+			// Mock implementation - no-op for tests
+		},
+	} satisfies Partial<AuthenticatedRequest> as unknown as AuthenticatedRequest;
+
+	return request;
+}
+
+export function createMockExtra(
+	request: AuthenticatedRequest
+): RequestHandlerExtra<ServerRequest, ServerNotification> {
+	return {
+		signal: new AbortController().signal,
+		requestId: "test-request-id",
+		sendNotification: vi.fn(),
+		sendRequest: vi.fn(),
+		authInfo: {
+			token: request.token.token,
+			clientId: "test-client",
+			scopes: ["*"],
+			extra: {
+				request,
+			},
+		},
+	};
 }

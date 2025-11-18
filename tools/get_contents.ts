@@ -3,6 +3,9 @@ import { ToolRegistration } from "./types";
 import { resolveUriToPath } from "./daily_note_utils";
 import type { ObsidianInterface } from "../obsidian/obsidian_interface";
 import { VaultFileResource } from "./vault_file_resource";
+import { AuthenticatedRequest } from "server/auth";
+import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol";
+import type { ServerRequest, ServerNotification } from "@modelcontextprotocol/sdk/types";
 
 export const getContentsTool: ToolRegistration = {
 	name: "get_contents",
@@ -34,27 +37,46 @@ export const getContentsTool: ToolRegistration = {
 			.optional()
 			.describe("End offset for file contents, defaults to file length"),
 	},
-	handler:
-		(obsidian: ObsidianInterface) =>
-		async (args: Record<string, string | number>): Promise<string> => {
-			if (!args.uri) {
-				throw new Error("URI parameter is required");
+	handler: async (
+		obsidian: ObsidianInterface,
+		request: AuthenticatedRequest,
+		args: Record<string, string | number>
+	): Promise<string> => {
+		if (!args.uri) {
+			throw new Error("URI parameter is required");
+		}
+
+		const path = await resolveUriToPath(obsidian, args.uri as string);
+		const encodedPath = encodeURI(path);
+		const url = new URL(`file:///${encodedPath}`);
+
+		["depth", "startOffset", "endOffset"].forEach((key) => {
+			if (args[key] !== undefined) {
+				url.searchParams.set(key, String(args[key]));
 			}
+		});
 
-			const path = await resolveUriToPath(obsidian, args.uri as string);
-			const encodedPath = encodeURI(path);
-			const url = new URL(`file:///${encodedPath}`);
-
-			["depth", "startOffset", "endOffset"].forEach((key) => {
-				if (args[key] !== undefined) {
-					url.searchParams.set(key, String(args[key]));
-				}
-			});
-
-			const result = await new VaultFileResource(obsidian).handler(url);
-			if (typeof result.contents?.[0]?.text !== "string") {
-				throw new Error(`No text found for URI: ${url}`);
-			}
-			return result.contents[0].text;
-		},
+		// Wrap request in extra format for resource handler
+		const extra: RequestHandlerExtra<ServerRequest, ServerNotification> = {
+			signal: new AbortController().signal,
+			requestId: "tool-request",
+			sendNotification: async () => {
+				// No-op for tool context
+			},
+			sendRequest: async () => ({}) as never,
+			authInfo: {
+				token: request.token.token,
+				clientId: "tool-client",
+				scopes: ["*"],
+				extra: {
+					request,
+				},
+			},
+		};
+		const result = await new VaultFileResource(obsidian).handler(url, extra);
+		if (typeof result.contents?.[0]?.text !== "string") {
+			throw new Error(`No text found for URI: ${url}`);
+		}
+		return result.contents[0].text;
+	},
 };

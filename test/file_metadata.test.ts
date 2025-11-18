@@ -4,7 +4,7 @@ import {
 	getFileMetadataTool,
 	FileMetadataResource,
 } from "../tools/file_metadata";
-import { MockObsidian } from "./mock_obsidian";
+import { MockObsidian, createMockRequest, createMockExtra } from "./mock_obsidian";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 describe("file_metadata tool annotations", () => {
@@ -21,6 +21,7 @@ describe("file_metadata tool annotations", () => {
 
 describe("File metadata functionality", () => {
 	let obsidian: MockObsidian;
+	let request: ReturnType<typeof createMockRequest>;
 
 	beforeEach(() => {
 		// Setup fake timers and set a fixed date
@@ -29,6 +30,7 @@ describe("File metadata functionality", () => {
 
 		vi.clearAllMocks();
 		obsidian = new MockObsidian();
+		request = createMockRequest(obsidian);
 
 		// Add test files
 		obsidian.setFiles({
@@ -47,7 +49,7 @@ describe("File metadata functionality", () => {
 
 	describe("generateFileMetadata function", () => {
 		it("should return basic metadata for a simple file", async () => {
-			const result = await generateFileMetadata(obsidian, "simple.md");
+			const result = await generateFileMetadata(obsidian, "simple.md", request);
 
 			expect(result).toMatchInlineSnapshot(`
 				"# File Metadata: simple.md
@@ -64,7 +66,7 @@ describe("File metadata functionality", () => {
 		});
 
 		it("should include frontmatter and tags in metadata", async () => {
-			const result = await generateFileMetadata(obsidian, "with-frontmatter.md");
+			const result = await generateFileMetadata(obsidian, "with-frontmatter.md", request);
 
 			expect(result).toMatchInlineSnapshot(`
 				"# File Metadata: with-frontmatter.md
@@ -92,7 +94,7 @@ describe("File metadata functionality", () => {
 		});
 
 		it("should include headings with proper formatting", async () => {
-			const result = await generateFileMetadata(obsidian, "with-headings.md");
+			const result = await generateFileMetadata(obsidian, "with-headings.md", request);
 
 			expect(result).toMatchInlineSnapshot(`
 				"# File Metadata: with-headings.md
@@ -111,7 +113,7 @@ describe("File metadata functionality", () => {
 		});
 
 		it("should throw an error for a non-existent file", async () => {
-			await expect(generateFileMetadata(obsidian, "nonexistent.md")).rejects.toThrow(
+			await expect(generateFileMetadata(obsidian, "nonexistent.md", request)).rejects.toThrow(
 				"File not found: nonexistent.md"
 			);
 		});
@@ -127,8 +129,9 @@ describe("File metadata functionality", () => {
 		});
 
 		it("should return metadata for an existing file", async () => {
-			const handler = getFileMetadataTool.handler(obsidian);
-			const result = await handler({ path: "file:///with-frontmatter.md" });
+			const result = await getFileMetadataTool.handler(obsidian, request, {
+				path: "file:///with-frontmatter.md",
+			});
 
 			expect(result).toMatchInlineSnapshot(`
 				"# File Metadata: with-frontmatter.md
@@ -156,19 +159,19 @@ describe("File metadata functionality", () => {
 		});
 
 		it("should throw an error for a non-existent file", async () => {
-			const handler = getFileMetadataTool.handler(obsidian);
-
-			await expect(handler({ path: "file:///nonexistent.md" })).rejects.toThrow(
-				"File not found: nonexistent.md"
-			);
+			await expect(
+				getFileMetadataTool.handler(obsidian, request, { path: "file:///nonexistent.md" })
+			).rejects.toThrow("File not found: nonexistent.md");
 		});
 	});
 
 	describe("FileMetadataResource", () => {
 		let resource: FileMetadataResource;
+		let resourceRequest: ReturnType<typeof createMockRequest>;
 
 		beforeEach(() => {
 			resource = new FileMetadataResource(obsidian);
+			resourceRequest = createMockRequest(obsidian);
 		});
 
 		describe("constructor", () => {
@@ -197,7 +200,7 @@ describe("File metadata functionality", () => {
 
 		describe("list", () => {
 			it("should return a list of all markdown files", () => {
-				const result = resource.list();
+				const result = resource.list(resourceRequest);
 
 				expect(result.resources).toHaveLength(4); // Based on our test setup
 				expect(result.resources[0]).toHaveProperty("uri");
@@ -213,7 +216,7 @@ describe("File metadata functionality", () => {
 
 		describe("completePath", () => {
 			it("should filter paths starting with the given prefix", () => {
-				const result = resource.completePath("with-");
+				const result = resource.completePath("with-", resourceRequest);
 
 				expect(result).toContain("with-frontmatter.md");
 				expect(result).toContain("with-tags.md");
@@ -224,9 +227,14 @@ describe("File metadata functionality", () => {
 
 		describe("handler", () => {
 			it("should return metadata for a valid file", async () => {
-				const result = await resource.handler(new URL("metadata:///with-frontmatter.md"), {
-					path: "with-frontmatter.md",
-				});
+				const extra = createMockExtra(resourceRequest);
+				const result = await resource.handler(
+					new URL("metadata:///with-frontmatter.md"),
+					{
+						path: "with-frontmatter.md",
+					},
+					extra
+				);
 
 				expect(result.contents).toHaveLength(1);
 				expect(result.contents[0].uri).toBe("metadata:///with-frontmatter.md");
@@ -258,16 +266,22 @@ describe("File metadata functionality", () => {
 			});
 
 			it("should throw an error for an invalid path format", async () => {
+				const extra = createMockExtra(resourceRequest);
 				await expect(
-					resource.handler(new URL("metadata:///path"), {
-						path: ["invalid", "array"] as unknown as string,
-					})
+					resource.handler(
+						new URL("metadata:///path"),
+						{
+							path: ["invalid", "array"] as unknown as string,
+						},
+						extra
+					)
 				).rejects.toThrow("Invalid path:");
 			});
 
 			it("should throw an error for a non-existent file", async () => {
+				const extra = createMockExtra(resourceRequest);
 				await expect(
-					resource.handler(new URL("metadata:///nonexistent.md"), { path: "nonexistent.md" })
+					resource.handler(new URL("metadata:///nonexistent.md"), { path: "nonexistent.md" }, extra)
 				).rejects.toThrow("File not found: nonexistent.md");
 			});
 		});

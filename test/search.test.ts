@@ -1,13 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { searchTool } from "../tools/search";
-import { MockObsidian } from "./mock_obsidian";
+import { MockObsidian, createMockRequest } from "./mock_obsidian";
 
 describe("search tool", () => {
 	let obsidian: MockObsidian;
+	let request: ReturnType<typeof createMockRequest>;
 
 	beforeEach(() => {
 		vi.clearAllMocks();
 		obsidian = new MockObsidian();
+		request = createMockRequest(obsidian);
 
 		obsidian.setFiles({
 			"file1.md": "This is the first test file with apple content",
@@ -19,8 +21,7 @@ describe("search tool", () => {
 	});
 
 	it("should return matching markdown files for a query", async () => {
-		const handler = searchTool.handler(obsidian);
-		const result = await handler({
+		const result = await searchTool.handler(obsidian, request, {
 			query: "apple",
 			limit: 100,
 			fuzzy: false,
@@ -35,9 +36,8 @@ describe("search tool", () => {
 	});
 
 	it("should throw an error when no results are found", async () => {
-		const handler = searchTool.handler(obsidian);
 		await expect(
-			handler({
+			searchTool.handler(obsidian, request, {
 				query: "nonexistent",
 				limit: 100,
 				fuzzy: false,
@@ -46,8 +46,7 @@ describe("search tool", () => {
 	});
 
 	it("should be case-insensitive", async () => {
-		const handler = searchTool.handler(obsidian);
-		const result = await handler({
+		const result = await searchTool.handler(obsidian, request, {
 			query: "APPLE",
 			limit: 100,
 			fuzzy: false,
@@ -60,8 +59,7 @@ describe("search tool", () => {
 	});
 
 	it("should respect the limit parameter", async () => {
-		const handler = searchTool.handler(obsidian);
-		const result = await handler({
+		const result = await searchTool.handler(obsidian, request, {
 			query: "apple",
 			limit: 1,
 			fuzzy: false,
@@ -76,8 +74,7 @@ describe("search tool", () => {
 	});
 
 	it("should filter by folder when specified", async () => {
-		const handler = searchTool.handler(obsidian);
-		const result = await handler({
+		const result = await searchTool.handler(obsidian, request, {
 			query: "apple",
 			limit: 100,
 			fuzzy: false,
@@ -92,17 +89,15 @@ describe("search tool", () => {
 
 	it("should use appropriate search function based on fuzzy flag", async () => {
 		// Instead of trying to spy on the mocked functions, let's test behavior
-		const handler = searchTool.handler(obsidian);
-
 		// Run with fuzzy=false (simple search)
-		const result1 = await handler({
+		const result1 = await searchTool.handler(obsidian, request, {
 			query: "apple",
 			limit: 100,
 			fuzzy: false,
 		});
 
 		// Run with fuzzy=true
-		const result2 = await handler({
+		const result2 = await searchTool.handler(obsidian, request, {
 			query: "apple",
 			limit: 100,
 			fuzzy: true,
@@ -114,8 +109,7 @@ describe("search tool", () => {
 	});
 
 	it("should format match results with context", async () => {
-		const handler = searchTool.handler(obsidian);
-		const result = await handler({
+		const result = await searchTool.handler(obsidian, request, {
 			query: "apple",
 			limit: 100,
 			fuzzy: false,

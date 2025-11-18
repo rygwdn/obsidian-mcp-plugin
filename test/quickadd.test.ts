@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { quickAddListTool, quickAddExecuteTool } from "../tools/quickadd";
-import { MockObsidian } from "./mock_obsidian";
+import { MockObsidian, createMockRequest } from "./mock_obsidian";
 import type { QuickAddChoice, QuickAddInterface } from "../obsidian/obsidian_interface";
 
 describe("quickadd tool annotations", () => {
@@ -71,10 +71,12 @@ class MockQuickAdd implements QuickAddInterface {
 describe("quickadd tools", () => {
 	let obsidian: MockObsidian;
 	let quickAddPlugin: MockQuickAdd;
+	let request: ReturnType<typeof createMockRequest>;
 
 	beforeEach(() => {
 		vi.clearAllMocks();
 		obsidian = new MockObsidian();
+		request = createMockRequest(obsidian);
 
 		quickAddPlugin = new MockQuickAdd();
 		obsidian.quickAdd = quickAddPlugin;
@@ -117,8 +119,7 @@ describe("quickadd tools", () => {
 
 	describe("quickAddListTool", () => {
 		it("should list all available QuickAdd choices with variables", async () => {
-			const handler = quickAddListTool.handler(obsidian);
-			const result = await handler({});
+			const result = await quickAddListTool.handler(obsidian, request, {});
 
 			// Use inline snapshot for the entire output
 			expect(result).toMatchInlineSnapshot(`
@@ -134,30 +135,27 @@ describe("quickadd tools", () => {
 		it("should return a message when no choices are found", async () => {
 			quickAddPlugin.setChoices([]);
 
-			const handler = quickAddListTool.handler(obsidian);
-			const result = await handler({});
+			const result = await quickAddListTool.handler(obsidian, request, {});
 
 			expect(result).toBe("No QuickAdd choices found");
 		});
 
 		it("should throw an error if QuickAdd plugin is not enabled", async () => {
 			obsidian.quickAdd = null;
-			obsidian.settings.enabledTools.quickadd = false;
 
-			const handler = quickAddListTool.handler(obsidian);
-
-			await expect(handler({})).rejects.toThrow("QuickAdd plugin is not enabled");
+			await expect(quickAddListTool.handler(obsidian, request, {})).rejects.toThrow(
+				"QuickAdd plugin is not enabled"
+			);
 		});
 
 		it("should throw an error if the API is not available", async () => {
 			// This is harder to test with the new interface, but we can disable the plugin
 			// which should have the same effect
 			obsidian.quickAdd = null;
-			obsidian.settings.enabledTools.quickadd = false;
 
-			const handler = quickAddListTool.handler(obsidian);
-
-			await expect(handler({})).rejects.toThrow("QuickAdd plugin is not enabled");
+			await expect(quickAddListTool.handler(obsidian, request, {})).rejects.toThrow(
+				"QuickAdd plugin is not enabled"
+			);
 		});
 	});
 
@@ -166,8 +164,7 @@ describe("quickadd tools", () => {
 			it("should execute a choice by ID", async () => {
 				const executeChoiceSpy = vi.spyOn(quickAddPlugin, "executeChoice");
 
-				const handler = quickAddExecuteTool.handler(obsidian);
-				const result = await handler({
+				const result = await quickAddExecuteTool.handler(obsidian, request, {
 					choice: "choice1",
 				});
 
@@ -178,8 +175,7 @@ describe("quickadd tools", () => {
 			it("should execute a choice by name", async () => {
 				const executeChoiceSpy = vi.spyOn(quickAddPlugin, "executeChoice");
 
-				const handler = quickAddExecuteTool.handler(obsidian);
-				const result = await handler({
+				const result = await quickAddExecuteTool.handler(obsidian, request, {
 					choice: "Test Choice 2",
 				});
 
@@ -190,13 +186,12 @@ describe("quickadd tools", () => {
 			it("should pass variables to the choice execution", async () => {
 				const executeChoiceSpy = vi.spyOn(quickAddPlugin, "executeChoice");
 
-				const handler = quickAddExecuteTool.handler(obsidian);
 				const variables = {
 					title: "Test Title",
 					content: "Test Content",
 				};
 
-				const result = await handler({
+				const result = await quickAddExecuteTool.handler(obsidian, request, {
 					choice: "choice1",
 					variables,
 				});
@@ -206,10 +201,8 @@ describe("quickadd tools", () => {
 			});
 
 			it("should throw an error if the choice is not found", async () => {
-				const handler = quickAddExecuteTool.handler(obsidian);
-
 				await expect(
-					handler({
+					quickAddExecuteTool.handler(obsidian, request, {
 						choice: "nonexistent",
 					})
 				).rejects.toThrow(/QuickAdd choice not found: nonexistent/);
@@ -220,10 +213,8 @@ describe("quickadd tools", () => {
 				const executeChoiceSpy = vi.spyOn(quickAddPlugin, "executeChoice");
 				executeChoiceSpy.mockRejectedValueOnce(new Error(errorMessage));
 
-				const handler = quickAddExecuteTool.handler(obsidian);
-
 				await expect(
-					handler({
+					quickAddExecuteTool.handler(obsidian, request, {
 						choice: "choice1",
 					})
 				).rejects.toThrow(`Error executing QuickAdd choice: ${errorMessage}`);
@@ -234,11 +225,10 @@ describe("quickadd tools", () => {
 			it("should format a template with variables", async () => {
 				const formatTemplateSpy = vi.spyOn(quickAddPlugin, "formatTemplate");
 
-				const handler = quickAddExecuteTool.handler(obsidian);
 				const template = "Hello {{name}}!";
 				const variables = { name: "World" };
 
-				const result = await handler({
+				const result = await quickAddExecuteTool.handler(obsidian, request, {
 					template,
 					variables,
 				});
@@ -250,7 +240,6 @@ describe("quickadd tools", () => {
 			it("should format a complex template with multiple variables", async () => {
 				const formatTemplateSpy = vi.spyOn(quickAddPlugin, "formatTemplate");
 
-				const handler = quickAddExecuteTool.handler(obsidian);
 				const template = "# {{title}}\n\nCreated by: {{author}}\nDate: {{date}}";
 				const variables = {
 					title: "My Document",
@@ -258,7 +247,7 @@ describe("quickadd tools", () => {
 					date: "2025-05-10",
 				};
 
-				const result = await handler({
+				const result = await quickAddExecuteTool.handler(obsidian, request, {
 					template,
 					variables,
 				});
@@ -270,14 +259,13 @@ describe("quickadd tools", () => {
 			it("should support variables of different types", async () => {
 				const formatTemplateSpy = vi.spyOn(quickAddPlugin, "formatTemplate");
 
-				const handler = quickAddExecuteTool.handler(obsidian);
 				const template = "Count: {{count}}\nActive: {{active}}";
 				const variables = {
 					count: 42,
 					active: true,
 				};
 
-				const result = await handler({
+				const result = await quickAddExecuteTool.handler(obsidian, request, {
 					template,
 					variables,
 				});
@@ -291,10 +279,8 @@ describe("quickadd tools", () => {
 				const formatTemplateSpy = vi.spyOn(quickAddPlugin, "formatTemplate");
 				formatTemplateSpy.mockRejectedValueOnce(new Error(errorMessage));
 
-				const handler = quickAddExecuteTool.handler(obsidian);
-
 				await expect(
-					handler({
+					quickAddExecuteTool.handler(obsidian, request, {
 						template: "Hello {{name}}!",
 					})
 				).rejects.toThrow(`Error formatting template: ${errorMessage}`);
@@ -303,18 +289,14 @@ describe("quickadd tools", () => {
 
 		describe("error handling", () => {
 			it("should throw an error if neither choice nor template is provided", async () => {
-				const handler = quickAddExecuteTool.handler(obsidian);
-
-				await expect(handler({})).rejects.toThrow(
+				await expect(quickAddExecuteTool.handler(obsidian, request, {})).rejects.toThrow(
 					"You must provide exactly one of 'choice' or 'template' parameters"
 				);
 			});
 
 			it("should throw an error if both choice and template are provided", async () => {
-				const handler = quickAddExecuteTool.handler(obsidian);
-
 				await expect(
-					handler({
+					quickAddExecuteTool.handler(obsidian, request, {
 						choice: "choice1",
 						template: "Hello {{name}}!",
 					})
@@ -323,12 +305,9 @@ describe("quickadd tools", () => {
 
 			it("should throw an error if QuickAdd plugin is not enabled", async () => {
 				obsidian.quickAdd = null;
-				obsidian.settings.enabledTools.quickadd = false;
-
-				const handler = quickAddExecuteTool.handler(obsidian);
 
 				await expect(
-					handler({
+					quickAddExecuteTool.handler(obsidian, request, {
 						choice: "choice1",
 					})
 				).rejects.toThrow("QuickAdd plugin is not enabled");
@@ -336,12 +315,9 @@ describe("quickadd tools", () => {
 
 			it("should throw an error if the API is not available", async () => {
 				obsidian.quickAdd = null;
-				obsidian.settings.enabledTools.quickadd = false;
-
-				const handler = quickAddExecuteTool.handler(obsidian);
 
 				await expect(
-					handler({
+					quickAddExecuteTool.handler(obsidian, request, {
 						choice: "choice1",
 					})
 				).rejects.toThrow("QuickAdd plugin is not enabled");

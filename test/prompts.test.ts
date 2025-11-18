@@ -1,20 +1,20 @@
 import { describe, it, expect, vi, beforeEach, Mock } from "vitest";
-import { MockObsidian } from "./mock_obsidian";
+import { MockObsidian, createMockRequest, createMockExtra } from "./mock_obsidian";
 import { registerPrompts, VaultPrompt } from "../tools/prompts";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol";
-import { ServerRequest, ServerNotification } from "@modelcontextprotocol/sdk/types.js";
 
 describe("prompt tools", () => {
 	let obsidian: MockObsidian;
 	let mockServer: McpServer;
 	let updateFn: Mock;
+	let request: ReturnType<typeof createMockRequest>;
 
 	beforeEach(() => {
 		vi.clearAllMocks();
 		obsidian = new MockObsidian({
 			promptsFolder: "prompts",
 		});
+		request = createMockRequest(obsidian);
 		updateFn = vi.fn();
 		mockServer = {
 			prompt: vi.fn(() => ({
@@ -50,29 +50,29 @@ describe("prompt tools", () => {
 
 	describe("VaultPrompt", () => {
 		it("should properly initialize with correct name", async () => {
-			const file = await obsidian.getFileByPath("prompts/test-prompt.md", "read");
+			const file = await obsidian.getFileByPath("prompts/test-prompt.md", "read", request);
 			const prompt = new VaultPrompt(file, obsidian);
 
 			expect(prompt.name).toBe("test-prompt");
 		});
 
 		it("should correctly get description from frontmatter", async () => {
-			const file = await obsidian.getFileByPath("prompts/test-prompt.md", "read");
+			const file = await obsidian.getFileByPath("prompts/test-prompt.md", "read", request);
 			const prompt = new VaultPrompt(file, obsidian);
 
 			expect(prompt.description).toBe("Test Prompt Description");
 		});
 
 		it("should return empty string for missing description", async () => {
-			const file = await obsidian.getFileByPath("prompts/test-prompt.md", "read");
-			vi.spyOn(obsidian, "getFileCache").mockReturnValue({ frontmatter: {} });
+			const file = await obsidian.getFileByPath("prompts/test-prompt.md", "read", request);
+			vi.spyOn(obsidian, "unsafeGetPromptFileCache").mockReturnValue({ frontmatter: {} });
 
 			const prompt = new VaultPrompt(file, obsidian);
 			expect(prompt.description).toBe("");
 		});
 
 		it("should correctly parse args from frontmatter", async () => {
-			const file = await obsidian.getFileByPath("prompts/test-prompt.md", "read");
+			const file = await obsidian.getFileByPath("prompts/test-prompt.md", "read", request);
 			const prompt = new VaultPrompt(file, obsidian);
 
 			const args = prompt.args;
@@ -81,7 +81,7 @@ describe("prompt tools", () => {
 		});
 
 		it("should handle string JSON args from frontmatter", async () => {
-			const file = await obsidian.getFileByPath("prompts/string-args-prompt.md", "read");
+			const file = await obsidian.getFileByPath("prompts/string-args-prompt.md", "read", request);
 			const prompt = new VaultPrompt(file, obsidian);
 
 			const args = prompt.args;
@@ -90,7 +90,7 @@ describe("prompt tools", () => {
 		});
 
 		it("should handle empty args", async () => {
-			const file = await obsidian.getFileByPath("prompts/no-args-prompt.md", "read");
+			const file = await obsidian.getFileByPath("prompts/no-args-prompt.md", "read", request);
 			const prompt = new VaultPrompt(file, obsidian);
 
 			const args = prompt.args;
@@ -99,24 +99,18 @@ describe("prompt tools", () => {
 
 		it("should replace placeholder values in handler", async () => {
 			const prompt = new VaultPrompt(
-				await obsidian.getFileByPath("prompts/test-prompt.md", "read"),
+				await obsidian.getFileByPath("prompts/test-prompt.md", "read", request),
 				obsidian
 			);
 
-			const abortController = new AbortController();
-			const extra: RequestHandlerExtra<ServerRequest, ServerNotification> = {
-				signal: abortController.signal,
-				requestId: "test-request-id",
-				sendNotification: vi.fn(),
-				sendRequest: vi.fn(),
-			};
+			const extra = createMockExtra(request);
 			const result = await prompt.handler({ param1: "test", param2: "value" }, extra);
 
 			expect(result.messages[0].content.text).toBe("This is a test prompt with a value parameter.");
 		});
 
 		it("should register with MCP server", async () => {
-			const file = await obsidian.getFileByPath("prompts/test-prompt.md", "read");
+			const file = await obsidian.getFileByPath("prompts/test-prompt.md", "read", request);
 			const prompt = new VaultPrompt(file, obsidian);
 
 			await prompt.register(mockServer);
@@ -131,7 +125,7 @@ describe("prompt tools", () => {
 		});
 
 		it("should update registration when called", async () => {
-			const file = await obsidian.getFileByPath("prompts/test-prompt.md", "read");
+			const file = await obsidian.getFileByPath("prompts/test-prompt.md", "read", request);
 			const prompt = new VaultPrompt(file, obsidian);
 
 			await prompt.register(mockServer);

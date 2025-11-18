@@ -2,13 +2,75 @@ import { Request, Response, NextFunction } from "express";
 import { MCPPluginSettings, AuthToken } from "../settings/types";
 import { logger } from "../tools/logging";
 import crypto from "crypto";
+import type { TokenTracker } from "./connection_tracker";
+
+export const AUTHENTICATED_REQUEST_KEY = "__authenticatedRequest__";
 
 export interface AuthenticatedRequest extends Request {
-	token?: AuthToken;
+	[AUTHENTICATED_REQUEST_KEY]: true;
+	token: AuthToken;
+	trackAction(action: {
+		type: "tool" | "resource" | "prompt" | "error" | "jsonrpc";
+		name: string;
+		duration?: number;
+		success: boolean;
+		error?: string;
+		details?: Record<string, unknown>;
+	}): void;
+}
+
+function isAuthenticatedRequest(value: unknown): value is AuthenticatedRequest {
+	return (
+		typeof value === "object" &&
+		value !== null &&
+		AUTHENTICATED_REQUEST_KEY in value &&
+		(value as AuthenticatedRequest)[AUTHENTICATED_REQUEST_KEY] === true
+	);
+}
+
+export function getRequest(
+	value:
+		| { authInfo?: { extra?: { request?: AuthenticatedRequest } } }
+		| AuthenticatedRequest
+		| undefined
+): AuthenticatedRequest {
+	if (isAuthenticatedRequest(value)) {
+		return value;
+	}
+
+	if (isAuthenticatedRequest(value?.authInfo?.extra?.request)) {
+		return value.authInfo.extra.request;
+	}
+
+	throw new Error("Authenticated request not found in context");
+}
+
+function createTrackAction(
+	request: AuthenticatedRequest,
+	tokenTracker: TokenTracker | null
+): AuthenticatedRequest["trackAction"] {
+	return (action: {
+		type: "tool" | "resource" | "prompt" | "error" | "jsonrpc";
+		name: string;
+		duration?: number;
+		success: boolean;
+		error?: string;
+		details?: Record<string, unknown>;
+	}): void => {
+		if (tokenTracker) {
+			tokenTracker.trackActionFromRequest(request, action);
+		}
+	};
 }
 
 export class AuthManager {
+	private tokenTracker: TokenTracker | null = null;
+
 	constructor(protected settings: MCPPluginSettings) {}
+
+	public setTokenTracker(tokenTracker: TokenTracker): void {
+		this.tokenTracker = tokenTracker;
+	}
 
 	public updateSettings(settings: MCPPluginSettings): void {
 		this.settings = settings;
@@ -16,6 +78,7 @@ export class AuthManager {
 
 	/**
 	 * Express middleware to validate Bearer token authentication
+	 * Sets up the AuthenticatedRequest with token, obsidian, and permission methods
 	 */
 	public middleware() {
 		return (req: Request, res: Response, next: NextFunction) => {
@@ -55,7 +118,9 @@ export class AuthManager {
 			token.lastUsed = Date.now();
 
 			const authReq = req as AuthenticatedRequest;
+			authReq[AUTHENTICATED_REQUEST_KEY] = true;
 			authReq.token = token;
+			authReq.trackAction = createTrackAction(authReq, this.tokenTracker);
 
 			logger.log(`[Auth] Authenticated: ${token.name}`);
 			next();

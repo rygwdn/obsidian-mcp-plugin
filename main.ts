@@ -30,13 +30,8 @@ export default class ObsidianMCPPlugin extends Plugin {
 
 	async registerRoutes() {
 		this.obsidianInterface = new ObsidianImpl(this.app, this);
-		this.mcpServer = new ObsidianMcpServer(
-			this.obsidianInterface,
-			this.manifest,
-			this.tokenTracker
-		);
-
 		const serverManager = this.getServerManager();
+		this.mcpServer = new ObsidianMcpServer(this.obsidianInterface, this.manifest);
 
 		serverManager.addRoute("/mcp").all(async (request, response) => {
 			try {

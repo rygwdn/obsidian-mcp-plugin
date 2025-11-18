@@ -2,16 +2,20 @@ import { z } from "zod";
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { ReadResourceResult } from "@modelcontextprotocol/sdk/types";
 import { Variables } from "@modelcontextprotocol/sdk/shared/uriTemplate";
+import { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol";
+import { ServerNotification, ServerRequest } from "@modelcontextprotocol/sdk/types";
 import { ToolRegistration } from "./types";
 import { logger } from "./logging";
 import type { ObsidianInterface } from "../obsidian/obsidian_interface";
 import { resolveUriToPath } from "./daily_note_utils";
+import { AuthenticatedRequest, getRequest } from "server/auth";
 
 export async function generateFileMetadata(
 	obsidian: ObsidianInterface,
-	filePath: string
+	filePath: string,
+	request: AuthenticatedRequest
 ): Promise<string> {
-	const file = await obsidian.getFileByPath(filePath, "read");
+	const file = await obsidian.getFileByPath(filePath, "read", request);
 
 	const fileCache = obsidian.getFileCache(file);
 	if (!fileCache) {
@@ -69,9 +73,13 @@ export const getFileMetadataTool: ToolRegistration = {
 				"URI to the file to get metadata for (e.g., file:///path/to/file.md or daily:///today)"
 			),
 	},
-	handler: (obsidian: ObsidianInterface) => async (args: Record<string, unknown>) => {
+	handler: async (
+		obsidian: ObsidianInterface,
+		request: AuthenticatedRequest,
+		args: Record<string, unknown>
+	) => {
 		const vaultPath = await resolveUriToPath(obsidian, args.path as string);
-		return await generateFileMetadata(obsidian, vaultPath);
+		return await generateFileMetadata(obsidian, vaultPath, request);
 	},
 };
 
@@ -83,28 +91,39 @@ export class FileMetadataResource {
 			"metadata",
 			this.template,
 			{ description: "Provides access to file metadata in the Obsidian vault" },
-			logger.withResourceLogging("metadata", async (uri: URL, variables: Variables) => {
-				return await this.handler(uri, variables);
-			})
+			logger.withResourceLogging(
+				"metadata",
+				async (
+					uri: URL,
+					variables: Variables,
+					extra: RequestHandlerExtra<ServerRequest, ServerNotification>
+				) => {
+					return await this.handler(uri, variables, extra);
+				}
+			)
 		);
 	}
 
 	public get template() {
 		const uriTemplate = `metadata:///{+path}`;
 		return new ResourceTemplate(uriTemplate, {
-			list: async () => {
-				return this.list();
+			list: async (extra: RequestHandlerExtra<ServerRequest, ServerNotification>) => {
+				const request = getRequest(extra);
+				return this.list(request);
 			},
 			complete: {
-				["+path"]: async (value) => {
-					return this.completePath(value);
+				["+path"]: async (value: string) => {
+					// Complete callback doesn't receive extra/request context
+					// Use method to get files accessible by ANY token
+					const files = this.obsidian.getFilesForAnyToken(this.obsidian.settings);
+					return files.map((file) => file.path).filter((path) => path.startsWith(value));
 				},
 			},
 		});
 	}
 
-	public list() {
-		const files = this.obsidian.getMarkdownFiles();
+	public list(request: AuthenticatedRequest) {
+		const files = this.obsidian.getMarkdownFiles(request);
 		return {
 			resources: files.map((file) => ({
 				name: file.path,
@@ -114,22 +133,29 @@ export class FileMetadataResource {
 		};
 	}
 
-	public completePath(value: string) {
-		const files = this.obsidian.getMarkdownFiles();
+	public completePath(value: string, request: AuthenticatedRequest) {
+		const files = this.obsidian.getMarkdownFiles(request);
+		logger.log(`completePath '${value}' found ${files.length} candidate files`);
 		return files.map((file) => file.path).filter((path) => path.startsWith(value));
 	}
 
-	public async handler(uri: URL, variables: Variables): Promise<ReadResourceResult> {
+	public async handler(
+		uri: URL,
+		variables: Variables,
+		extra?: RequestHandlerExtra<ServerRequest, ServerNotification>
+	): Promise<ReadResourceResult> {
 		const filePath = variables.path;
 		if (Array.isArray(filePath)) {
 			throw new Error("Invalid path: " + filePath);
 		}
 
+		const request = getRequest(extra);
+
 		return {
 			contents: [
 				{
 					uri: uri.toString(),
-					text: await generateFileMetadata(this.obsidian, filePath),
+					text: await generateFileMetadata(this.obsidian, filePath, request),
 					mimeType: "text/markdown",
 				},
 			],

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { updateContentTool } from "../tools/update_content";
-import { MockObsidian } from "./mock_obsidian";
+import { MockObsidian, createMockRequest } from "./mock_obsidian";
 import moment from "moment";
 
 const MOCK_DATE = new Date("2023-05-09T12:00:00.000Z");
@@ -19,6 +19,7 @@ describe("update_content tool annotations", () => {
 
 describe("update_content tool", () => {
 	let obsidian: MockObsidian;
+	let request: ReturnType<typeof createMockRequest>;
 
 	beforeEach(() => {
 		// Setup fake timers and set a fixed date
@@ -27,6 +28,7 @@ describe("update_content tool", () => {
 
 		vi.clearAllMocks();
 		obsidian = new MockObsidian();
+		request = createMockRequest(obsidian);
 
 		vi.stubGlobal("window", {
 			moment: (...args: unknown[]) => {
@@ -63,8 +65,7 @@ describe("update_content tool", () => {
 	describe("regular file handling", () => {
 		describe("append mode", () => {
 			it("should append content to an existing file", async () => {
-				const handler = updateContentTool.handler(obsidian);
-				const result = await handler({
+				const result = await updateContentTool.handler(obsidian, request, {
 					uri: "file:///test.md",
 					mode: "append",
 					content: "Some additional content",
@@ -80,8 +81,7 @@ describe("update_content tool", () => {
 					"test.md": "Content without newline",
 				});
 
-				const handler = updateContentTool.handler(obsidian);
-				await handler({
+				await updateContentTool.handler(obsidian, request, {
 					uri: "file:///test.md",
 					mode: "append",
 					content: "Appended content",
@@ -95,9 +95,8 @@ describe("update_content tool", () => {
 			});
 
 			it("should throw an error if the file doesn't exist and create_if_missing is false", async () => {
-				const handler = updateContentTool.handler(obsidian);
 				await expect(
-					handler({
+					updateContentTool.handler(obsidian, request, {
 						uri: "file:///nonexistent.md",
 						mode: "append",
 						content: "Some content",
@@ -106,8 +105,7 @@ describe("update_content tool", () => {
 			});
 
 			it("should create a new file if it doesn't exist and create_if_missing is true", async () => {
-				const handler = updateContentTool.handler(obsidian);
-				const result = await handler({
+				const result = await updateContentTool.handler(obsidian, request, {
 					uri: "file:///new_file.md",
 					mode: "append",
 					content: "New file content",
@@ -126,8 +124,7 @@ describe("update_content tool", () => {
 
 		describe("replace mode", () => {
 			it("should replace content in a file", async () => {
-				const handler = updateContentTool.handler(obsidian);
-				const result = await handler({
+				const result = await updateContentTool.handler(obsidian, request, {
 					uri: "file:///replace.md",
 					mode: "replace",
 					find: "specific content",
@@ -140,10 +137,8 @@ describe("update_content tool", () => {
 			});
 
 			it("should throw an error when the find parameter is not provided", async () => {
-				const handler = updateContentTool.handler(obsidian);
-
 				await expect(
-					handler({
+					updateContentTool.handler(obsidian, request, {
 						uri: "file:///replace.md",
 						mode: "replace",
 						content: "new content",
@@ -152,10 +147,8 @@ describe("update_content tool", () => {
 			});
 
 			it("should throw an error when content to find is not in the file", async () => {
-				const handler = updateContentTool.handler(obsidian);
-
 				await expect(
-					handler({
+					updateContentTool.handler(obsidian, request, {
 						uri: "file:///replace.md",
 						mode: "replace",
 						find: "nonexistent content",
@@ -165,10 +158,8 @@ describe("update_content tool", () => {
 			});
 
 			it("should throw an error when there are multiple matches", async () => {
-				const handler = updateContentTool.handler(obsidian);
-
 				await expect(
-					handler({
+					updateContentTool.handler(obsidian, request, {
 						uri: "file:///multiple.md",
 						mode: "replace",
 						find: "multiple matches",
@@ -178,8 +169,7 @@ describe("update_content tool", () => {
 			});
 
 			it("should work with empty replacement string", async () => {
-				const handler = updateContentTool.handler(obsidian);
-				const result = await handler({
+				const result = await updateContentTool.handler(obsidian, request, {
 					uri: "file:///replace.md",
 					mode: "replace",
 					find: "specific content",
@@ -196,8 +186,7 @@ describe("update_content tool", () => {
 	describe("daily:// URI handling", () => {
 		describe("append mode", () => {
 			it("should append content to today's daily note", async () => {
-				const handler = updateContentTool.handler(obsidian);
-				const result = await handler({
+				const result = await updateContentTool.handler(obsidian, request, {
 					uri: "daily:///today",
 					mode: "append",
 					content: "New content appended.",
@@ -214,9 +203,8 @@ describe("update_content tool", () => {
 				// Remove today's note
 				obsidian.markdownFiles.delete("daily/2023-05-09.md");
 
-				const handler = updateContentTool.handler(obsidian);
 				await expect(
-					handler({
+					updateContentTool.handler(obsidian, request, {
 						uri: "daily:///today",
 						mode: "append",
 						content: "New content.",
@@ -227,8 +215,7 @@ describe("update_content tool", () => {
 			it("should create and append to daily note when it doesn't exist and create_if_missing is true", async () => {
 				obsidian.markdownFiles.delete("daily/2023-05-09.md");
 
-				const handler = updateContentTool.handler(obsidian);
-				const result = await handler({
+				const result = await updateContentTool.handler(obsidian, request, {
 					uri: "daily:///today",
 					mode: "append",
 					content: "New daily note content.",
@@ -246,9 +233,8 @@ describe("update_content tool", () => {
 				// Disable the daily notes plugin
 				obsidian.dailyNotes = null;
 
-				const handler = updateContentTool.handler(obsidian);
 				await expect(
-					handler({
+					updateContentTool.handler(obsidian, request, {
 						uri: "daily:///today",
 						mode: "append",
 						content: "New content.",
@@ -259,8 +245,7 @@ describe("update_content tool", () => {
 
 		describe("replace mode", () => {
 			it("should replace content in today's daily note", async () => {
-				const handler = updateContentTool.handler(obsidian);
-				const result = await handler({
+				const result = await updateContentTool.handler(obsidian, request, {
 					uri: "daily:///today",
 					mode: "replace",
 					find: "This is today's note content.",
@@ -275,9 +260,8 @@ describe("update_content tool", () => {
 			});
 
 			it("should throw error when using replace mode without find parameter", async () => {
-				const handler = updateContentTool.handler(obsidian);
 				await expect(
-					handler({
+					updateContentTool.handler(obsidian, request, {
 						uri: "daily:///today",
 						mode: "replace",
 						content: "Replacement content.",
@@ -286,9 +270,8 @@ describe("update_content tool", () => {
 			});
 
 			it("should throw error when content to find is not in the daily note", async () => {
-				const handler = updateContentTool.handler(obsidian);
 				await expect(
-					handler({
+					updateContentTool.handler(obsidian, request, {
 						uri: "daily:///today",
 						mode: "replace",
 						find: "nonexistent content",
@@ -303,9 +286,8 @@ describe("update_content tool", () => {
 					"daily/2023-05-09.md": "This has duplicate content. This has duplicate content.",
 				});
 
-				const handler = updateContentTool.handler(obsidian);
 				await expect(
-					handler({
+					updateContentTool.handler(obsidian, request, {
 						uri: "daily:///today",
 						mode: "replace",
 						find: "duplicate content",

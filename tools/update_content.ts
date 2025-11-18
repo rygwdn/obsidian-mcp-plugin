@@ -3,6 +3,7 @@ import { z } from "zod";
 import { ToolRegistration } from "./types";
 import { resolveUriToPath } from "./daily_note_utils";
 import type { ObsidianInterface } from "../obsidian/obsidian_interface";
+import { AuthenticatedRequest } from "server/auth";
 
 export const updateContentTool: ToolRegistration = {
 	name: "update_content",
@@ -36,35 +37,46 @@ export const updateContentTool: ToolRegistration = {
 				"Create the file if it doesn't exist (applies to both regular files and daily notes)"
 			),
 	},
-	handler:
-		(obsidian: ObsidianInterface) =>
-		async (args: {
+	handler: async (
+		obsidian: ObsidianInterface,
+		request: AuthenticatedRequest,
+		args: {
 			uri: string;
 			mode: "append" | "replace";
 			content: string;
 			find?: string;
 			create_if_missing?: boolean;
-		}) => {
-			const resolvedVaultPath = await resolveUriToPath(obsidian, args.uri);
+		}
+	) => {
+		const resolvedVaultPath = await resolveUriToPath(obsidian, args.uri);
 
-			const file = await obsidian.getFileByPath(
-				resolvedVaultPath,
-				args.create_if_missing ? "create" : "write"
+		const file = await obsidian.getFileByPath(
+			resolvedVaultPath,
+			args.create_if_missing ? "create" : "write",
+			request
+		);
+
+		const fileContent = await obsidian.read(file, request);
+
+		// Use the original URI string for display in messages
+		const displayUri = args.uri.replace(/^file:\/\/\/|^daily:\/\/\//, "");
+
+		if (args.mode === "append") {
+			return await append(args.content, fileContent, obsidian, file, displayUri, request);
+		} else if (args.mode === "replace") {
+			return await replace(
+				args.find,
+				args.content,
+				fileContent,
+				displayUri,
+				obsidian,
+				file,
+				request
 			);
-
-			const fileContent = await obsidian.read(file);
-
-			// Use the original URI string for display in messages
-			const displayUri = args.uri.replace(/^file:\/\/\/|^daily:\/\/\//, "");
-
-			if (args.mode === "append") {
-				return await append(args.content, fileContent, obsidian, file, displayUri);
-			} else if (args.mode === "replace") {
-				return await replace(args.find, args.content, fileContent, displayUri, obsidian, file);
-			} else {
-				throw new Error(`Invalid mode: ${args.mode}`);
-			}
-		},
+		} else {
+			throw new Error(`Invalid mode: ${args.mode}`);
+		}
+	},
 };
 
 async function replace(
@@ -73,7 +85,8 @@ async function replace(
 	fileContent: string,
 	originalUri: string,
 	obsidian: ObsidianInterface,
-	file: TFile
+	file: TFile,
+	request: AuthenticatedRequest
 ) {
 	if (!find) {
 		throw new Error("'find' parameter is required for replace mode");
@@ -93,7 +106,7 @@ async function replace(
 
 	const updatedContent = fileContent.replace(find, replacement);
 
-	await obsidian.modify(file, updatedContent);
+	await obsidian.modify(file, updatedContent, request);
 	return `Content successfully replaced in ${originalUri}`;
 }
 
@@ -102,13 +115,14 @@ async function append(
 	fileContent: string,
 	obsidian: ObsidianInterface,
 	file: TFile,
-	originalUri: string
+	originalUri: string,
+	request: AuthenticatedRequest
 ) {
 	if (!fileContent.endsWith("\n")) {
 		content = "\n" + content;
 	}
 
-	await obsidian.modify(file, fileContent + content);
+	await obsidian.modify(file, fileContent + content, request);
 
 	return `Content appended successfully to ${originalUri}`;
 }

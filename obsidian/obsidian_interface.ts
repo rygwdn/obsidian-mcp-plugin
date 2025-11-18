@@ -1,26 +1,55 @@
 import { MCPPluginSettings } from "settings/types";
 import { TFile, CachedMetadata } from "./obsidian_types";
+import { AuthenticatedRequest } from "../server/auth";
 
 export interface ObsidianInterface {
 	settings: MCPPluginSettings;
 
-	getMarkdownFiles(): TFile[];
-	getFileByPath(path: string, permissions: "read" | "write" | "create"): Promise<TFile>;
-	cachedRead(file: TFile): Promise<string>;
-	read(file: TFile): Promise<string>;
-	create(path: string, data: string): Promise<TFile>;
-	modify(file: TFile, data: string): Promise<void>;
-	createFolder(path: string): Promise<void>;
+	getMarkdownFiles(request: AuthenticatedRequest): TFile[];
+	getFileByPath(
+		path: string,
+		permissions: "read" | "write" | "create",
+		request: AuthenticatedRequest
+	): Promise<TFile>;
+	cachedRead(file: TFile, request: AuthenticatedRequest): Promise<string>;
+	read(file: TFile, request: AuthenticatedRequest): Promise<string>;
+	create(path: string, data: string, request: AuthenticatedRequest): Promise<TFile>;
+	modify(file: TFile, data: string, request: AuthenticatedRequest): Promise<void>;
+	createFolder(path: string, request: AuthenticatedRequest): Promise<void>;
 	getFileCache(file: TFile): CachedMetadata | null;
-	checkFile(filePath: string): Promise<CheckFileResult>;
-	search(query: string, fuzzy: boolean, folder?: string): Promise<SearchResult[]>;
+	checkFile(filePath: string, request: AuthenticatedRequest): Promise<CheckFileResult>;
+	search(
+		query: string,
+		fuzzy: boolean,
+		folder: string | undefined,
+		request: AuthenticatedRequest
+	): Promise<SearchResult[]>;
+
+	/**
+	 * Get prompt files without permission checks.
+	 * Used only for prompt registration at server startup where request context is not available.
+	 */
+	unsafeGetPromptFiles(settings: MCPPluginSettings): TFile[];
+
+	/**
+	 * Get files accessible by ANY token.
+	 * Used only for autocomplete callbacks where request context is not available.
+	 */
+	getFilesForAnyToken(settings: MCPPluginSettings): TFile[];
+
+	/**
+	 * Get file cache for prompt files without permission checks.
+	 * Only works for files in the prompts folder.
+	 * Used only for prompt registration at server startup where request context is not available.
+	 */
+	unsafeGetPromptFileCache(settings: MCPPluginSettings, file: TFile): CachedMetadata | null;
 
 	onFileModified(
 		callback: (operation: "create" | "modify" | "rename" | "delete", file: TFile) => void
 	): void;
 
-	quickAdd: QuickAddInterface | null;
-	dataview: DataviewInterface | null;
+	getQuickAdd(request: AuthenticatedRequest): QuickAddInterface | null;
+	getDataview(request: AuthenticatedRequest): DataviewInterface | null;
 	dailyNotes: DailyNotesInterface | null;
 }
 

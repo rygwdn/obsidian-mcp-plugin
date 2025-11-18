@@ -9,6 +9,7 @@ import {
 import { logger } from "./logging";
 import type { ObsidianInterface } from "../obsidian/obsidian_interface";
 import { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol";
+import { getRequest } from "../server/auth";
 
 export class VaultPrompt {
 	public registration: RegisteredPrompt | undefined;
@@ -19,7 +20,8 @@ export class VaultPrompt {
 	) {}
 
 	private get metadata() {
-		return this.obsidian.getFileCache(this.file);
+		// Use unsafe method for prompt registration (no request context available)
+		return this.obsidian.unsafeGetPromptFileCache(this.obsidian.settings, this.file);
 	}
 
 	public get name() {
@@ -63,8 +65,9 @@ export class VaultPrompt {
 		extra: RequestHandlerExtra<ServerRequest, ServerNotification>
 	): Promise<GetPromptResult> {
 		return logger.withPromptLogging(this.name, extra, async () => {
+			const request = getRequest(extra);
 			const frontmatterPosition = this.metadata?.frontmatterPosition?.end.offset;
-			let content = await this.obsidian.cachedRead(this.file);
+			let content = await this.obsidian.cachedRead(this.file, request);
 			if (frontmatterPosition) {
 				content = content.slice(frontmatterPosition).trimStart();
 			}
@@ -100,9 +103,9 @@ export class VaultPrompt {
 }
 
 function getPrompts(obsidian: ObsidianInterface) {
-	return obsidian
-		.getMarkdownFiles()
-		.filter((file) => file.path.startsWith(obsidian.settings.promptsFolder));
+	// Prompts are registered at server startup, not per-request
+	// Use unsafe method to get prompt files without permission checks
+	return obsidian.unsafeGetPromptFiles(obsidian.settings);
 }
 
 function syncPrompts(

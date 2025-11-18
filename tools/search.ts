@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ToolRegistration } from "./types";
 import type { ObsidianInterface } from "../obsidian/obsidian_interface";
+import { AuthenticatedRequest } from "server/auth";
 
 export const searchTool: ToolRegistration = {
 	name: "search",
@@ -18,37 +19,43 @@ export const searchTool: ToolRegistration = {
 		fuzzy: z.boolean().default(false).describe("Use fuzzy search"),
 		folder: z.string().optional().describe("Search under specific folder"),
 	},
-	handler:
-		(obsidian: ObsidianInterface) =>
-		async (args: { query: string; limit: number; fuzzy: boolean; folder?: string }) => {
-			const query = args.query;
+	handler: async (
+		obsidian: ObsidianInterface,
+		request: AuthenticatedRequest,
+		args: {
+			query: string;
+			limit: number;
+			fuzzy: boolean;
+			folder?: string;
+		}
+	) => {
+		const query = args.query;
 
-			const allMatches = await obsidian.search(query, args.fuzzy, args.folder);
-			const totalMatches = allMatches.flatMap((m) => m.matches).length;
+		const allMatches = await obsidian.search(query, args.fuzzy, args.folder, request);
+		const totalMatches = allMatches.flatMap((m) => m.matches).length;
 
-			if (totalMatches === 0) {
-				throw new Error("No results found for query: " + query);
-			}
+		if (totalMatches === 0) {
+			throw new Error("No results found for query: " + query);
+		}
+		const lines = [`# ${Math.min(args.limit, totalMatches)} of ${totalMatches} matches:`, ""];
 
-			const lines = [`# ${Math.min(args.limit, totalMatches)} of ${totalMatches} matches:`, ""];
+		let remainingMatches = args.limit;
 
-			let remainingMatches = args.limit;
+		for (const { matches, cachedContents, file } of allMatches) {
+			lines.push(`## file:///${file.path}\n`);
 
-			for (const { matches, cachedContents, file } of allMatches) {
-				lines.push(`## file:///${file.path}\n`);
-
-				for (const match of matches) {
-					if (remainingMatches <= 0) break;
-					lines.push(...writeMatch(match, cachedContents));
-					remainingMatches--;
-				}
-
+			for (const match of matches) {
 				if (remainingMatches <= 0) break;
-				lines.push("");
+				lines.push(...writeMatch(match, cachedContents));
+				remainingMatches--;
 			}
 
-			return lines.join("\n");
-		},
+			if (remainingMatches <= 0) break;
+			lines.push("");
+		}
+
+		return lines.join("\n");
+	},
 };
 
 function writeMatch([start, end]: [number, number], cachedContents: string) {

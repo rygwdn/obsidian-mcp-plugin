@@ -10,7 +10,12 @@ import {
 } from "./obsidian_interface";
 import { App, CachedMetadata, prepareFuzzySearch, prepareSimpleSearch, TFile } from "obsidian";
 import ObsidianMCPPlugin from "main";
-import { isDirectoryAccessible, isFileAccessible, isFileModifiable } from "tools/permissions";
+import {
+	isDirectoryAccessibleWithToken,
+	isFileAccessibleWithToken,
+	isFileModifiableWithToken,
+} from "tools/permissions";
+import { AuthenticatedRequest } from "../server/auth";
 import { getAPI as getDataviewAPI } from "obsidian-dataview";
 import type { DailyNotesPlugin, PeriodicNotesPlugin } from "./obsidian_types";
 
@@ -24,7 +29,7 @@ export class ObsidianImpl implements ObsidianInterface {
 		return this.plugin.settings;
 	}
 
-	async checkFile(filePath: string): Promise<CheckFileResult> {
+	async checkFile(filePath: string, request: AuthenticatedRequest): Promise<CheckFileResult> {
 		const file = this.app.vault.getFileByPath(filePath);
 		if (!file) {
 			return {
@@ -34,77 +39,146 @@ export class ObsidianImpl implements ObsidianInterface {
 
 		return {
 			exists: true,
-			isAccessible: isFileAccessible(this, file),
-			isModifiable: isFileModifiable(this, file),
+			isAccessible: isFileAccessibleWithToken(this, file, request.token, request),
+			isModifiable: isFileModifiableWithToken(this, file, request.token, request),
 			file,
 		};
 	}
 
-	getMarkdownFiles(): TFile[] {
-		return this.app.vault.getMarkdownFiles().filter((file) => isFileAccessible(this, file));
+	getMarkdownFiles(request: AuthenticatedRequest): TFile[] {
+		return this.app.vault
+			.getMarkdownFiles()
+			.filter((file) => isFileAccessibleWithToken(this, file, request.token, request));
 	}
 
-	async getFileByPath(filePath: string, permissions: "read" | "write" | "create"): Promise<TFile> {
+	async getFileByPath(
+		filePath: string,
+		permissions: "read" | "write" | "create",
+		request: AuthenticatedRequest
+	): Promise<TFile> {
 		const file = this.app.vault.getFileByPath(filePath);
-		if (!file && permissions === "create" && isDirectoryAccessible(filePath, this.settings)) {
+		if (!file && permissions === "create") {
+			const parentPath = filePath.includes("/")
+				? filePath.substring(0, filePath.lastIndexOf("/"))
+				: "/";
+			if (!isDirectoryAccessibleWithToken(parentPath === "/" ? "" : parentPath, request.token)) {
+				throw new Error(`Directory not accessible: ${parentPath}`);
+			}
 			return await this.app.vault.create(filePath, "");
 		}
 		if (!file) {
 			throw new Error(`File not found: ${filePath}`);
 		}
-		if (!isFileAccessible(this, file)) {
+		if (!isFileAccessibleWithToken(this, file, request.token, request)) {
 			throw new Error(`Access denied: ${filePath}`);
 		}
-		if (permissions === "write" && !isFileModifiable(this, file)) {
+		if (permissions === "write" && !isFileModifiableWithToken(this, file, request.token, request)) {
 			throw new Error(`File is read-only: ${filePath}`);
 		}
 
 		return file;
 	}
 
-	async cachedRead(file: TFile): Promise<string> {
+	async cachedRead(file: TFile, request: AuthenticatedRequest): Promise<string> {
+		if (!isFileAccessibleWithToken(this, file, request.token, request)) {
+			throw new Error(`Access denied: ${file.path}`);
+		}
 		return await this.app.vault.cachedRead(file);
 	}
 
-	async read(file: TFile): Promise<string> {
+	async read(file: TFile, request: AuthenticatedRequest): Promise<string> {
+		if (!isFileAccessibleWithToken(this, file, request.token, request)) {
+			throw new Error(`Access denied: ${file.path}`);
+		}
 		return await this.app.vault.read(file);
 	}
 
-	async create(path: string, data: string): Promise<TFile> {
-		if (!isDirectoryAccessible(path, this.settings)) {
-			throw new Error(`Directory not accessible: ${path}`);
+	async create(path: string, data: string, request: AuthenticatedRequest): Promise<TFile> {
+		const parentPath = path.includes("/") ? path.substring(0, path.lastIndexOf("/")) : "/";
+		if (!isDirectoryAccessibleWithToken(parentPath === "/" ? "" : parentPath, request.token)) {
+			throw new Error(`Directory not accessible: ${parentPath}`);
 		}
 		return await this.app.vault.create(path, data);
 	}
 
-	async modify(file: TFile, data: string): Promise<void> {
-		if (!isFileModifiable(this, file)) {
+	async modify(file: TFile, data: string, request: AuthenticatedRequest): Promise<void> {
+		if (!isFileModifiableWithToken(this, file, request.token, request)) {
 			throw new Error(`File is read-only: ${file.path}`);
 		}
 		return await this.app.vault.modify(file, data);
 	}
 
-	async createFolder(path: string): Promise<void> {
-		if (!isDirectoryAccessible(path, this.settings)) {
+	async createFolder(path: string, request: AuthenticatedRequest): Promise<void> {
+		if (!isDirectoryAccessibleWithToken(path, request.token)) {
 			throw new Error(`Directory not accessible: ${path}`);
 		}
 		await this.app.vault.createFolder(path);
 	}
 
 	getFileCache(file: TFile): CachedMetadata | null {
+		// Note: Permission checks should be done before calling this method
+		// to avoid circular dependencies. This method just returns the cache.
 		return this.app.metadataCache.getFileCache(file);
 	}
 
-	async search(query: string, fuzzy: boolean, folder?: string): Promise<SearchResult[]> {
+	unsafeGetPromptFiles(settings: MCPPluginSettings): TFile[] {
+		return this.app.vault
+			.getMarkdownFiles()
+			.filter((file) => file.path.startsWith(settings.promptsFolder));
+	}
+
+	getFilesForAnyToken(settings: MCPPluginSettings): TFile[] {
+		const allFiles = this.app.vault.getMarkdownFiles();
+		const tokens = settings.server.tokens;
+
+		if (tokens.length === 0) {
+			return [];
+		}
+
+		return allFiles.filter((file) => {
+			return tokens.some((token) => {
+				const fileCache = this.app.metadataCache.getFileCache(file);
+				const frontmatter = fileCache?.frontmatter || {};
+				if (frontmatter.mcp_access === false) return false;
+				if (frontmatter.mcp_access === true) return true;
+
+				// Check directory permissions
+				const parentPath = file.path.includes("/")
+					? file.path.substring(0, file.path.lastIndexOf("/"))
+					: "/";
+				const { rules, rootPermission } = token.directoryPermissions;
+				for (const rule of rules) {
+					if (parentPath === rule.path || parentPath.startsWith(rule.path + "/")) {
+						return rule.allowed;
+					}
+				}
+				return rootPermission;
+			});
+		});
+	}
+
+	unsafeGetPromptFileCache(settings: MCPPluginSettings, file: TFile): CachedMetadata | null {
+		if (!file.path.startsWith(settings.promptsFolder)) {
+			return null;
+		}
+		return this.app.metadataCache.getFileCache(file);
+	}
+
+	async search(
+		query: string,
+		fuzzy: boolean,
+		folder: string | undefined,
+		request: AuthenticatedRequest
+	): Promise<SearchResult[]> {
 		const search = fuzzy ? prepareFuzzySearch(query) : prepareSimpleSearch(query);
 		const results: SearchResult[] = [];
 
-		for (const file of this.getMarkdownFiles()) {
+		for (const file of this.getMarkdownFiles(request)) {
 			if (folder && !file.path.startsWith(folder)) {
 				continue;
 			}
 
-			const cachedContents = await this.cachedRead(file);
+			const cachedContents = await this.cachedRead(file, request);
 			const result = search(cachedContents);
 			if (result) {
 				results.push({
@@ -135,8 +209,8 @@ export class ObsidianImpl implements ObsidianInterface {
 		});
 	}
 
-	get quickAdd(): QuickAddInterface | null {
-		if (!this.settings.enabledTools.quickadd) {
+	getQuickAdd(request: AuthenticatedRequest): QuickAddInterface | null {
+		if (!request.token.enabledTools.quickadd) {
 			return null;
 		}
 		const plugin = this.app.plugins.plugins["quickadd"];
@@ -151,8 +225,8 @@ export class ObsidianImpl implements ObsidianInterface {
 		return null;
 	}
 
-	get dataview(): DataviewInterface | null {
-		if (!this.settings.enabledTools.dataview_query) {
+	getDataview(request: AuthenticatedRequest): DataviewInterface | null {
+		if (!request.token.enabledTools.dataview_query) {
 			return null;
 		}
 		const api = getDataviewAPI(this.app);

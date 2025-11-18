@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ToolRegistration } from "./types";
 import type { ObsidianInterface } from "../obsidian/obsidian_interface";
+import { AuthenticatedRequest } from "server/auth";
 
 const description = `
 Executes a Dataview query against your vault's notes and returns the results in markdown format.
@@ -31,14 +32,19 @@ export const dataviewQueryTool: ToolRegistration = {
 			.string()
 			.describe("Dataview query to execute. See tool description for examples and documentation."),
 	},
-	handler: (obsidian: ObsidianInterface) => async (args: Record<string, unknown>) => {
+	handler: async (
+		obsidian: ObsidianInterface,
+		request: AuthenticatedRequest,
+		args: { query: string }
+	) => {
 		const { query } = args as { query: string };
-		if (!obsidian.dataview) {
+		const dataview = obsidian.getDataview(request);
+		if (!dataview) {
 			throw new Error("Dataview plugin is not enabled");
 		}
 
 		try {
-			const queryResult = await obsidian.dataview.queryMarkdown(query);
+			const queryResult = await dataview.queryMarkdown(query);
 
 			if (!queryResult.successful) {
 				throw new Error(`Query execution failed: ${queryResult.error}`);
