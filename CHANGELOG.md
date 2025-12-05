@@ -2,6 +2,20 @@
 
 ## [Unreleased]
 
+## [0.8.0] - 2025-01-27
+
+### Changed
+
+- Server now defaults to HTTP and requires tokens to start
+- Enhanced server and logging functionality with improved error handling
+- More graceful server start failure handling
+- Updated default ports and HTTPS handling
+
+### Refactored
+
+- Implemented token-scoped permission checks for improved security
+- Refactored security and submission documentation for clarity
+
 ## [0.7.0] - 2025-11-04
 
 ### Added
