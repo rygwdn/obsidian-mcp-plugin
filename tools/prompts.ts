@@ -1,5 +1,5 @@
 import type { TFile } from "../obsidian/obsidian_types";
-import { z, ZodType } from "zod";
+import { z, ZodType, type ZodTypeAny } from "zod";
 import { McpServer, RegisteredPrompt } from "@modelcontextprotocol/sdk/server/mcp.js";
 import {
 	GetPromptResult,
@@ -61,7 +61,7 @@ export class VaultPrompt {
 	}
 
 	public async handler(
-		args: Record<string, string>,
+		args: Record<string, unknown>,
 		extra: RequestHandlerExtra<ServerRequest, ServerNotification>
 	): Promise<GetPromptResult> {
 		return logger.withPromptLogging(this.name, extra, async () => {
@@ -71,8 +71,13 @@ export class VaultPrompt {
 			if (frontmatterPosition) {
 				content = content.slice(frontmatterPosition).trimStart();
 			}
+			// Convert args to strings for template replacement
+			const stringArgs: Record<string, string> = {};
 			for (const key in args) {
-				content = content.replace(new RegExp(`{{${key}}}`, "g"), args[key]);
+				stringArgs[key] = String(args[key] ?? "");
+			}
+			for (const key in stringArgs) {
+				content = content.replace(new RegExp(`{{${key}}}`, "g"), stringArgs[key]);
 			}
 
 			return {
@@ -82,10 +87,12 @@ export class VaultPrompt {
 	}
 
 	public async register(server: McpServer) {
+		// MCP SDK expects ZodRawShapeCompat which is Record<string, ZodTypeAny>
+		// Our args is Record<string, ZodType> which should be compatible
 		this.registration = server.prompt(
 			this.name,
 			this.description,
-			this.args,
+			this.args as Record<string, ZodTypeAny>,
 			async (args, extra) => {
 				return await this.handler(args, extra);
 			}
@@ -95,9 +102,11 @@ export class VaultPrompt {
 	public update() {
 		logger.log(`Updating prompt: ${this.name}`);
 
+		// MCP SDK expects ZodRawShapeCompat which is Record<string, ZodTypeAny>
+		// Our args is Record<string, ZodType> which should be compatible
 		this.registration?.update({
 			description: this.description,
-			argsSchema: this.args,
+			argsSchema: this.args as Record<string, ZodTypeAny>,
 		});
 	}
 }

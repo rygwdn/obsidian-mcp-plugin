@@ -106,7 +106,9 @@ describe("prompt tools", () => {
 			const extra = createMockExtra(request);
 			const result = await prompt.handler({ param1: "test", param2: "value" }, extra);
 
-			expect(result.messages[0].content.text).toBe("This is a test prompt with a value parameter.");
+			const messageContent = result.messages[0].content as { type: "text"; text: string };
+			expect(messageContent.type).toBe("text");
+			expect(messageContent.text).toBe("This is a test prompt with a value parameter.");
 		});
 
 		it("should register with MCP server", async () => {

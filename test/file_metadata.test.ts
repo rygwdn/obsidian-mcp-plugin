@@ -240,7 +240,8 @@ describe("File metadata functionality", () => {
 				expect(result.contents[0].uri).toBe("metadata:///with-frontmatter.md");
 				expect(result.contents[0].mimeType).toBe("text/markdown");
 
-				expect(result.contents[0].text).toMatchInlineSnapshot(`
+				const content = result.contents[0] as { uri: string; text: string; mimeType?: string };
+				expect(content.text).toMatchInlineSnapshot(`
 					"# File Metadata: with-frontmatter.md
 
 					- **path**: with-frontmatter.md

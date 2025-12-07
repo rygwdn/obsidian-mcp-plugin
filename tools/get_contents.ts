@@ -74,9 +74,17 @@ export const getContentsTool: ToolRegistration = {
 			},
 		};
 		const result = await new VaultFileResource(obsidian).handler(url, extra);
-		if (typeof result.contents?.[0]?.text !== "string") {
-			throw new Error(`No text found for URI: ${url}`);
+		const content = result.contents?.[0];
+		if (!content) {
+			throw new Error(`No content found for URI: ${url}`);
 		}
-		return result.contents[0].text;
+		if ("text" in content && typeof content.text === "string") {
+			return content.text;
+		}
+		if ("blob" in content && typeof content.blob === "string") {
+			// Convert blob (base64) to text if needed
+			return Buffer.from(content.blob, "base64").toString("utf-8");
+		}
+		throw new Error(`No text or blob found for URI: ${url}`);
 	},
 };

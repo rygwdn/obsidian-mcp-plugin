@@ -159,9 +159,10 @@ describe("VaultFileResource", () => {
 			const result = await resource.handler(new URL("file:///test1.md"), extra);
 
 			expect(result.contents).toHaveLength(1);
-			expect(result.contents[0].text).toBe("Test file 1 contents");
-			expect(result.contents[0].uri).toBe("file:///test1.md");
-			expect(result.contents[0].mimeType).toBe("text/markdown");
+			const content = result.contents[0] as { uri: string; text: string; mimeType?: string };
+			expect(content.text).toBe("Test file 1 contents");
+			expect(content.uri).toBe("file:///test1.md");
+			expect(content.mimeType).toBe("text/markdown");
 		});
 
 		it("should throw an error for non-existent files", async () => {
@@ -178,8 +179,9 @@ describe("VaultFileResource", () => {
 			};
 
 			expect(result.contents).toHaveLength(1);
-			expect(result.contents[0].mimeType).toBe("text/directory");
-			expect(result.contents[0].text).toContain("test3.md");
+			const content = result.contents[0] as { uri: string; text: string; mimeType?: string };
+			expect(content.mimeType).toBe("text/directory");
+			expect(content.text).toContain("test3.md");
 		});
 
 		it("should handle URL-encoded file names with spaces", async () => {
@@ -187,9 +189,10 @@ describe("VaultFileResource", () => {
 			const result = await resource.handler(new URL("file:///file%20with%20spaces.md"), extra);
 
 			expect(result.contents).toHaveLength(1);
-			expect(result.contents[0].text).toBe("Content of file with spaces");
-			expect(result.contents[0].uri).toBe("file:///file%20with%20spaces.md");
-			expect(result.contents[0].mimeType).toBe("text/markdown");
+			const content = result.contents[0] as { uri: string; text: string; mimeType?: string };
+			expect(content.text).toBe("Content of file with spaces");
+			expect(content.uri).toBe("file:///file%20with%20spaces.md");
+			expect(content.mimeType).toBe("text/markdown");
 		});
 
 		it("should handle URL-encoded folder paths with spaces", async () => {
@@ -200,9 +203,10 @@ describe("VaultFileResource", () => {
 			);
 
 			expect(result.contents).toHaveLength(1);
-			expect(result.contents[0].text).toBe("Content of nested file with spaces");
-			expect(result.contents[0].uri).toBe("file:///folder%20with%20spaces/nested%20file.md");
-			expect(result.contents[0].mimeType).toBe("text/markdown");
+			const content = result.contents[0] as { uri: string; text: string; mimeType?: string };
+			expect(content.text).toBe("Content of nested file with spaces");
+			expect(content.uri).toBe("file:///folder%20with%20spaces/nested%20file.md");
+			expect(content.mimeType).toBe("text/markdown");
 		});
 
 		it("should handle URL-encoded directory listing", async () => {
@@ -210,8 +214,9 @@ describe("VaultFileResource", () => {
 			const result = await resource.handler(new URL("file:///folder%20with%20spaces"), extra);
 
 			expect(result.contents).toHaveLength(1);
-			expect(result.contents[0].mimeType).toBe("text/directory");
-			expect(result.contents[0].text).toContain("nested file.md");
+			const content = result.contents[0] as { uri: string; text: string; mimeType?: string };
+			expect(content.mimeType).toBe("text/directory");
+			expect(content.text).toContain("nested file.md");
 		});
 	});
 });
@@ -319,9 +324,10 @@ describe("VaultDailyNoteResource", () => {
 			const result = await resource.handler(new URL("daily:///today"), extra);
 
 			expect(result.contents).toHaveLength(1);
-			expect(result.contents[0].text).toBe("Daily note content for today");
-			expect(result.contents[0].uri).toBe("daily:///today");
-			expect(result.contents[0].mimeType).toBe("text/markdown");
+			const content = result.contents[0] as { uri: string; text: string; mimeType?: string };
+			expect(content.text).toBe("Daily note content for today");
+			expect(content.uri).toBe("daily:///today");
+			expect(content.mimeType).toBe("text/markdown");
 		});
 
 		it("should throw error when daily notes plugin not enabled", async () => {
