@@ -1,12 +1,15 @@
-import * as https from "https";
 import * as http from "http";
-import express, { Express, Request, Response, NextFunction } from "express";
-import cors from "cors";
+import * as https from "https";
+import { type Express, type NextFunction, type Request, type Response } from "express";
+import express from "express";
 import bodyParser from "body-parser";
+import cors from "cors";
 import forge, { pki } from "node-forge";
-import { MCPPluginSettings, CryptoSettings } from "../settings/types";
+
+import type { CryptoSettings, MCPPluginSettings } from "../settings/types";
 import { logger } from "../tools/logging";
-import { AuthManager, AuthenticatedRequest } from "./auth";
+
+import { AuthManager, type AuthenticatedRequest } from "./auth";
 import type { TokenTracker } from "./connection_tracker";
 
 const DEFAULT_BINDING_HOST = "127.0.0.1";

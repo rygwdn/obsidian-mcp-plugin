@@ -1,14 +1,21 @@
-import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { ReadResourceResult } from "@modelcontextprotocol/sdk/types";
-import { UriTemplate, Variables } from "@modelcontextprotocol/sdk/shared/uriTemplate.js";
-import { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol";
-import { ServerNotification, ServerRequest } from "@modelcontextprotocol/sdk/types";
-import { logger } from "./logging";
-import { ALIASES, resolveUriToPath } from "./daily_note_utils";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type {
+	ReadResourceResult,
+	ServerNotification,
+	ServerRequest,
+} from "@modelcontextprotocol/sdk/types";
+import { UriTemplate, type Variables } from "@modelcontextprotocol/sdk/shared/uriTemplate.js";
+import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol";
+
 import type { ObsidianInterface } from "../obsidian/obsidian_interface";
+import type { AuthenticatedRequest } from "server/auth";
+import { getRequest } from "server/auth";
+import type { AuthToken } from "settings/types";
+
+import { ALIASES, resolveUriToPath } from "./daily_note_utils";
+import { logger } from "./logging";
 import { isDirectoryAccessibleWithToken } from "./permissions";
-import { AuthenticatedRequest, getRequest } from "server/auth";
-import { AuthToken } from "settings/types";
 
 class SimpleUriTemplate extends UriTemplate {
 	constructor(

@@ -1,9 +1,11 @@
-import type { TFile } from "../obsidian/obsidian_types";
 import { z } from "zod";
-import { ToolRegistration } from "./types";
-import { resolveUriToPath } from "./daily_note_utils";
+
 import type { ObsidianInterface } from "../obsidian/obsidian_interface";
-import { AuthenticatedRequest } from "server/auth";
+import type { TFile } from "../obsidian/obsidian_types";
+import type { AuthenticatedRequest } from "server/auth";
+
+import { resolveUriToPath } from "./daily_note_utils";
+import type { ToolRegistration } from "./types";
 
 export const updateContentTool: ToolRegistration = {
 	name: "update_content",

@@ -1,6 +1,7 @@
-import { MCPPluginSettings } from "settings/types";
-import { TFile, CachedMetadata } from "./obsidian_types";
-import { AuthenticatedRequest } from "../server/auth";
+import type { AuthenticatedRequest } from "../server/auth";
+import type { MCPPluginSettings } from "settings/types";
+
+import type { CachedMetadata, TFile } from "./obsidian_types";
 
 export interface ObsidianInterface {
 	settings: MCPPluginSettings;

@@ -1,7 +1,9 @@
-import { Request, Response, NextFunction } from "express";
-import { MCPPluginSettings, AuthToken } from "../settings/types";
-import { logger } from "../tools/logging";
+import { type NextFunction, type Request, type Response } from "express";
 import crypto from "crypto";
+
+import type { AuthToken, MCPPluginSettings } from "../settings/types";
+import { logger } from "../tools/logging";
+
 import type { TokenTracker } from "./connection_tracker";
 
 export const AUTHENTICATED_REQUEST_KEY = "__authenticatedRequest__";

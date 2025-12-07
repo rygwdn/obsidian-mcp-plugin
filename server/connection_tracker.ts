@@ -1,5 +1,6 @@
+import type { AuthenticatedRequest } from "./auth";
+
 import { logger } from "../tools/logging";
-import { AuthenticatedRequest } from "./auth";
 
 interface ActionParams {
 	type: "tool" | "resource" | "prompt" | "error" | "jsonrpc";

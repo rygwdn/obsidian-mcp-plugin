@@ -1,7 +1,7 @@
-import type { TFile } from "../obsidian/obsidian_types";
 import type { ObsidianInterface } from "../obsidian/obsidian_interface";
-import { AuthToken } from "settings/types";
-import { AuthenticatedRequest } from "../server/auth";
+import type { TFile } from "../obsidian/obsidian_types";
+import type { AuthenticatedRequest } from "../server/auth";
+import type { AuthToken } from "settings/types";
 
 export function getFileFrontmatterPermissions(
 	obsidian: ObsidianInterface,

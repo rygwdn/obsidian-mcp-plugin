@@ -1,8 +1,9 @@
-import { ReadResourceTemplateCallback } from "@modelcontextprotocol/sdk/server/mcp";
-import { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol";
-import { ServerNotification, ServerRequest } from "@modelcontextprotocol/sdk/types";
+import type { ReadResourceTemplateCallback } from "@modelcontextprotocol/sdk/server/mcp";
+import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol";
+import type { ServerNotification, ServerRequest } from "@modelcontextprotocol/sdk/types";
+
+import type { TokenTracker } from "server/connection_tracker";
 import { getRequest } from "server/auth";
-import { TokenTracker } from "server/connection_tracker";
 
 export class Logger {
 	private prefix: string;

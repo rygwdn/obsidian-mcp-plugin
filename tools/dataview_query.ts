@@ -1,7 +1,9 @@
 import { z } from "zod";
-import { ToolRegistration } from "./types";
+
 import type { ObsidianInterface } from "../obsidian/obsidian_interface";
-import { AuthenticatedRequest } from "server/auth";
+import type { AuthenticatedRequest } from "server/auth";
+
+import type { ToolRegistration } from "./types";
 
 const description = `
 Executes a Dataview query against your vault's notes and returns the results in markdown format.

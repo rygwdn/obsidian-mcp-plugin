@@ -1,13 +1,8 @@
 import { defineConfig } from "vitest/config";
-import { resolve } from "path";
+import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
-	resolve: {
-		alias: {
-			"settings/types": resolve(__dirname, "./settings/types.ts"),
-			"server/auth": resolve(__dirname, "./server/auth.ts"),
-		},
-	},
+	plugins: [tsconfigPaths()],
 	test: {
 		environment: "node",
 		include: ["**/*.test.ts"],

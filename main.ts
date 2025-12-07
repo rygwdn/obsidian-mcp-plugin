@@ -1,13 +1,14 @@
-import { Plugin } from "obsidian";
-import { ObsidianMcpServer } from "mcp_server";
-import { DEFAULT_SETTINGS, MCPPluginSettings } from "./settings/types";
-import { MCPSettingTab } from "./settings/tab";
 import type { Response } from "express";
-import { logger } from "./tools/logging";
+import { Plugin } from "obsidian";
+
 import type { ObsidianInterface } from "./obsidian/obsidian_interface";
 import { ObsidianImpl } from "./obsidian/obsidian_impl";
+import { ObsidianMcpServer } from "mcp_server";
 import { ServerManager } from "./server/server_manager";
 import { TokenTracker } from "./server/connection_tracker";
+import { logger } from "./tools/logging";
+import { DEFAULT_SETTINGS, type MCPPluginSettings } from "./settings/types";
+import { MCPSettingTab } from "./settings/tab";
 
 export default class ObsidianMCPPlugin extends Plugin {
 	private serverManager: ServerManager | null = null;

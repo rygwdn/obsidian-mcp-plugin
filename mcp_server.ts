@@ -1,21 +1,23 @@
-import { McpServer, ToolCallback } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { searchTool } from "tools/search";
-import { updateContentTool } from "tools/update_content";
-import { dataviewQueryTool } from "tools/dataview_query";
-import { getFileMetadataTool, FileMetadataResource } from "tools/file_metadata";
-import { quickAddListTool, quickAddExecuteTool } from "tools/quickadd";
-import { ToolRegistration } from "tools/types";
-import { DEFAULT_SETTINGS } from "./settings/types";
-import { VaultDailyNoteResource, VaultFileResource } from "tools/vault_file_resource";
-import { getContentsTool } from "tools/get_contents";
+import crypto from "crypto";
 import type { Request, Response } from "express";
-import { logger } from "tools/logging";
+import type { ToolCallback } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types";
+
 import type { ObsidianInterface } from "./obsidian/obsidian_interface";
 import type { AuthenticatedRequest } from "./server/auth";
 import { getRequest } from "./server/auth";
-import crypto from "crypto";
-import { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types";
+import { DEFAULT_SETTINGS } from "./settings/types";
+import { dataviewQueryTool } from "tools/dataview_query";
+import { FileMetadataResource, getFileMetadataTool } from "tools/file_metadata";
+import { getContentsTool } from "tools/get_contents";
+import { logger } from "tools/logging";
+import { quickAddExecuteTool, quickAddListTool } from "tools/quickadd";
+import { searchTool } from "tools/search";
+import type { ToolRegistration } from "tools/types";
+import { updateContentTool } from "tools/update_content";
+import { VaultDailyNoteResource, VaultFileResource } from "tools/vault_file_resource";
 
 export class ObsidianMcpServer {
 	private transports: StreamableHTTPServerTransport[] = [];

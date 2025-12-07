@@ -1,5 +1,17 @@
-import { MCPPluginSettings } from "settings/types";
+import type { App, CachedMetadata, TFile } from "obsidian";
+import { prepareFuzzySearch, prepareSimpleSearch } from "obsidian";
+import { getAPI as getDataviewAPI } from "obsidian-dataview";
+
+import type ObsidianMCPPlugin from "main";
+import type { AuthenticatedRequest } from "../server/auth";
+import type { MCPPluginSettings } from "settings/types";
 import {
+	isDirectoryAccessibleWithToken,
+	isFileAccessibleWithToken,
+	isFileModifiableWithToken,
+} from "tools/permissions";
+
+import type {
 	CheckFileResult,
 	DailyNotesInterface,
 	DataviewInterface,
@@ -8,15 +20,6 @@ import {
 	QuickAddInterface,
 	SearchResult,
 } from "./obsidian_interface";
-import { App, CachedMetadata, prepareFuzzySearch, prepareSimpleSearch, TFile } from "obsidian";
-import ObsidianMCPPlugin from "main";
-import {
-	isDirectoryAccessibleWithToken,
-	isFileAccessibleWithToken,
-	isFileModifiableWithToken,
-} from "tools/permissions";
-import { AuthenticatedRequest } from "../server/auth";
-import { getAPI as getDataviewAPI } from "obsidian-dataview";
 import type { DailyNotesPlugin, PeriodicNotesPlugin } from "./obsidian_types";
 
 export class ObsidianImpl implements ObsidianInterface {

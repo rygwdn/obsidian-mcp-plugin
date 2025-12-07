@@ -1,14 +1,21 @@
 import { z } from "zod";
-import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { ReadResourceResult } from "@modelcontextprotocol/sdk/types";
-import { Variables } from "@modelcontextprotocol/sdk/shared/uriTemplate";
-import { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol";
-import { ServerNotification, ServerRequest } from "@modelcontextprotocol/sdk/types";
-import { ToolRegistration } from "./types";
-import { logger } from "./logging";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type {
+	ReadResourceResult,
+	ServerNotification,
+	ServerRequest,
+} from "@modelcontextprotocol/sdk/types";
+import type { Variables } from "@modelcontextprotocol/sdk/shared/uriTemplate";
+import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol";
+
 import type { ObsidianInterface } from "../obsidian/obsidian_interface";
+import type { AuthenticatedRequest } from "server/auth";
+import { getRequest } from "server/auth";
+
 import { resolveUriToPath } from "./daily_note_utils";
-import { AuthenticatedRequest, getRequest } from "server/auth";
+import { logger } from "./logging";
+import type { ToolRegistration } from "./types";
 
 export async function generateFileMetadata(
 	obsidian: ObsidianInterface,

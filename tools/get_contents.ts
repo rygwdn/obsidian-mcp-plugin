@@ -1,11 +1,13 @@
 import { z } from "zod";
-import { ToolRegistration } from "./types";
-import { resolveUriToPath } from "./daily_note_utils";
-import type { ObsidianInterface } from "../obsidian/obsidian_interface";
-import { VaultFileResource } from "./vault_file_resource";
-import { AuthenticatedRequest } from "server/auth";
 import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol";
-import type { ServerRequest, ServerNotification } from "@modelcontextprotocol/sdk/types";
+import type { ServerNotification, ServerRequest } from "@modelcontextprotocol/sdk/types";
+
+import type { ObsidianInterface } from "../obsidian/obsidian_interface";
+import type { AuthenticatedRequest } from "server/auth";
+
+import { resolveUriToPath } from "./daily_note_utils";
+import type { ToolRegistration } from "./types";
+import { VaultFileResource } from "./vault_file_resource";
 
 export const getContentsTool: ToolRegistration = {
 	name: "get_contents",

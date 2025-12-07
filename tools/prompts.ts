@@ -1,15 +1,16 @@
-import type { TFile } from "../obsidian/obsidian_types";
-import { z, ZodType, type ZodTypeAny } from "zod";
-import { McpServer, RegisteredPrompt } from "@modelcontextprotocol/sdk/server/mcp.js";
-import {
+import { z, type ZodType, type ZodTypeAny } from "zod";
+import type { McpServer, RegisteredPrompt } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type {
 	GetPromptResult,
 	ServerNotification,
 	ServerRequest,
 } from "@modelcontextprotocol/sdk/types.js";
-import { logger } from "./logging";
+import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol";
+
+import type { TFile } from "../obsidian/obsidian_types";
 import type { ObsidianInterface } from "../obsidian/obsidian_interface";
-import { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol";
 import { getRequest } from "../server/auth";
+import { logger } from "./logging";
 
 export class VaultPrompt {
 	public registration: RegisteredPrompt | undefined;

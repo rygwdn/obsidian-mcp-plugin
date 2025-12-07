@@ -1,7 +1,8 @@
-import { ToolAnnotations } from "@modelcontextprotocol/sdk/types";
-import { ZodRawShape } from "zod";
+import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types";
+import type { ZodRawShape } from "zod";
+
 import type { ObsidianInterface } from "../obsidian/obsidian_interface";
-import { AuthenticatedRequest } from "server/auth";
+import type { AuthenticatedRequest } from "server/auth";
 
 export interface ToolRegistration {
 	annotations: ToolAnnotations;

@@ -1,7 +1,9 @@
 import { z } from "zod";
-import { ToolRegistration } from "./types";
+
 import type { ObsidianInterface, QuickAddChoice } from "../obsidian/obsidian_interface";
-import { AuthenticatedRequest } from "server/auth";
+import type { AuthenticatedRequest } from "server/auth";
+
+import type { ToolRegistration } from "./types";
 
 /**
  * Extracts variable names from a template string based on QuickAdd template syntax
