@@ -25,6 +25,7 @@ export interface AuthToken {
 		update_content: boolean;
 		dataview_query: boolean;
 		quickadd: boolean;
+		tasknotes: boolean;
 	};
 	directoryPermissions: {
 		rules: DirectoryRule[];

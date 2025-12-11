@@ -7,6 +7,7 @@ import {
 	ObsidianInterface,
 	QuickAddInterface,
 	SearchResult,
+	TaskNotesInterface,
 } from "../obsidian/obsidian_interface";
 import { DEFAULT_SETTINGS, MCPPluginSettings, AuthToken } from "settings/types";
 import { AuthenticatedRequest, AUTHENTICATED_REQUEST_KEY } from "../server/auth";
@@ -219,8 +220,16 @@ export class MockObsidian implements ObsidianInterface {
 		return this.dataview;
 	}
 
+	getTaskNotes(request: AuthenticatedRequest): TaskNotesInterface | null {
+		if (!request.token.enabledTools.tasknotes) {
+			return null;
+		}
+		return this.taskNotes;
+	}
+
 	quickAdd: QuickAddInterface | null;
 	dataview: DataviewInterface | null;
+	taskNotes: TaskNotesInterface | null;
 	dailyNotes: DailyNotesInterface | null;
 }
 
@@ -320,6 +329,7 @@ export function createMockRequest(
 			update_content: true,
 			dataview_query: true,
 			quickadd: true,
+			tasknotes: false,
 		},
 		directoryPermissions: {
 			rules: [],

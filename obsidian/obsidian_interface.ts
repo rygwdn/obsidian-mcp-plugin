@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 import type { AuthenticatedRequest } from "../server/auth";
 import type { MCPPluginSettings } from "settings/types";
 
@@ -51,6 +53,7 @@ export interface ObsidianInterface {
 
 	getQuickAdd(request: AuthenticatedRequest): QuickAddInterface | null;
 	getDataview(request: AuthenticatedRequest): DataviewInterface | null;
+	getTaskNotes(request: AuthenticatedRequest): TaskNotesInterface | null;
 	dailyNotes: DailyNotesInterface | null;
 }
 
@@ -81,6 +84,73 @@ export interface DataviewInterface {
 export interface DailyNotesInterface {
 	format: string;
 	folder: string;
+}
+
+// TaskNotes Zod schemas - single source of truth for types and validation
+export const TaskInfoSchema = z.object({
+	id: z.string(),
+	title: z.string(),
+	status: z.string(),
+	priority: z.string(),
+	due: z.string().optional(),
+	scheduled: z.string().optional(),
+	path: z.string(),
+	archived: z.boolean(),
+	tags: z.array(z.string()).optional(),
+	contexts: z.array(z.string()).optional(),
+	projects: z.array(z.string()).optional(),
+	recurrence: z.string().optional(),
+	completedDate: z.string().optional(),
+	timeEstimate: z.number().optional(),
+	totalTrackedTime: z.number().optional(),
+	isBlocked: z.boolean().optional(),
+	isBlocking: z.boolean().optional(),
+	dateCreated: z.string().optional(),
+	dateModified: z.string().optional(),
+});
+export type TaskInfo = z.infer<typeof TaskInfoSchema>;
+
+export const TaskStatsSchema = z.object({
+	total: z.number(),
+	completed: z.number(),
+	active: z.number(),
+	overdue: z.number(),
+	archived: z.number(),
+});
+export type TaskStats = z.infer<typeof TaskStatsSchema>;
+
+export const TaskFilterOptionsSchema = z.object({
+	statuses: z.array(z.string()),
+	priorities: z.array(z.string()),
+	contexts: z.array(z.string()),
+	projects: z.array(z.string()),
+});
+export type TaskFilterOptions = z.infer<typeof TaskFilterOptionsSchema>;
+
+export interface TaskFilter {
+	status?: string[];
+	priority?: string[];
+	due?: { before?: string; after?: string };
+	scheduled?: { before?: string; after?: string };
+	archived?: boolean;
+	tags?: string[];
+	contexts?: string[];
+	projects?: string[];
+	limit?: number;
+	offset?: number;
+	sortBy?: string;
+	sortDirection?: "asc" | "desc";
+}
+
+export interface TaskNotesInterface {
+	getTaskByPath(path: string): TaskInfo | null;
+	queryTasks(filter: TaskFilter): TaskInfo[];
+	createTask(data: { title: string; [key: string]: unknown }): Promise<TaskInfo>;
+	updateTask(id: string, updates: Record<string, unknown>): Promise<TaskInfo>;
+	toggleStatus(id: string): Promise<TaskInfo>;
+	completeInstance(id: string, date?: string): Promise<TaskInfo>;
+	getStats(): TaskStats;
+	getFilterOptions(): TaskFilterOptions;
 }
 
 export interface SearchResult {

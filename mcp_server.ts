@@ -15,6 +15,12 @@ import { getContentsTool } from "tools/get_contents";
 import { logger } from "tools/logging";
 import { quickAddExecuteTool, quickAddListTool } from "tools/quickadd";
 import { searchTool } from "tools/search";
+import {
+	taskNotesQueryTool,
+	taskNotesUpdateTool,
+	taskNotesCreateTool,
+	TaskNotesStatsResource,
+} from "tools/tasknotes";
 import type { ToolRegistration } from "tools/types";
 import { updateContentTool } from "tools/update_content";
 import { VaultDailyNoteResource, VaultFileResource } from "tools/vault_file_resource";
@@ -129,6 +135,13 @@ export class ObsidianMcpServer {
 		if (this.obsidian.getQuickAdd(request) && enabledTools.quickadd) {
 			this.registerTool(server, quickAddListTool);
 			this.registerTool(server, quickAddExecuteTool);
+		}
+
+		if (enabledTools.tasknotes && this.obsidian.getTaskNotes(request)) {
+			new TaskNotesStatsResource(this.obsidian).register(server);
+			this.registerTool(server, taskNotesQueryTool);
+			this.registerTool(server, taskNotesUpdateTool);
+			this.registerTool(server, taskNotesCreateTool);
 		}
 	}
 

@@ -11,14 +11,18 @@ import {
 	isFileModifiableWithToken,
 } from "tools/permissions";
 
-import type {
-	CheckFileResult,
-	DailyNotesInterface,
-	DataviewInterface,
-	ObsidianInterface,
-	QuickAddChoice,
-	QuickAddInterface,
-	SearchResult,
+import {
+	TaskInfoSchema,
+	TaskStatsSchema,
+	TaskFilterOptionsSchema,
+	type CheckFileResult,
+	type DailyNotesInterface,
+	type DataviewInterface,
+	type ObsidianInterface,
+	type QuickAddChoice,
+	type QuickAddInterface,
+	type SearchResult,
+	type TaskNotesInterface,
 } from "./obsidian_interface";
 import type { DailyNotesPlugin, PeriodicNotesPlugin } from "./obsidian_types";
 
@@ -240,6 +244,76 @@ export class ObsidianImpl implements ObsidianInterface {
 		return {
 			queryMarkdown: (query) => api.queryMarkdown(query),
 		};
+	}
+
+	getTaskNotes(request: AuthenticatedRequest): TaskNotesInterface | null {
+		if (!request.token.enabledTools.tasknotes) {
+			return null;
+		}
+		const plugin = this.app.plugins.plugins["task-notes"];
+		if (!plugin || !("cacheManager" in plugin) || !("taskService" in plugin)) {
+			return null;
+		}
+
+		const cacheManager = plugin.cacheManager as Record<string, unknown>;
+		const taskService = plugin.taskService as Record<string, unknown>;
+
+		// Validate required methods exist on the plugin API
+		const requiredCacheMethods = ["getTaskByPath", "queryTasks", "getStats", "getFilterOptions"];
+		const requiredServiceMethods = ["createTask", "updateTask", "toggleStatus", "completeInstance"];
+
+		for (const method of requiredCacheMethods) {
+			if (typeof cacheManager[method] !== "function") {
+				return null;
+			}
+		}
+		for (const method of requiredServiceMethods) {
+			if (typeof taskService[method] !== "function") {
+				return null;
+			}
+		}
+
+		const cache = cacheManager as {
+			getTaskByPath(path: string): unknown;
+			queryTasks(filter: unknown): unknown[];
+			getStats(): unknown;
+			getFilterOptions(): unknown;
+		};
+		const service = taskService as {
+			createTask(data: unknown): Promise<unknown>;
+			updateTask(id: string, updates: unknown): Promise<unknown>;
+			toggleStatus(id: string): Promise<unknown>;
+			completeInstance(id: string, date?: string): Promise<unknown>;
+		};
+
+		return {
+			getTaskByPath: (path) => {
+				const result = cache.getTaskByPath(path);
+				return result === null ? null : TaskInfoSchema.parse(result);
+			},
+			queryTasks: (filter) => {
+				const results = cache.queryTasks(filter);
+				return results.map((task) => TaskInfoSchema.parse(task));
+			},
+			createTask: async (data) => {
+				const result = await service.createTask(data);
+				return TaskInfoSchema.parse(result);
+			},
+			updateTask: async (id, updates) => {
+				const result = await service.updateTask(id, updates);
+				return TaskInfoSchema.parse(result);
+			},
+			toggleStatus: async (id) => {
+				const result = await service.toggleStatus(id);
+				return TaskInfoSchema.parse(result);
+			},
+			completeInstance: async (id, date) => {
+				const result = await service.completeInstance(id, date);
+				return TaskInfoSchema.parse(result);
+			},
+			getStats: () => TaskStatsSchema.parse(cache.getStats()),
+			getFilterOptions: () => TaskFilterOptionsSchema.parse(cache.getFilterOptions()),
+		} satisfies TaskNotesInterface;
 	}
 
 	get dailyNotes(): DailyNotesInterface | null {

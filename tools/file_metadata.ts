@@ -44,6 +44,29 @@ export async function generateFileMetadata(
 		result += "\n";
 	}
 
+	// Add TaskNotes computed fields if available
+	const taskNotes = obsidian.getTaskNotes(request);
+	if (taskNotes) {
+		const taskInfo = taskNotes.getTaskByPath(filePath);
+		if (taskInfo) {
+			result += `## TaskNotes\n\n`;
+			result += `- **id**: ${taskInfo.id}\n`;
+			result += `- **status**: ${taskInfo.status}\n`;
+			result += `- **priority**: ${taskInfo.priority}\n`;
+			if (taskInfo.due) result += `- **due**: ${taskInfo.due}\n`;
+			if (taskInfo.scheduled) result += `- **scheduled**: ${taskInfo.scheduled}\n`;
+			// Boolean fields use !== undefined to show false values (truthy check would hide them)
+			if (taskInfo.isBlocked !== undefined) result += `- **isBlocked**: ${taskInfo.isBlocked}\n`;
+			if (taskInfo.isBlocking !== undefined) result += `- **isBlocking**: ${taskInfo.isBlocking}\n`;
+			if (taskInfo.totalTrackedTime)
+				result += `- **totalTrackedTime**: ${taskInfo.totalTrackedTime}ms\n`;
+			if (taskInfo.recurrence) result += `- **recurrence**: ${taskInfo.recurrence}\n`;
+			if (taskInfo.contexts?.length) result += `- **contexts**: ${taskInfo.contexts.join(", ")}\n`;
+			if (taskInfo.projects?.length) result += `- **projects**: ${taskInfo.projects.join(", ")}\n`;
+			result += "\n";
+		}
+	}
+
 	if (fileCache.tags && fileCache.tags.length > 0) {
 		result += `## Tags\n\n`;
 		for (const tag of fileCache.tags) {

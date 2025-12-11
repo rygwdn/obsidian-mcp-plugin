@@ -225,6 +225,7 @@ function renderCreateTokenConfig(
 			search: true,
 			dataview_query: true,
 			quickadd: true,
+			tasknotes: false,
 		},
 		directoryPermissions: {
 			rules: [],
