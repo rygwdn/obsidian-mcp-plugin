@@ -250,7 +250,7 @@ export class ObsidianImpl implements ObsidianInterface {
 		if (!request.token.enabledTools.tasknotes) {
 			return null;
 		}
-		const plugin = this.app.plugins.plugins["task-notes"];
+		const plugin = this.app.plugins.plugins["tasknotes"];
 		if (!plugin || !("cacheManager" in plugin) || !("taskService" in plugin)) {
 			return null;
 		}

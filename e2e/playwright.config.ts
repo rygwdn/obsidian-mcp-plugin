@@ -28,7 +28,16 @@ export default defineConfig({
 		},
 		{
 			name: "e2e",
-			testMatch: ["ui-settings.test.ts", "mcp-api.test.ts"],
+			testMatch: [
+				"ui-settings.test.ts",
+				"mcp-api.test.ts",
+				"dataview.test.ts",
+				"quickadd.test.ts",
+				// TaskNotes tests are disabled because the plugin API doesn't expose
+				// the expected cacheManager/taskService methods needed for MCP integration.
+				// The plugin loads but getTaskNotes() returns null due to missing methods.
+				// "tasknotes.test.ts",
+			],
 			dependencies: ["setup"],
 		},
 	],

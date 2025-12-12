@@ -13,7 +13,7 @@ const MCP_PLUGIN_PATH = path.join(PLUGINS_PATH, "obsidian-mcp-plugin");
 const UNPACKED_PATH = path.join(__dirname, "../.obsidian-unpacked");
 
 // Community plugins required for e2e tests
-const REQUIRED_PLUGINS = ["dataview", "quickadd", "obsidian-task-notes"];
+const REQUIRED_PLUGINS = ["dataview", "quickadd", "tasknotes"];
 
 /**
  * Global setup for Playwright e2e tests

@@ -83,7 +83,7 @@ echo ""
 # Download each plugin
 download_plugin "$DATAVIEW_REPO" "dataview" "$DATAVIEW_VERSION"
 download_plugin "$QUICKADD_REPO" "quickadd" "$QUICKADD_VERSION"
-download_plugin "$TASKNOTES_REPO" "obsidian-task-notes" "$TASKNOTES_VERSION"
+download_plugin "$TASKNOTES_REPO" "tasknotes" "$TASKNOTES_VERSION"
 
 echo ""
 echo "All plugins downloaded successfully!"
