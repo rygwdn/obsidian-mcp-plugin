@@ -7,8 +7,12 @@ This document contains preferences and commands for Claude to use when working w
 After making changes, Claude should run the following commands to validate the changes:
 
 ```bash
-# Full check including linting, formatting, typechecking and tests
+# Full check including linting, formatting, typechecking and unit tests
 npm run check
+
+# E2E tests (requires Docker/Podman, run outside sandbox)
+podman build -t obsidian-mcp-e2e -f e2e/Dockerfile .
+podman run --rm --ipc=host -v $(pwd)/e2e/test-results:/app/e2e/test-results obsidian-mcp-e2e
 ```
 
 ## References to Project Guidelines

@@ -1,9 +1,11 @@
 ---
 description:
-globs: test/**
+globs: test/**,e2e/**
 alwaysApply: false
 ---
 # Testing Best Practices
+
+## Unit Tests (test/)
 
 Tests should use real implementations instead of mocks whenever possible. The [test/resources.test.ts](mdc:test/resources.test.ts) file serves as a good example of this approach.
 
@@ -11,3 +13,39 @@ Key testing principles:
 - Set up test environment with realistic data
 - Use MockApp to simulate Obsidian's API
 - Avoid vi.mock() for any of the code under test
+
+Run unit tests with: `npm run test`
+
+## E2E Tests (e2e/)
+
+End-to-end tests run against a real Obsidian instance using Playwright in a Docker container.
+
+### Structure
+- `e2e/tests/` - Playwright test files
+- `e2e/helpers/mcp-client.ts` - MCP SDK client wrapper for testing
+- `e2e/helpers/obsidian.ts` - Obsidian launch and management helpers
+- `e2e/test-vault/` - Test vault with sample data
+
+### MCP Client
+E2E tests use the official MCP SDK (`@modelcontextprotocol/sdk`) with `StreamableHTTPClientTransport`:
+```typescript
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { createMcpClient } from "../helpers/mcp-client";
+
+const client = await createMcpClient();
+const result = await client.listTools();
+await client.close();
+```
+
+### Running E2E Tests
+E2E tests require Docker/Podman:
+```bash
+# Build the test container
+podman build -t obsidian-mcp-e2e -f e2e/Dockerfile .
+
+# Run all e2e tests
+podman run --rm --ipc=host -v $(pwd)/e2e/test-results:/app/e2e/test-results obsidian-mcp-e2e
+
+# Run specific test
+podman run --rm --ipc=host obsidian-mcp-e2e npm run test:e2e -- --grep "should list"
+```

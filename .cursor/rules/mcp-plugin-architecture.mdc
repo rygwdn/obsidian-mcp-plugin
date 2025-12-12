@@ -20,5 +20,10 @@ This plugin follows a structured architecture for tools and resources:
 - Resources should handle daily notes through [tools/daily_note_utils.ts](mdc:tools/daily_note_utils.ts)
 
 ## Daily Notes Support
-- Daily notes follow the special scheme: `file://daily:<date>`
-- Support aliases like "today", "yesterday", "tomorrow"
+- Daily notes follow the special scheme: `daily:///<date>` (e.g., `daily:///today`, `daily:///2024-01-15`)
+- Support aliases: "today", "yesterday", "tomorrow"
+
+## Server Implementation
+- MCP server uses `StreamableHTTPServerTransport` from `@modelcontextprotocol/sdk`
+- Server is defined in [mcp_server.ts](mdc:mcp_server.ts)
+- HTTP endpoint at `/mcp` handles JSON-RPC requests with Bearer token authentication
