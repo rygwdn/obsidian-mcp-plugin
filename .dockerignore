@@ -1,0 +1,9 @@
+node_modules
+e2e/.obsidian-unpacked
+e2e/.obsidian-appimage
+e2e/test-results
+e2e/playwright-report
+dist
+main.js
+*.log
+.git

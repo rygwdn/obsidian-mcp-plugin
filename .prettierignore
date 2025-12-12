@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Build output
+main.js
+main.js.map
+*.js.map
+
+# E2E generated files
+e2e/.obsidian-unpacked/
+e2e/.obsidian-appimage/
+e2e/playwright-report/
+e2e/test-results/
+e2e/.playwright/
+playwright-report/
+test-results/
+
+# Coverage
+coverage/

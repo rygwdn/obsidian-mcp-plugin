@@ -1,0 +1,23 @@
+{
+	"config": {
+		"MD013": {
+			"line_length": 100,
+			"code_blocks": false,
+			"tables": false
+		},
+		"MD024": {
+			"siblings_only": true
+		}
+	},
+	"globs": ["**/*.md"],
+	"ignores": [
+		"node_modules/**",
+		"e2e/.obsidian-unpacked/**",
+		"e2e/.obsidian-appimage/**",
+		"e2e/playwright-report/**",
+		"e2e/test-results/**",
+		"e2e/.playwright/**",
+		"playwright-report/**",
+		"test-results/**"
+	]
+}

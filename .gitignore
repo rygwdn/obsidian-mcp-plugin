@@ -24,3 +24,5 @@ data.json
 **/.claude/settings.local.json
 coverage/
 .mcp.json
+playwright-report
+test-results
