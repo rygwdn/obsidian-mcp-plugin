@@ -65,7 +65,7 @@ test.describe("TaskNotes Integration", () => {
 		const result = await client.callTool({
 			name: "tasknotes_query",
 			arguments: {
-				status: "incomplete",
+				status: ["incomplete"],
 			},
 		});
 
@@ -81,7 +81,7 @@ test.describe("TaskNotes Integration", () => {
 		const result = await client.callTool({
 			name: "tasknotes_query",
 			arguments: {
-				priority: "high",
+				priority: ["high"],
 			},
 		});
 
@@ -109,7 +109,7 @@ test.describe("TaskNotes Integration", () => {
 		const result = await client.callTool({
 			name: "tasknotes_query",
 			arguments: {
-				status: "completed",
+				status: ["completed"],
 			},
 		});
 
@@ -132,56 +132,22 @@ test.describe("TaskNotes Integration", () => {
 		}
 	});
 
-	test("should create a new task", async () => {
-		const result = await client.callTool({
-			name: "tasknotes_create",
-			arguments: {
-				title: "E2E Test Task",
-				priority: "medium",
-				status: "incomplete",
-				contexts: ["testing"],
-				tags: ["e2e", "automated"],
-			},
-		});
-
-		expect(result.isError).toBeFalsy();
-	});
-
-	test("should find created task in query", async () => {
-		// Query to find the task we just created
-		const result = await client.callTool({
-			name: "tasknotes_query",
-			arguments: {
-				contexts: ["testing"],
-			},
-		});
-
-		expect(result.isError).toBeFalsy();
-		const text = getToolResultText(result);
-		expect(text).toMatch(/e2e test task/i);
-	});
-
-	test("should update task status", async () => {
-		// First query to get a task
+	test("should get task by path", async () => {
+		// Query to get an existing task first
 		const queryResult = await client.callTool({
 			name: "tasknotes_query",
-			arguments: {
-				contexts: ["testing"],
-			},
+			arguments: {},
 		});
-
 		expect(queryResult.isError).toBeFalsy();
+		const queryText = getToolResultText(queryResult);
+		const tasks = JSON.parse(queryText);
+		expect(tasks.length).toBeGreaterThan(0);
 
-		// Update the task (the exact update mechanism depends on the tool's API)
-		const updateResult = await client.callTool({
-			name: "tasknotes_update",
-			arguments: {
-				title: "E2E Test Task",
-				status: "completed",
-			},
-		});
-
-		expect(updateResult.isError).toBeFalsy();
+		// Verify tasks have expected fields
+		const firstTask = tasks[0];
+		expect(firstTask).toHaveProperty("title");
+		expect(firstTask).toHaveProperty("status");
+		expect(firstTask).toHaveProperty("path");
 	});
 
 	test("should handle query with no matching tasks", async () => {

@@ -73,7 +73,7 @@ export const taskNotesQueryTool: ToolRegistration = {
 			sortDirection: parsed.sort_direction,
 		};
 
-		const tasks = taskNotes.queryTasks(filter);
+		const tasks = await taskNotes.queryTasks(filter);
 		return JSON.stringify(tasks, null, 2);
 	},
 };
@@ -233,7 +233,7 @@ export class TaskNotesStatsResource {
 			throw new Error("TaskNotes plugin is not enabled");
 		}
 
-		const stats = taskNotes.getStats();
+		const stats = await taskNotes.getStats();
 		const filterOptions = taskNotes.getFilterOptions();
 
 		const result = {

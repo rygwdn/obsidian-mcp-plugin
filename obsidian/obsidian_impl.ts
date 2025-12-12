@@ -22,6 +22,7 @@ import {
 	type QuickAddChoice,
 	type QuickAddInterface,
 	type SearchResult,
+	type TaskFilter,
 	type TaskNotesInterface,
 } from "./obsidian_interface";
 import type { DailyNotesPlugin, PeriodicNotesPlugin } from "./obsidian_types";
@@ -250,69 +251,252 @@ export class ObsidianImpl implements ObsidianInterface {
 		if (!request.token.enabledTools.tasknotes) {
 			return null;
 		}
-		const plugin = this.app.plugins.plugins["tasknotes"];
-		if (!plugin || !("cacheManager" in plugin) || !("taskService" in plugin)) {
+		const plugin = this.app.plugins.plugins["tasknotes"] as Record<string, unknown> | undefined;
+		if (!plugin) {
 			return null;
 		}
 
-		const cacheManager = plugin.cacheManager as Record<string, unknown>;
-		const taskService = plugin.taskService as Record<string, unknown>;
+		// TaskNotes v4.x API structure:
+		// - cacheManager (TaskManager): getTaskByPath, getAllTasks, getAllStatuses, etc.
+		// - taskService (TaskService): createTask, updateTask, toggleStatus, toggleRecurringTaskComplete
+		// - filterService (FilterService): getFilterOptions, sortTasks, etc.
 
-		// Validate required methods exist on the plugin API
-		const requiredCacheMethods = ["getTaskByPath", "queryTasks", "getStats", "getFilterOptions"];
-		const requiredServiceMethods = ["createTask", "updateTask", "toggleStatus", "completeInstance"];
-
-		for (const method of requiredCacheMethods) {
-			if (typeof cacheManager[method] !== "function") {
-				return null;
-			}
-		}
-		for (const method of requiredServiceMethods) {
-			if (typeof taskService[method] !== "function") {
-				return null;
-			}
+		if (
+			!plugin.cacheManager ||
+			!plugin.taskService ||
+			!plugin.filterService ||
+			typeof plugin.cacheManager !== "object" ||
+			typeof plugin.taskService !== "object" ||
+			typeof plugin.filterService !== "object"
+		) {
+			return null;
 		}
 
-		const cache = cacheManager as {
-			getTaskByPath(path: string): unknown;
-			queryTasks(filter: unknown): unknown[];
-			getStats(): unknown;
+		const cacheManager = plugin.cacheManager as {
+			getTaskByPath(path: string): unknown | null;
+			getAllTasks(): Promise<unknown>; // Returns Promise of Map, object, or array
+			getAllStatuses(): string[];
+			getAllPriorities(): string[];
+			getAllContexts(): string[];
+			getAllProjects(): string[];
+		};
+
+		const taskService = plugin.taskService as {
+			createTask(data: unknown): Promise<unknown>;
+			updateTask(path: string, updates: unknown): Promise<unknown>;
+			toggleStatus(path: string): Promise<unknown>;
+			toggleRecurringTaskComplete(path: string, date?: string): Promise<unknown>;
+		};
+
+		const filterService = plugin.filterService as {
 			getFilterOptions(): unknown;
 		};
-		const service = taskService as {
-			createTask(data: unknown): Promise<unknown>;
-			updateTask(id: string, updates: unknown): Promise<unknown>;
-			toggleStatus(id: string): Promise<unknown>;
-			completeInstance(id: string, date?: string): Promise<unknown>;
+
+		// Validate required methods exist
+		const hasMethod = (obj: unknown, method: string) =>
+			obj &&
+			typeof obj === "object" &&
+			typeof (obj as Record<string, unknown>)[method] === "function";
+
+		if (
+			!hasMethod(cacheManager, "getTaskByPath") ||
+			!hasMethod(cacheManager, "getAllTasks") ||
+			!hasMethod(taskService, "createTask") ||
+			!hasMethod(taskService, "updateTask") ||
+			!hasMethod(taskService, "toggleStatus") ||
+			!hasMethod(filterService, "getFilterOptions")
+		) {
+			return null;
+		}
+
+		// Helper to filter tasks based on our filter interface
+		const filterTasks = (tasks: unknown[], filter: TaskFilter): unknown[] => {
+			let filtered = [...tasks];
+
+			if (filter.status && filter.status.length > 0) {
+				filtered = filtered.filter((t) => {
+					const task = t as { status?: string };
+					return task.status && filter.status!.includes(task.status);
+				});
+			}
+
+			if (filter.priority && filter.priority.length > 0) {
+				filtered = filtered.filter((t) => {
+					const task = t as { priority?: string };
+					return task.priority && filter.priority!.includes(task.priority);
+				});
+			}
+
+			if (filter.contexts && filter.contexts.length > 0) {
+				filtered = filtered.filter((t) => {
+					const task = t as { contexts?: string[] };
+					return task.contexts && filter.contexts!.some((ctx) => task.contexts!.includes(ctx));
+				});
+			}
+
+			if (filter.projects && filter.projects.length > 0) {
+				filtered = filtered.filter((t) => {
+					const task = t as { projects?: string[] };
+					return task.projects && filter.projects!.some((proj) => task.projects!.includes(proj));
+				});
+			}
+
+			if (filter.tags && filter.tags.length > 0) {
+				filtered = filtered.filter((t) => {
+					const task = t as { tags?: string[] };
+					return task.tags && filter.tags!.some((tag) => task.tags!.includes(tag));
+				});
+			}
+
+			if (filter.archived !== undefined) {
+				filtered = filtered.filter((t) => {
+					const task = t as { archived?: boolean };
+					return task.archived === filter.archived;
+				});
+			}
+
+			if (filter.due) {
+				if (filter.due.before) {
+					const before = filter.due.before;
+					filtered = filtered.filter((t) => {
+						const task = t as { due?: string };
+						return task.due && task.due <= before;
+					});
+				}
+				if (filter.due.after) {
+					const after = filter.due.after;
+					filtered = filtered.filter((t) => {
+						const task = t as { due?: string };
+						return task.due && task.due >= after;
+					});
+				}
+			}
+
+			if (filter.scheduled) {
+				if (filter.scheduled.before) {
+					const before = filter.scheduled.before;
+					filtered = filtered.filter((t) => {
+						const task = t as { scheduled?: string };
+						return task.scheduled && task.scheduled <= before;
+					});
+				}
+				if (filter.scheduled.after) {
+					const after = filter.scheduled.after;
+					filtered = filtered.filter((t) => {
+						const task = t as { scheduled?: string };
+						return task.scheduled && task.scheduled >= after;
+					});
+				}
+			}
+
+			// Apply limit and offset
+			if (filter.offset) {
+				filtered = filtered.slice(filter.offset);
+			}
+			if (filter.limit) {
+				filtered = filtered.slice(0, filter.limit);
+			}
+
+			return filtered;
 		};
 
 		return {
 			getTaskByPath: (path) => {
-				const result = cache.getTaskByPath(path);
-				return result === null ? null : TaskInfoSchema.parse(result);
+				const result = cacheManager.getTaskByPath(path);
+				if (result === null || result === undefined) return null;
+				return TaskInfoSchema.parse(result);
 			},
-			queryTasks: (filter) => {
-				const results = cache.queryTasks(filter);
-				return results.map((task) => TaskInfoSchema.parse(task));
+			queryTasks: async (filter) => {
+				const allTasksRaw = await cacheManager.getAllTasks();
+				// Handle case where getAllTasks returns a Map, object, or array
+				let allTasks: unknown[];
+				if (Array.isArray(allTasksRaw)) {
+					allTasks = allTasksRaw;
+				} else if (allTasksRaw instanceof Map) {
+					allTasks = Array.from(allTasksRaw.values());
+				} else if (allTasksRaw && typeof allTasksRaw === "object") {
+					allTasks = Object.values(allTasksRaw);
+				} else {
+					allTasks = [];
+				}
+
+				const filtered = filterTasks(allTasks, filter);
+				return filtered.map((task) => TaskInfoSchema.parse(task));
 			},
 			createTask: async (data) => {
-				const result = await service.createTask(data);
+				const result = await taskService.createTask(data);
 				return TaskInfoSchema.parse(result);
 			},
 			updateTask: async (id, updates) => {
-				const result = await service.updateTask(id, updates);
+				const result = await taskService.updateTask(id, updates);
 				return TaskInfoSchema.parse(result);
 			},
 			toggleStatus: async (id) => {
-				const result = await service.toggleStatus(id);
+				const result = await taskService.toggleStatus(id);
 				return TaskInfoSchema.parse(result);
 			},
 			completeInstance: async (id, date) => {
-				const result = await service.completeInstance(id, date);
+				// Use toggleRecurringTaskComplete for recurring task completion
+				const result = await taskService.toggleRecurringTaskComplete(id, date);
 				return TaskInfoSchema.parse(result);
 			},
-			getStats: () => TaskStatsSchema.parse(cache.getStats()),
-			getFilterOptions: () => TaskFilterOptionsSchema.parse(cache.getFilterOptions()),
+			getStats: async () => {
+				// Compute stats from all tasks
+				const allTasksRaw = await cacheManager.getAllTasks();
+				let allTasks: unknown[];
+				if (Array.isArray(allTasksRaw)) {
+					allTasks = allTasksRaw;
+				} else if (allTasksRaw instanceof Map) {
+					allTasks = Array.from(allTasksRaw.values());
+				} else if (allTasksRaw && typeof allTasksRaw === "object") {
+					allTasks = Object.values(allTasksRaw);
+				} else {
+					allTasks = [];
+				}
+
+				let completed = 0;
+				let active = 0;
+				let overdue = 0;
+				let archived = 0;
+				const today = new Date().toISOString().split("T")[0];
+
+				for (const t of allTasks) {
+					const task = t as { status?: string; archived?: boolean; due?: string };
+					if (task.archived) {
+						archived++;
+					} else if (task.status === "completed" || task.status === "done") {
+						completed++;
+					} else {
+						active++;
+						if (task.due && task.due < today) {
+							overdue++;
+						}
+					}
+				}
+
+				return TaskStatsSchema.parse({
+					total: allTasks.length,
+					completed,
+					active,
+					overdue,
+					archived,
+				});
+			},
+			getFilterOptions: () => {
+				// Get filter options from filterService or build from cacheManager
+				try {
+					const options = filterService.getFilterOptions();
+					return TaskFilterOptionsSchema.parse(options);
+				} catch {
+					// Fallback: build from cacheManager methods
+					return TaskFilterOptionsSchema.parse({
+						statuses: cacheManager.getAllStatuses(),
+						priorities: cacheManager.getAllPriorities(),
+						contexts: cacheManager.getAllContexts(),
+						projects: cacheManager.getAllProjects(),
+					});
+				}
+			},
 		} satisfies TaskNotesInterface;
 	}
 

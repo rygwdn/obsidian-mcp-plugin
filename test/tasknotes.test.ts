@@ -48,7 +48,7 @@ class MockTaskNotes implements TaskNotesInterface {
 		return this.tasks.find((t) => t.path === path) ?? null;
 	}
 
-	queryTasks(filter: TaskFilter): TaskInfo[] {
+	async queryTasks(filter: TaskFilter): Promise<TaskInfo[]> {
 		let filtered = [...this.tasks];
 
 		if (filter.status && filter.status.length > 0) {
@@ -170,13 +170,13 @@ class MockTaskNotes implements TaskNotesInterface {
 		return task;
 	}
 
-	getStats(): {
+	async getStats(): Promise<{
 		total: number;
 		completed: number;
 		active: number;
 		overdue: number;
 		archived: number;
-	} {
+	}> {
 		const today = new Date().toISOString().split("T")[0];
 		return {
 			total: this.tasks.length,
@@ -742,7 +742,7 @@ title: Complete project proposal
 				isBlocked: true,
 				isBlocking: false,
 			};
-			taskNotesPlugin.setTasks([...taskNotesPlugin.queryTasks({}), blockedTask]);
+			taskNotesPlugin.setTasks([...(await taskNotesPlugin.queryTasks({})), blockedTask]);
 
 			obsidian.setFiles({
 				"tasks/blocked-task.md": `---
@@ -768,7 +768,7 @@ title: Blocked task
 				archived: false,
 				recurrence: "every week",
 			};
-			taskNotesPlugin.setTasks([...taskNotesPlugin.queryTasks({}), recurringTask]);
+			taskNotesPlugin.setTasks([...(await taskNotesPlugin.queryTasks({})), recurringTask]);
 
 			obsidian.setFiles({
 				"tasks/recurring-task.md": `---
@@ -793,7 +793,7 @@ title: Recurring task
 				archived: false,
 				totalTrackedTime: 3600000, // 1 hour in ms
 			};
-			taskNotesPlugin.setTasks([...taskNotesPlugin.queryTasks({}), trackedTask]);
+			taskNotesPlugin.setTasks([...(await taskNotesPlugin.queryTasks({})), trackedTask]);
 
 			obsidian.setFiles({
 				"tasks/tracked-task.md": `---

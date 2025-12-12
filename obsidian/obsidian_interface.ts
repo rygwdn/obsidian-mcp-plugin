@@ -144,12 +144,12 @@ export interface TaskFilter {
 
 export interface TaskNotesInterface {
 	getTaskByPath(path: string): TaskInfo | null;
-	queryTasks(filter: TaskFilter): TaskInfo[];
+	queryTasks(filter: TaskFilter): Promise<TaskInfo[]>;
 	createTask(data: { title: string; [key: string]: unknown }): Promise<TaskInfo>;
 	updateTask(id: string, updates: Record<string, unknown>): Promise<TaskInfo>;
 	toggleStatus(id: string): Promise<TaskInfo>;
 	completeInstance(id: string, date?: string): Promise<TaskInfo>;
-	getStats(): TaskStats;
+	getStats(): Promise<TaskStats>;
 	getFilterOptions(): TaskFilterOptions;
 }
 
