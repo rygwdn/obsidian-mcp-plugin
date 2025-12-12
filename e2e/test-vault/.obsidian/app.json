@@ -1,11 +1,11 @@
 {
-  "alwaysUpdateLinks": true,
-  "newFileLocation": "current",
-  "attachmentFolderPath": "attachments",
-  "showUnsupportedFiles": false,
-  "showInlineTitle": true,
-  "showFrontmatter": true,
-  "foldHeading": true,
-  "foldIndent": true,
-  "defaultViewMode": "source"
+	"alwaysUpdateLinks": true,
+	"newFileLocation": "current",
+	"attachmentFolderPath": "attachments",
+	"showUnsupportedFiles": false,
+	"showInlineTitle": true,
+	"showFrontmatter": true,
+	"foldHeading": true,
+	"foldIndent": true,
+	"defaultViewMode": "source"
 }

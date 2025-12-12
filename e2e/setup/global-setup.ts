@@ -7,12 +7,18 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const TEST_VAULT_PATH = path.join(__dirname, "../test-vault");
-const PLUGIN_PATH = path.join(TEST_VAULT_PATH, ".obsidian/plugins/obsidian-mcp-plugin");
+const OBSIDIAN_PATH = path.join(TEST_VAULT_PATH, ".obsidian");
+const PLUGINS_PATH = path.join(OBSIDIAN_PATH, "plugins");
+const MCP_PLUGIN_PATH = path.join(PLUGINS_PATH, "obsidian-mcp-plugin");
 const UNPACKED_PATH = path.join(__dirname, "../.obsidian-unpacked");
+
+// Community plugins required for e2e tests
+const REQUIRED_PLUGINS = ["dataview", "quickadd", "obsidian-task-notes"];
 
 /**
  * Global setup for Playwright e2e tests
  * - Verifies unpacked Obsidian exists
+ * - Verifies community plugins are installed
  * - Updates plugin config with test-specific settings
  */
 export default async function globalSetup() {
@@ -26,17 +32,30 @@ export default async function globalSetup() {
 		);
 	}
 
-	// Verify plugin files exist
-	if (!fs.existsSync(path.join(PLUGIN_PATH, "main.js"))) {
+	// Verify MCP plugin files exist
+	if (!fs.existsSync(path.join(MCP_PLUGIN_PATH, "main.js"))) {
 		throw new Error(
-			`Plugin not found in test vault. Run: npm run e2e:setup\n` +
-				`Expected path: ${PLUGIN_PATH}/main.js`
+			`MCP plugin not found in test vault. Run: npm run e2e:setup\n` +
+				`Expected path: ${MCP_PLUGIN_PATH}/main.js`
 		);
 	}
 
-	// Update plugin data.json with test-specific port and token
-	console.log(`Configuring plugin with port ${E2E_MCP_PORT}...`);
-	const dataPath = path.join(PLUGIN_PATH, "data.json");
+	// Verify community plugins are installed
+	for (const pluginId of REQUIRED_PLUGINS) {
+		const pluginPath = path.join(PLUGINS_PATH, pluginId, "main.js");
+		if (!fs.existsSync(pluginPath)) {
+			throw new Error(
+				`Required plugin '${pluginId}' not found.\n` +
+					`Run: bash e2e/scripts/download-plugins.sh\n` +
+					`Expected path: ${pluginPath}`
+			);
+		}
+	}
+	console.log(`Verified ${REQUIRED_PLUGINS.length} community plugins installed`);
+
+	// Update MCP plugin data.json with test-specific port and token
+	console.log(`Configuring MCP plugin with port ${E2E_MCP_PORT}...`);
+	const dataPath = path.join(MCP_PLUGIN_PATH, "data.json");
 
 	if (!fs.existsSync(dataPath)) {
 		throw new Error(`Plugin data.json not found at ${dataPath}`);
@@ -47,6 +66,16 @@ export default async function globalSetup() {
 	data.server.port = E2E_MCP_PORT;
 	data.server.enabled = true;
 	data.server.tokens[0].token = E2E_TEST_TOKEN;
+
+	// Ensure all plugin integrations are enabled
+	data.server.tokens[0].enabledTools = {
+		file_access: true,
+		search: true,
+		update_content: true,
+		dataview_query: true,
+		quickadd: true,
+		tasknotes: true,
+	};
 
 	fs.writeFileSync(dataPath, JSON.stringify(data, null, 2));
 

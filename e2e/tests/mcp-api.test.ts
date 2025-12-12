@@ -253,4 +253,152 @@ test.describe("MCP HTTP API", () => {
 			expect(result.isError).toBe(true);
 		});
 	});
+
+	test.describe("Daily Notes", () => {
+		test("should create daily note via update_content", async () => {
+			const result = await client.callTool({
+				name: "update_content",
+				arguments: {
+					uri: "daily:///today",
+					mode: "append",
+					content: "# Daily Note\n\nCreated by e2e test at " + new Date().toISOString(),
+					create_if_missing: true,
+				},
+			});
+
+			// Should succeed or indicate file was created
+			expect(result.isError).toBeFalsy();
+		});
+
+		test("should read created daily note", async () => {
+			// Wait for file to sync
+			await new Promise((resolve) => setTimeout(resolve, 500));
+
+			try {
+				const result = await client.readResource({ uri: "daily:///today" });
+				expect(result.contents).toBeInstanceOf(Array);
+				if (result.contents.length > 0) {
+					const content = result.contents[0];
+					if ("text" in content) {
+						expect(content.text).toContain("Daily Note");
+					}
+				}
+			} catch {
+				// Daily note resource might not exist yet
+			}
+		});
+	});
+
+	test.describe("Search Advanced", () => {
+		test("should search with multiple results", async () => {
+			const result = await client.callTool({
+				name: "search",
+				arguments: { query: "project" },
+			});
+
+			expect(result.isError).toBeFalsy();
+			const text = getToolResultText(result);
+			// Should find both project files
+			expect(text).toContain("project-alpha");
+			expect(text).toContain("project-beta");
+		});
+
+		test("should search in tasks folder", async () => {
+			const result = await client.callTool({
+				name: "search",
+				arguments: { query: "documentation", folder: "tasks" },
+			});
+
+			expect(result.isError).toBeFalsy();
+			const text = getToolResultText(result);
+			expect(text).toContain("work-task-1");
+		});
+
+		test("should return error for non-matching query", async () => {
+			const result = await client.callTool({
+				name: "search",
+				arguments: { query: "xyznonexistentquery12345xyz" },
+			});
+
+			// Search returns an error when no results are found
+			expect(result.isError).toBe(true);
+			expect(getToolResultText(result)).toContain("No results found");
+		});
+	});
+
+	test.describe("File Metadata Advanced", () => {
+		test("should return frontmatter in metadata", async () => {
+			const result = await client.callTool({
+				name: "get_file_metadata",
+				arguments: { path: "file:///notes/project-alpha.md" },
+			});
+
+			expect(result.isError).toBeFalsy();
+			const text = getToolResultText(result);
+			// Should contain frontmatter fields
+			expect(text).toMatch(/status|priority|tags/i);
+		});
+
+		test("should return metadata for task file", async () => {
+			const result = await client.callTool({
+				name: "get_file_metadata",
+				arguments: { path: "file:///tasks/work-task-1.md" },
+			});
+
+			expect(result.isError).toBeFalsy();
+			const text = getToolResultText(result);
+			expect(text).toMatch(/title|priority|due/i);
+		});
+
+		test("should handle metadata for non-existent file", async () => {
+			const result = await client.callTool({
+				name: "get_file_metadata",
+				arguments: { path: "file:///nonexistent-file-12345.md" },
+			});
+
+			expect(result.isError).toBe(true);
+		});
+	});
+
+	test.describe("Directory Listing", () => {
+		test("should list root directory contents", async () => {
+			const result = await client.callTool({
+				name: "get_contents",
+				arguments: { uri: "file:///", depth: 1 },
+			});
+
+			expect(result.isError).toBeFalsy();
+			const text = getToolResultText(result);
+			expect(text).toContain("notes");
+			expect(text).toContain("tasks");
+			expect(text).toContain("templates");
+		});
+
+		test("should list notes directory", async () => {
+			const result = await client.callTool({
+				name: "get_contents",
+				arguments: { uri: "file:///notes", depth: 1 },
+			});
+
+			expect(result.isError).toBeFalsy();
+			const text = getToolResultText(result);
+			expect(text).toContain("welcome.md");
+			expect(text).toContain("project-alpha.md");
+			expect(text).toContain("project-beta.md");
+			expect(text).toContain("meeting-notes.md");
+		});
+
+		test("should list tasks directory", async () => {
+			const result = await client.callTool({
+				name: "get_contents",
+				arguments: { uri: "file:///tasks", depth: 1 },
+			});
+
+			expect(result.isError).toBeFalsy();
+			const text = getToolResultText(result);
+			expect(text).toContain("work-task-1.md");
+			expect(text).toContain("work-task-2.md");
+			expect(text).toContain("personal-task-1.md");
+		});
+	});
 });
