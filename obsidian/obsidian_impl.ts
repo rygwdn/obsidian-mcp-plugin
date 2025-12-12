@@ -403,8 +403,17 @@ export class ObsidianImpl implements ObsidianInterface {
 		return {
 			getTaskByPath: (path) => {
 				const result = cacheManager.getTaskByPath(path);
-				if (result === null || result === undefined) return null;
-				return TaskInfoSchema.parse(result);
+				// Check for null, undefined, or empty object (TaskNotes returns {} for non-task files)
+				if (
+					result === null ||
+					result === undefined ||
+					(typeof result === "object" && Object.keys(result as object).length === 0)
+				) {
+					return null;
+				}
+				// Use safeParse to gracefully handle unexpected task data formats
+				const parsed = TaskInfoSchema.safeParse(result);
+				return parsed.success ? parsed.data : null;
 			},
 			queryTasks: async (filter) => {
 				const allTasksRaw = await cacheManager.getAllTasks();
