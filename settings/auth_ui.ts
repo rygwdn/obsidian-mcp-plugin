@@ -138,6 +138,7 @@ function updateTokenList(
 			{ key: "search", icon: "🔍", title: "Vault Search" },
 			{ key: "dataview_query", icon: "📊", title: "Dataview Integration" },
 			{ key: "quickadd", icon: "⚡", title: "QuickAdd Integration" },
+			{ key: "tasknotes", icon: "✅", title: "TaskNotes Integration" },
 		];
 
 		for (const tool of toolsInOrder) {
@@ -437,6 +438,24 @@ function renderFeaturesConfig(
 			.setDisabled(!isQuickAddEnabled)
 			.onChange((value) => {
 				token.enabledTools.quickadd = value;
+			})
+	);
+
+	const isTaskNotesEnabled = plugin.app.plugins.enabledPlugins.has("tasknotes");
+	const taskNotesSetting = new Setting(containerEl)
+		.setName("✅ TaskNotes Integration")
+		.setDesc(
+			isTaskNotesEnabled
+				? "Query and manage tasks across your vault"
+				: "TaskNotes plugin is not enabled"
+		);
+
+	taskNotesSetting.addToggle((toggle) =>
+		toggle
+			.setValue(isTaskNotesEnabled && token.enabledTools.tasknotes)
+			.setDisabled(!isTaskNotesEnabled)
+			.onChange((value) => {
+				token.enabledTools.tasknotes = value;
 			})
 	);
 }
