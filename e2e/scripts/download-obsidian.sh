@@ -5,7 +5,7 @@
 set -euo pipefail
 
 E2E_DIR="${E2E_DIR:-/app/e2e}"
-OBSIDIAN_VERSION="${OBSIDIAN_VERSION:-1.8.10}"
+OBSIDIAN_VERSION="${OBSIDIAN_VERSION:-1.10.6}"
 OBSIDIAN_APPIMAGE="$E2E_DIR/.obsidian-appimage/Obsidian-${OBSIDIAN_VERSION}.AppImage"
 APPIMAGE_EXTRACT="$E2E_DIR/.obsidian-appimage/squashfs-root"
 UNPACKED_PATH="$E2E_DIR/.obsidian-unpacked"
