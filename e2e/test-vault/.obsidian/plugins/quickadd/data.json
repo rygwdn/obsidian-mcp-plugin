@@ -1,0 +1,107 @@
+{
+	"choices": [
+		{
+			"id": "e2e-template-choice",
+			"name": "Daily Note Template",
+			"type": "Template",
+			"command": false,
+			"templatePath": "templates/daily-template.md",
+			"fileNameFormat": {
+				"enabled": true,
+				"format": "{{DATE:YYYY-MM-DD}}"
+			},
+			"folder": {
+				"enabled": true,
+				"folders": ["daily"],
+				"chooseWhenCreatingNote": false,
+				"createInSameFolderAsActiveFile": false,
+				"chooseFromSubfolders": false
+			},
+			"appendLink": false,
+			"openFileInNewTab": {
+				"enabled": false,
+				"direction": "vertical",
+				"focus": true
+			},
+			"openFile": true,
+			"openFileInMode": "default",
+			"setFileExistsBehavior": false,
+			"fileExistsMode": "Increment the file name"
+		},
+		{
+			"id": "e2e-capture-choice",
+			"name": "Quick Capture",
+			"type": "Capture",
+			"command": false,
+			"captureTo": "notes/capture.md",
+			"captureToActiveFile": false,
+			"createFileIfItDoesntExist": {
+				"enabled": true,
+				"createWithTemplate": false,
+				"template": ""
+			},
+			"format": {
+				"enabled": true,
+				"format": "- {{VALUE}}"
+			},
+			"insertAfter": {
+				"enabled": false,
+				"after": "",
+				"insertAtEnd": false,
+				"considerSubsections": false,
+				"createIfNotFound": false,
+				"createIfNotFoundLocation": "top"
+			},
+			"prepend": false,
+			"appendLink": false,
+			"openFileInNewTab": {
+				"enabled": false,
+				"direction": "vertical",
+				"focus": true
+			},
+			"openFile": false,
+			"openFileInMode": "default"
+		},
+		{
+			"id": "e2e-meeting-template",
+			"name": "Meeting Note",
+			"type": "Template",
+			"command": false,
+			"templatePath": "templates/meeting-template.md",
+			"fileNameFormat": {
+				"enabled": true,
+				"format": "Meeting - {{VALUE:Meeting Title}}"
+			},
+			"folder": {
+				"enabled": true,
+				"folders": ["notes"],
+				"chooseWhenCreatingNote": false,
+				"createInSameFolderAsActiveFile": false,
+				"chooseFromSubfolders": false
+			},
+			"appendLink": false,
+			"openFileInNewTab": {
+				"enabled": false,
+				"direction": "vertical",
+				"focus": true
+			},
+			"openFile": true,
+			"openFileInMode": "default",
+			"setFileExistsBehavior": false,
+			"fileExistsMode": "Increment the file name"
+		}
+	],
+	"macros": [],
+	"inputPrompt": "single-prompt",
+	"devMode": false,
+	"templateFolderPath": "templates",
+	"announceUpdates": false,
+	"version": "1.11.1",
+	"migrations": {
+		"migrateToMacroIDFromEmbeddedMacro": true,
+		"useQuickAddTemplateFolder": true,
+		"incrementFileNameSettingMoveToDefaultBehavior": true,
+		"mutualExclusionInsertAfterAndWriteToBottomOfFile": true,
+		"setVersionAfterUpdateModalRelease": true
+	}
+}

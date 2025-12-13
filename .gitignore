@@ -17,6 +17,8 @@ main.js
 
 # obsidian
 data.json
+# Exception: allow e2e test vault plugin data.json files
+!e2e/test-vault/.obsidian/plugins/*/data.json
 
 # Exclude macOS Finder (System Explorer) View States
 .DS_Store

@@ -1,0 +1,65 @@
+{
+	"taskFolder": "tasks",
+	"archiveFolder": "tasks/archive",
+	"taskIdentificationMethod": "tag",
+	"taskTag": "task",
+	"defaultPriority": "normal",
+	"defaultStatus": "incomplete",
+	"filenameFormat": "zettel",
+	"calendarDefaultView": "dayGridMonth",
+	"timeFormat": "24h",
+	"enableNlpInput": true,
+	"showTaskCardsInNotes": true,
+	"showSubTasks": true,
+	"showRelationships": true,
+	"statusWorkflow": {
+		"statuses": [
+			{
+				"id": "incomplete",
+				"name": "Incomplete",
+				"type": "open",
+				"color": "#808080"
+			},
+			{
+				"id": "in-progress",
+				"name": "In Progress",
+				"type": "open",
+				"color": "#3b82f6"
+			},
+			{
+				"id": "completed",
+				"name": "Completed",
+				"type": "completed",
+				"color": "#22c55e"
+			},
+			{
+				"id": "cancelled",
+				"name": "Cancelled",
+				"type": "cancelled",
+				"color": "#ef4444"
+			}
+		]
+	},
+	"priorityLevels": [
+		{
+			"id": "low",
+			"name": "Low",
+			"color": "#22c55e"
+		},
+		{
+			"id": "normal",
+			"name": "Normal",
+			"color": "#3b82f6"
+		},
+		{
+			"id": "medium",
+			"name": "Medium",
+			"color": "#f59e0b"
+		},
+		{
+			"id": "high",
+			"name": "High",
+			"color": "#ef4444"
+		}
+	]
+}
