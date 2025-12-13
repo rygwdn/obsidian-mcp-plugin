@@ -8,6 +8,7 @@ import {
 import { generateFileMetadata } from "../tools/file_metadata";
 import { MockObsidian, createMockRequest, createMockExtra } from "./mock_obsidian";
 import type { TaskNotesInterface, TaskInfo, TaskFilter } from "../obsidian/obsidian_interface";
+import { TaskInfoSchema } from "../obsidian/obsidian_interface";
 
 describe("tasknotes tool annotations", () => {
 	it("should have the correct annotations for the query tool", () => {
@@ -807,5 +808,123 @@ title: Tracked task
 
 			expect(result).toContain("- **totalTrackedTime**: 3600000ms");
 		});
+	});
+});
+
+describe("TaskInfoSchema null value handling", () => {
+	it("should accept null values for optional string fields", () => {
+		const taskWithNulls = {
+			id: "task-1",
+			title: "Test task",
+			status: "todo",
+			priority: "high",
+			path: "tasks/test.md",
+			archived: false,
+			due: null,
+			scheduled: null,
+			recurrence: null,
+			completedDate: null,
+			dateCreated: null,
+			dateModified: null,
+		};
+
+		const parsed = TaskInfoSchema.parse(taskWithNulls);
+		expect(parsed.id).toBe("task-1");
+		expect(parsed.due).toBeNull();
+		expect(parsed.scheduled).toBeNull();
+		expect(parsed.recurrence).toBeNull();
+	});
+
+	it("should accept null values for optional array fields", () => {
+		const taskWithNullArrays = {
+			id: "task-2",
+			title: "Test task with null arrays",
+			status: "todo",
+			priority: "medium",
+			path: "tasks/test2.md",
+			archived: false,
+			tags: null,
+			contexts: null,
+			projects: null,
+		};
+
+		const parsed = TaskInfoSchema.parse(taskWithNullArrays);
+		expect(parsed.tags).toBeNull();
+		expect(parsed.contexts).toBeNull();
+		expect(parsed.projects).toBeNull();
+	});
+
+	it("should accept null values for optional number fields", () => {
+		const taskWithNullNumbers = {
+			id: "task-3",
+			title: "Test task with null numbers",
+			status: "in-progress",
+			priority: "low",
+			path: "tasks/test3.md",
+			archived: false,
+			timeEstimate: null,
+			totalTrackedTime: null,
+		};
+
+		const parsed = TaskInfoSchema.parse(taskWithNullNumbers);
+		expect(parsed.timeEstimate).toBeNull();
+		expect(parsed.totalTrackedTime).toBeNull();
+	});
+
+	it("should accept null values for optional boolean fields", () => {
+		const taskWithNullBooleans = {
+			id: "task-4",
+			title: "Test task with null booleans",
+			status: "todo",
+			priority: "high",
+			path: "tasks/test4.md",
+			archived: false,
+			isBlocked: null,
+			isBlocking: null,
+		};
+
+		const parsed = TaskInfoSchema.parse(taskWithNullBooleans);
+		expect(parsed.isBlocked).toBeNull();
+		expect(parsed.isBlocking).toBeNull();
+	});
+
+	it("should accept undefined values for optional fields", () => {
+		const taskWithUndefined = {
+			id: "task-5",
+			title: "Test task with undefined",
+			status: "done",
+			priority: "none",
+			path: "tasks/test5.md",
+			archived: true,
+			// All optional fields left undefined
+		};
+
+		const parsed = TaskInfoSchema.parse(taskWithUndefined);
+		expect(parsed.due).toBeUndefined();
+		expect(parsed.scheduled).toBeUndefined();
+		expect(parsed.tags).toBeUndefined();
+	});
+
+	it("should accept a mix of null, undefined, and defined values", () => {
+		const taskWithMixed = {
+			id: "task-6",
+			title: "Mixed values task",
+			status: "todo",
+			priority: "high",
+			path: "tasks/test6.md",
+			archived: false,
+			due: "2025-12-25",
+			scheduled: null,
+			tags: ["important"],
+			contexts: null,
+			projects: undefined,
+		};
+
+		const parsed = TaskInfoSchema.parse(taskWithMixed);
+		expect(parsed.due).toBe("2025-12-25");
+		expect(parsed.scheduled).toBeNull();
+		expect(parsed.tags).toEqual(["important"]);
+		expect(parsed.contexts).toBeNull();
+		expect(parsed.projects).toBeUndefined();
 	});
 });

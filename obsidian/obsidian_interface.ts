@@ -87,26 +87,27 @@ export interface DailyNotesInterface {
 }
 
 // TaskNotes Zod schemas - single source of truth for types and validation
+// Use .nullish() to accept both null (from plugin API) and undefined
 export const TaskInfoSchema = z.object({
 	id: z.string(),
 	title: z.string(),
 	status: z.string(),
 	priority: z.string(),
-	due: z.string().optional(),
-	scheduled: z.string().optional(),
+	due: z.string().nullish(),
+	scheduled: z.string().nullish(),
 	path: z.string(),
 	archived: z.boolean(),
-	tags: z.array(z.string()).optional(),
-	contexts: z.array(z.string()).optional(),
-	projects: z.array(z.string()).optional(),
-	recurrence: z.string().optional(),
-	completedDate: z.string().optional(),
-	timeEstimate: z.number().optional(),
-	totalTrackedTime: z.number().optional(),
-	isBlocked: z.boolean().optional(),
-	isBlocking: z.boolean().optional(),
-	dateCreated: z.string().optional(),
-	dateModified: z.string().optional(),
+	tags: z.array(z.string()).nullish(),
+	contexts: z.array(z.string()).nullish(),
+	projects: z.array(z.string()).nullish(),
+	recurrence: z.string().nullish(),
+	completedDate: z.string().nullish(),
+	timeEstimate: z.number().nullish(),
+	totalTrackedTime: z.number().nullish(),
+	isBlocked: z.boolean().nullish(),
+	isBlocking: z.boolean().nullish(),
+	dateCreated: z.string().nullish(),
+	dateModified: z.string().nullish(),
 });
 export type TaskInfo = z.infer<typeof TaskInfoSchema>;
 
