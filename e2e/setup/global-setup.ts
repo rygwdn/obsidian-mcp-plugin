@@ -1,7 +1,13 @@
 import * as fs from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
-import { E2E_MCP_PORT, E2E_TEST_TOKEN } from "../playwright.config";
+import {
+	E2E_MCP_PORT,
+	E2E_TEST_TOKEN,
+	E2E_FULL_ACCESS_TOKEN,
+	E2E_READ_ONLY_TOKEN,
+	E2E_NO_INTEGRATIONS_TOKEN,
+} from "../playwright.config";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -72,26 +78,7 @@ export default async function globalSetup() {
 				httpsEnabled: false,
 				crypto: null,
 				subjectAltNames: "",
-				tokens: [
-					{
-						id: "e2e-test-token",
-						name: "E2E Test Token",
-						token: E2E_TEST_TOKEN,
-						createdAt: Date.now(),
-						enabledTools: {
-							file_access: true,
-							search: true,
-							update_content: true,
-							dataview_query: true,
-							quickadd: true,
-							tasknotes: true,
-						},
-						directoryPermissions: {
-							rules: [],
-							rootPermission: true,
-						},
-					},
-				],
+				tokens: [],
 			},
 		};
 	} else {
@@ -100,17 +87,82 @@ export default async function globalSetup() {
 
 	data.server.port = E2E_MCP_PORT;
 	data.server.enabled = true;
-	data.server.tokens[0].token = E2E_TEST_TOKEN;
 
-	// Ensure all plugin integrations are enabled
-	data.server.tokens[0].enabledTools = {
-		file_access: true,
-		search: true,
-		update_content: true,
-		dataview_query: true,
-		quickadd: true,
-		tasknotes: true,
-	};
+	// Configure multiple test tokens with different permission sets
+	data.server.tokens = [
+		{
+			id: "e2e-test-token",
+			name: "E2E Test Token",
+			token: E2E_TEST_TOKEN,
+			createdAt: Date.now(),
+			enabledTools: {
+				file_access: true,
+				search: true,
+				update_content: true,
+				dataview_query: true,
+				quickadd: true,
+				tasknotes: true,
+			},
+			directoryPermissions: {
+				rules: [],
+				rootPermission: true,
+			},
+		},
+		{
+			id: "e2e-full-access-token",
+			name: "E2E Full Access Token",
+			token: E2E_FULL_ACCESS_TOKEN,
+			createdAt: Date.now(),
+			enabledTools: {
+				file_access: true,
+				search: true,
+				update_content: true,
+				dataview_query: true,
+				quickadd: true,
+				tasknotes: true,
+			},
+			directoryPermissions: {
+				rules: [],
+				rootPermission: true,
+			},
+		},
+		{
+			id: "e2e-read-only-token",
+			name: "E2E Read Only Token",
+			token: E2E_READ_ONLY_TOKEN,
+			createdAt: Date.now(),
+			enabledTools: {
+				file_access: true,
+				search: true,
+				update_content: false,
+				dataview_query: true,
+				quickadd: false,
+				tasknotes: false,
+			},
+			directoryPermissions: {
+				rules: [],
+				rootPermission: true,
+			},
+		},
+		{
+			id: "e2e-no-integrations-token",
+			name: "E2E No Integrations Token",
+			token: E2E_NO_INTEGRATIONS_TOKEN,
+			createdAt: Date.now(),
+			enabledTools: {
+				file_access: true,
+				search: true,
+				update_content: true,
+				dataview_query: false,
+				quickadd: false,
+				tasknotes: false,
+			},
+			directoryPermissions: {
+				rules: [],
+				rootPermission: true,
+			},
+		},
+	];
 
 	fs.writeFileSync(dataPath, JSON.stringify(data, null, 2));
 

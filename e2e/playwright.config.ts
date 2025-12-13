@@ -8,6 +8,9 @@ const __dirname = path.dirname(__filename);
 // E2E test port - different from default to avoid conflicts
 export const E2E_MCP_PORT = 27199;
 export const E2E_TEST_TOKEN = "e2e-test-token-value-for-automated-testing";
+export const E2E_FULL_ACCESS_TOKEN = "e2e-full-access-token";
+export const E2E_READ_ONLY_TOKEN = "e2e-read-only-token";
+export const E2E_NO_INTEGRATIONS_TOKEN = "e2e-no-integrations-token";
 
 export default defineConfig({
 	testDir: "./tests",
@@ -34,6 +37,7 @@ export default defineConfig({
 				"dataview.test.ts",
 				"quickadd.test.ts",
 				"tasknotes.test.ts",
+				"integration-toggles.test.ts",
 			],
 			dependencies: ["setup"],
 		},
