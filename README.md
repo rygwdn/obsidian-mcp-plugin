@@ -27,6 +27,8 @@ Obsidian, with its own built-in server - no external dependencies required.
   - **Dataview**: Execute Dataview queries (requires Dataview plugin)
   - **Daily Notes**: Interact with daily notes (requires Daily Notes or Periodic Notes plugin)
   - **QuickAdd**: Trigger QuickAdd actions and list choices (requires QuickAdd plugin)
+  - **TaskNotes**: Query and manage tasks with filtering by status, priority, and context
+    (requires TaskNotes plugin)
 
 ## Installation
 
@@ -129,6 +131,13 @@ This plugin offers a range of functionalities that can be enabled or disabled th
   [QuickAdd plugin](https://github.com/chhoumann/quickadd)).
   *Security impact: HIGH - QuickAdd actions can modify vault content, run scripts, or interact
   with external services, depending on how they are configured.*
+
+- **TaskNotes Integration**: If you use the TaskNotes plugin, this feature allows AI assistants to
+  query tasks across your vault with powerful filtering options. You can filter by status
+  (incomplete, completed, cancelled), priority (high, medium, low, none), and context tags. The
+  integration also provides task statistics and the ability to look up individual tasks by file
+  path (requires [TaskNotes plugin](https://github.com/callumalpass/tasknotes)).
+  *Security impact: Exposes task data from your vault to connected systems.*
 
 - **Logging Verbosity**: Controls console logging detail level. By default, logging is minimal, but you
   can enable "Verbose Logging" in Advanced settings for debugging.

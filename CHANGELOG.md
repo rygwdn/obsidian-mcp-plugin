@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Added
+
+- **TaskNotes Integration**: Query and manage tasks from the TaskNotes plugin with filtering by
+  status, priority, and context. Includes `tasknotes_query` tool, `tasknotes_get_task` tool, and
+  `tasknotes:///stats` resource for task statistics.
+
 ## [0.8.0] - 2025-01-27
 
 ### Changed
