@@ -78,10 +78,9 @@ test.describe("Integration Toggles", () => {
 			const result = await client.callTool({
 				name: "update_content",
 				arguments: {
-					uri: "file:///notes/welcome.md",
-					mode: "replace",
-					find: "Welcome (modified by e2e test)",
-					content: "Welcome to the Test Vault",
+					uri: "file:///notes/project-alpha.md",
+					mode: "append",
+					content: "\n\n## Integration Test\n\nThis was added by integration test.",
 				},
 			});
 
