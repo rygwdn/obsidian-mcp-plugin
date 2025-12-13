@@ -2,11 +2,25 @@
 
 ## [Unreleased]
 
+## [0.9.0] - 2025-12-12
+
 ### Added
 
 - **TaskNotes Integration**: Query and manage tasks from the TaskNotes plugin with filtering by
   status, priority, and context. Includes `tasknotes_query` tool, `tasknotes_get_task` tool, and
   `tasknotes:///stats` resource for task statistics.
+- **E2E Testing**: Added Playwright end-to-end tests running against real Obsidian in Docker,
+  covering core tools, Dataview, QuickAdd, and TaskNotes integrations.
+
+### Changed
+
+- Updated e2e test environment to Obsidian 1.10.6
+- Modernized TypeScript imports with vite-tsconfig-paths
+
+### Fixed
+
+- Handle empty object returns from TaskNotes API for non-task files
+- Correct async handling for TaskNotes plugin methods
 
 ## [0.8.0] - 2025-01-27
 
