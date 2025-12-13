@@ -454,7 +454,7 @@ function renderFeaturesConfig(
 
 	taskNotesSetting.addToggle((toggle) =>
 		toggle
-			.setValue(isTaskNotesEnabled && token.enabledTools.tasknotes)
+			.setValue(isTaskNotesEnabled && (token.enabledTools.tasknotes ?? false))
 			.setDisabled(!isTaskNotesEnabled)
 			.onChange((value) => {
 				token.enabledTools.tasknotes = value;
@@ -480,7 +480,7 @@ function renderFeaturesConfig(
 
 	timeblocksSetting.addToggle((toggle) =>
 		toggle
-			.setValue(isTimeblocksEnabled && token.enabledTools.timeblocks)
+			.setValue(isTimeblocksEnabled && (token.enabledTools.timeblocks ?? false))
 			.setDisabled(!isTimeblocksEnabled)
 			.onChange((value) => {
 				token.enabledTools.timeblocks = value;

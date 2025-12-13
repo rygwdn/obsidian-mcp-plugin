@@ -52,6 +52,16 @@ export default class ObsidianMCPPlugin extends Plugin {
 			this.settings.server = DEFAULT_SETTINGS.server;
 		}
 
+		// Migration: Add missing enabledTools properties to existing tokens
+		for (const token of this.settings.server.tokens) {
+			if (token.enabledTools.tasknotes === undefined) {
+				token.enabledTools.tasknotes = false;
+			}
+			if (token.enabledTools.timeblocks === undefined) {
+				token.enabledTools.timeblocks = false;
+			}
+		}
+
 		logger.getVerboseSetting = () => this.settings.verboseLogging;
 	}
 
