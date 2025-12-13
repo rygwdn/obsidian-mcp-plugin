@@ -57,11 +57,46 @@ export default async function globalSetup() {
 	console.log(`Configuring MCP plugin with port ${E2E_MCP_PORT}...`);
 	const dataPath = path.join(MCP_PLUGIN_PATH, "data.json");
 
+	// Create default data.json if it doesn't exist (fresh build won't have one)
+	let data;
 	if (!fs.existsSync(dataPath)) {
-		throw new Error(`Plugin data.json not found at ${dataPath}`);
+		console.log("Creating default data.json for MCP plugin...");
+		data = {
+			promptsFolder: "prompts",
+			vaultDescription: "Test vault for e2e tests",
+			verboseLogging: true,
+			server: {
+				enabled: false,
+				port: E2E_MCP_PORT,
+				host: "127.0.0.1",
+				httpsEnabled: false,
+				crypto: null,
+				subjectAltNames: "",
+				tokens: [
+					{
+						id: "e2e-test-token",
+						name: "E2E Test Token",
+						token: E2E_TEST_TOKEN,
+						createdAt: Date.now(),
+						enabledTools: {
+							file_access: true,
+							search: true,
+							update_content: true,
+							dataview_query: true,
+							quickadd: true,
+							tasknotes: true,
+						},
+						directoryPermissions: {
+							rules: [],
+							rootPermission: true,
+						},
+					},
+				],
+			},
+		};
+	} else {
+		data = JSON.parse(fs.readFileSync(dataPath, "utf-8"));
 	}
-
-	const data = JSON.parse(fs.readFileSync(dataPath, "utf-8"));
 
 	data.server.port = E2E_MCP_PORT;
 	data.server.enabled = true;
