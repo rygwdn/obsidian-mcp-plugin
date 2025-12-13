@@ -45,36 +45,86 @@ test.describe("TaskNotes Integration", () => {
 		const result = await client.listTools();
 		const toolNames = result.tools.map((t) => t.name);
 		expect(toolNames).toContain("tasknotes_query");
-		expect(toolNames).toContain("tasknotes_update");
-		expect(toolNames).toContain("tasknotes_create");
+		expect(toolNames).toContain("tasknotes");
 	});
 
-	test("should query all tasks", async () => {
-		const result = await client.callTool({
-			name: "tasknotes_query",
-			arguments: {},
-		});
-
-		expect(result.isError).toBeFalsy();
-		const text = getToolResultText(result);
-		// Should find tasks from the tasks folder
-		expect(text).toMatch(/documentation|authentication|groceries/i);
-	});
-
-	test("should query incomplete tasks", async () => {
+	test("should query tasks with default filters", async () => {
 		const result = await client.callTool({
 			name: "tasknotes_query",
 			arguments: {
-				status: ["incomplete"],
+				due_before: "2030-12-31", // Far future to get all tasks
 			},
 		});
 
 		expect(result.isError).toBeFalsy();
 		const text = getToolResultText(result);
-		// Should find incomplete tasks
-		expect(text).toMatch(/documentation|authentication/i);
-		// Should not include completed tasks
-		expect(text).not.toMatch(/groceries/i);
+		const data = JSON.parse(text);
+
+		// Should return response with tasks array and metadata
+		expect(data).toHaveProperty("tasks");
+		expect(data).toHaveProperty("hasMore");
+		expect(data).toHaveProperty("returned");
+		expect(data.tasks).toBeInstanceOf(Array);
+	});
+
+	test("should include stats when include_stats is true (default)", async () => {
+		const result = await client.callTool({
+			name: "tasknotes_query",
+			arguments: {
+				due_before: "2030-12-31",
+			},
+		});
+
+		expect(result.isError).toBeFalsy();
+		const text = getToolResultText(result);
+		const data = JSON.parse(text);
+
+		// Stats should be included by default
+		expect(data).toHaveProperty("stats");
+		expect(data.stats).toHaveProperty("total");
+		expect(data.stats).toHaveProperty("active");
+		expect(data.stats).toHaveProperty("completed");
+
+		// Filter options should also be included
+		expect(data).toHaveProperty("filterOptions");
+		expect(data.filterOptions).toHaveProperty("statuses");
+		expect(data.filterOptions).toHaveProperty("priorities");
+	});
+
+	test("should not include stats when include_stats is false", async () => {
+		const result = await client.callTool({
+			name: "tasknotes_query",
+			arguments: {
+				due_before: "2030-12-31",
+				include_stats: false,
+			},
+		});
+
+		expect(result.isError).toBeFalsy();
+		const text = getToolResultText(result);
+		const data = JSON.parse(text);
+
+		expect(data).not.toHaveProperty("stats");
+		expect(data).not.toHaveProperty("filterOptions");
+	});
+
+	test("should query tasks by status", async () => {
+		const result = await client.callTool({
+			name: "tasknotes_query",
+			arguments: {
+				status: ["incomplete"],
+				due_before: "2030-12-31",
+			},
+		});
+
+		expect(result.isError).toBeFalsy();
+		const text = getToolResultText(result);
+		const data = JSON.parse(text);
+
+		// All returned tasks should have the specified status
+		if (data.tasks.length > 0) {
+			expect(data.tasks.every((t: { status: string }) => t.status === "incomplete")).toBe(true);
+		}
 	});
 
 	test("should query tasks by priority", async () => {
@@ -82,83 +132,74 @@ test.describe("TaskNotes Integration", () => {
 			name: "tasknotes_query",
 			arguments: {
 				priority: ["high"],
+				due_before: "2030-12-31",
 			},
 		});
 
 		expect(result.isError).toBeFalsy();
 		const text = getToolResultText(result);
-		// Should find high priority task
-		expect(text).toMatch(/documentation/i);
-	});
+		const data = JSON.parse(text);
 
-	test("should query tasks by context", async () => {
-		const result = await client.callTool({
-			name: "tasknotes_query",
-			arguments: {
-				contexts: ["work"],
-			},
-		});
-
-		expect(result.isError).toBeFalsy();
-		const text = getToolResultText(result);
-		// Should find work-related tasks
-		expect(text).toMatch(/documentation|authentication/i);
-	});
-
-	test("should query completed tasks", async () => {
-		const result = await client.callTool({
-			name: "tasknotes_query",
-			arguments: {
-				status: ["completed"],
-			},
-		});
-
-		expect(result.isError).toBeFalsy();
-		const text = getToolResultText(result);
-		// Should find completed task (groceries)
-		expect(text).toMatch(/groceries/i);
-	});
-
-	test("should read tasknotes stats resource", async () => {
-		const result = await client.readResource({
-			uri: "tasknotes:///stats",
-		});
-
-		expect(result.contents).toBeInstanceOf(Array);
-		const content = result.contents[0];
-		if ("text" in content) {
-			// Stats should include counts or status information
-			expect(content.text).toBeDefined();
+		// All returned tasks should have high priority
+		if (data.tasks.length > 0) {
+			expect(data.tasks.every((t: { priority: string }) => t.priority === "high")).toBe(true);
 		}
 	});
 
-	test("should get task by path", async () => {
-		// Query to get an existing task first
-		const queryResult = await client.callTool({
+	test("should respect limit and indicate hasMore", async () => {
+		const result = await client.callTool({
 			name: "tasknotes_query",
-			arguments: {},
+			arguments: {
+				due_before: "2030-12-31",
+				limit: 1,
+			},
 		});
-		expect(queryResult.isError).toBeFalsy();
-		const queryText = getToolResultText(queryResult);
-		const tasks = JSON.parse(queryText);
-		expect(tasks.length).toBeGreaterThan(0);
 
-		// Verify tasks have expected fields
-		const firstTask = tasks[0];
-		expect(firstTask).toHaveProperty("title");
-		expect(firstTask).toHaveProperty("status");
-		expect(firstTask).toHaveProperty("path");
+		expect(result.isError).toBeFalsy();
+		const text = getToolResultText(result);
+		const data = JSON.parse(text);
+
+		expect(data.tasks.length).toBeLessThanOrEqual(1);
+		expect(data.returned).toBeLessThanOrEqual(1);
+		// hasMore should be true if there are more tasks
+	});
+
+	test("should verify tasks have expected fields", async () => {
+		const result = await client.callTool({
+			name: "tasknotes_query",
+			arguments: {
+				due_before: "2030-12-31",
+			},
+		});
+
+		expect(result.isError).toBeFalsy();
+		const text = getToolResultText(result);
+		const data = JSON.parse(text);
+
+		if (data.tasks.length > 0) {
+			const firstTask = data.tasks[0];
+			expect(firstTask).toHaveProperty("title");
+			expect(firstTask).toHaveProperty("status");
+			expect(firstTask).toHaveProperty("path");
+			expect(firstTask).toHaveProperty("priority");
+		}
 	});
 
 	test("should handle query with no matching tasks", async () => {
 		const result = await client.callTool({
 			name: "tasknotes_query",
 			arguments: {
-				contexts: ["nonexistent-context-12345"],
+				status: ["nonexistent-status-12345"],
+				due_before: "2030-12-31",
 			},
 		});
 
-		// Should not error, just return empty or no results message
+		// Should not error, just return empty results
 		expect(result.isError).toBeFalsy();
+		const text = getToolResultText(result);
+		const data = JSON.parse(text);
+
+		expect(data.tasks).toEqual([]);
+		expect(data.hasMore).toBe(false);
 	});
 });

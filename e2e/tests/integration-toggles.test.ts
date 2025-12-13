@@ -71,6 +71,7 @@ test.describe("Integration Toggles", () => {
 			expect(toolNames).toContain("quickadd_list");
 			expect(toolNames).toContain("quickadd_execute");
 			expect(toolNames).toContain("tasknotes_query");
+			expect(toolNames).toContain("tasknotes");
 		});
 
 		test("should be able to call update_content", async () => {

@@ -123,24 +123,16 @@ export type TaskStats = z.infer<typeof TaskStatsSchema>;
 export const TaskFilterOptionsSchema = z.object({
 	statuses: z.array(z.string()),
 	priorities: z.array(z.string()),
-	contexts: z.array(z.string()),
-	projects: z.array(z.string()),
 });
 export type TaskFilterOptions = z.infer<typeof TaskFilterOptionsSchema>;
 
 export interface TaskFilter {
 	status?: string[];
 	priority?: string[];
-	due?: { before?: string; after?: string };
-	scheduled?: { before?: string; after?: string };
+	dueBefore?: string;
 	archived?: boolean;
 	tags?: string[];
-	contexts?: string[];
-	projects?: string[];
 	limit?: number;
-	offset?: number;
-	sortBy?: string;
-	sortDirection?: "asc" | "desc";
 }
 
 export interface TaskNotesInterface {
@@ -148,8 +140,6 @@ export interface TaskNotesInterface {
 	queryTasks(filter: TaskFilter): Promise<TaskInfo[]>;
 	createTask(data: { title: string; [key: string]: unknown }): Promise<TaskInfo>;
 	updateTask(id: string, updates: Record<string, unknown>): Promise<TaskInfo>;
-	toggleStatus(id: string): Promise<TaskInfo>;
-	completeInstance(id: string, date?: string): Promise<TaskInfo>;
 	getStats(): Promise<TaskStats>;
 	getFilterOptions(): TaskFilterOptions;
 }

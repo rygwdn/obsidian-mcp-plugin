@@ -327,20 +327,6 @@ export class ObsidianImpl implements ObsidianInterface {
 				});
 			}
 
-			if (filter.contexts && filter.contexts.length > 0) {
-				filtered = filtered.filter((t) => {
-					const task = t as { contexts?: string[] };
-					return task.contexts && filter.contexts!.some((ctx) => task.contexts!.includes(ctx));
-				});
-			}
-
-			if (filter.projects && filter.projects.length > 0) {
-				filtered = filtered.filter((t) => {
-					const task = t as { projects?: string[] };
-					return task.projects && filter.projects!.some((proj) => task.projects!.includes(proj));
-				});
-			}
-
 			if (filter.tags && filter.tags.length > 0) {
 				filtered = filtered.filter((t) => {
 					const task = t as { tags?: string[] };
@@ -355,44 +341,15 @@ export class ObsidianImpl implements ObsidianInterface {
 				});
 			}
 
-			if (filter.due) {
-				if (filter.due.before) {
-					const before = filter.due.before;
-					filtered = filtered.filter((t) => {
-						const task = t as { due?: string };
-						return task.due && task.due <= before;
-					});
-				}
-				if (filter.due.after) {
-					const after = filter.due.after;
-					filtered = filtered.filter((t) => {
-						const task = t as { due?: string };
-						return task.due && task.due >= after;
-					});
-				}
+			if (filter.dueBefore) {
+				const before = filter.dueBefore;
+				filtered = filtered.filter((t) => {
+					const task = t as { due?: string; scheduled?: string };
+					// Include tasks due OR scheduled on or before the date
+					return (task.due && task.due <= before) || (task.scheduled && task.scheduled <= before);
+				});
 			}
 
-			if (filter.scheduled) {
-				if (filter.scheduled.before) {
-					const before = filter.scheduled.before;
-					filtered = filtered.filter((t) => {
-						const task = t as { scheduled?: string };
-						return task.scheduled && task.scheduled <= before;
-					});
-				}
-				if (filter.scheduled.after) {
-					const after = filter.scheduled.after;
-					filtered = filtered.filter((t) => {
-						const task = t as { scheduled?: string };
-						return task.scheduled && task.scheduled >= after;
-					});
-				}
-			}
-
-			// Apply limit and offset
-			if (filter.offset) {
-				filtered = filtered.slice(filter.offset);
-			}
 			if (filter.limit) {
 				filtered = filtered.slice(0, filter.limit);
 			}
@@ -440,15 +397,6 @@ export class ObsidianImpl implements ObsidianInterface {
 				const result = await taskService.updateTask(id, updates);
 				return TaskInfoSchema.parse(result);
 			},
-			toggleStatus: async (id) => {
-				const result = await taskService.toggleStatus(id);
-				return TaskInfoSchema.parse(result);
-			},
-			completeInstance: async (id, date) => {
-				// Use toggleRecurringTaskComplete for recurring task completion
-				const result = await taskService.toggleRecurringTaskComplete(id, date);
-				return TaskInfoSchema.parse(result);
-			},
 			getStats: async () => {
 				// Compute stats from all tasks
 				const allTasksRaw = await cacheManager.getAllTasks();
@@ -494,15 +442,19 @@ export class ObsidianImpl implements ObsidianInterface {
 			getFilterOptions: () => {
 				// Get filter options from filterService or build from cacheManager
 				try {
-					const options = filterService.getFilterOptions();
-					return TaskFilterOptionsSchema.parse(options);
+					const options = filterService.getFilterOptions() as {
+						statuses?: string[];
+						priorities?: string[];
+					};
+					return TaskFilterOptionsSchema.parse({
+						statuses: options.statuses ?? [],
+						priorities: options.priorities ?? [],
+					});
 				} catch {
 					// Fallback: build from cacheManager methods
 					return TaskFilterOptionsSchema.parse({
 						statuses: cacheManager.getAllStatuses(),
 						priorities: cacheManager.getAllPriorities(),
-						contexts: cacheManager.getAllContexts(),
-						projects: cacheManager.getAllProjects(),
 					});
 				}
 			},

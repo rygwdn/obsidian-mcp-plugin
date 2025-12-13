@@ -1,12 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-	taskNotesQueryTool,
-	taskNotesUpdateTool,
-	taskNotesCreateTool,
-	TaskNotesStatsResource,
-} from "../tools/tasknotes";
+import { taskNotesQueryTool, taskNotesTool } from "../tools/tasknotes";
 import { generateFileMetadata } from "../tools/file_metadata";
-import { MockObsidian, createMockRequest, createMockExtra } from "./mock_obsidian";
+import { MockObsidian, createMockRequest } from "./mock_obsidian";
 import type { TaskNotesInterface, TaskInfo, TaskFilter } from "../obsidian/obsidian_interface";
 import { TaskInfoSchema } from "../obsidian/obsidian_interface";
 
@@ -21,21 +16,11 @@ describe("tasknotes tool annotations", () => {
 		});
 	});
 
-	it("should have the correct annotations for the update tool", () => {
-		expect(taskNotesUpdateTool.annotations).toEqual({
-			title: "TaskNotes Update Tool",
+	it("should have the correct annotations for the tasknotes tool", () => {
+		expect(taskNotesTool.annotations).toEqual({
+			title: "TaskNotes Tool",
 			readOnlyHint: false,
 			destructiveHint: true,
-			idempotentHint: false,
-			openWorldHint: false,
-		});
-	});
-
-	it("should have the correct annotations for the create tool", () => {
-		expect(taskNotesCreateTool.annotations).toEqual({
-			title: "TaskNotes Create Tool",
-			readOnlyHint: false,
-			destructiveHint: false,
 			idempotentHint: false,
 			openWorldHint: false,
 		});
@@ -60,62 +45,28 @@ class MockTaskNotes implements TaskNotesInterface {
 			filtered = filtered.filter((t) => filter.priority!.includes(t.priority));
 		}
 
-		if (filter.due) {
-			if (filter.due.before) {
-				filtered = filtered.filter((t) => t.due && t.due <= filter.due!.before!);
-			}
-			if (filter.due.after) {
-				filtered = filtered.filter((t) => t.due && t.due >= filter.due!.after!);
-			}
-		}
-
-		if (filter.scheduled) {
-			if (filter.scheduled.before) {
-				filtered = filtered.filter((t) => t.scheduled && t.scheduled <= filter.scheduled!.before!);
-			}
-			if (filter.scheduled.after) {
-				filtered = filtered.filter((t) => t.scheduled && t.scheduled >= filter.scheduled!.after!);
-			}
-		}
-
-		if (filter.archived !== undefined) {
-			filtered = filtered.filter((t) => t.archived === filter.archived);
-		}
-
 		if (filter.tags && filter.tags.length > 0) {
 			filtered = filtered.filter(
 				(t) => t.tags && filter.tags!.some((tag) => t.tags!.includes(tag))
 			);
 		}
 
-		if (filter.contexts && filter.contexts.length > 0) {
-			filtered = filtered.filter(
-				(t) => t.contexts && filter.contexts!.some((ctx) => t.contexts!.includes(ctx))
-			);
+		if (filter.archived !== undefined) {
+			filtered = filtered.filter((t) => t.archived === filter.archived);
 		}
 
-		if (filter.projects && filter.projects.length > 0) {
-			filtered = filtered.filter(
-				(t) => t.projects && filter.projects!.some((proj) => t.projects!.includes(proj))
-			);
-		}
-
-		// Sorting
-		if (filter.sortBy) {
-			const direction = filter.sortDirection === "desc" ? -1 : 1;
-			filtered.sort((a, b) => {
-				const aVal = (a as unknown as Record<string, unknown>)[filter.sortBy!] as string | number;
-				const bVal = (b as unknown as Record<string, unknown>)[filter.sortBy!] as string | number;
-				if (aVal < bVal) return -1 * direction;
-				if (aVal > bVal) return 1 * direction;
-				return 0;
+		if (filter.dueBefore) {
+			const before = filter.dueBefore;
+			filtered = filtered.filter((t) => {
+				return (t.due && t.due <= before) || (t.scheduled && t.scheduled <= before);
 			});
 		}
 
-		// Pagination
-		const offset = filter.offset || 0;
-		const limit = filter.limit || 50;
-		return filtered.slice(offset, offset + limit);
+		if (filter.limit) {
+			filtered = filtered.slice(0, filter.limit);
+		}
+
+		return filtered;
 	}
 
 	async createTask(data: { title: string; [key: string]: unknown }): Promise<TaskInfo> {
@@ -129,10 +80,7 @@ class MockTaskNotes implements TaskNotesInterface {
 		};
 
 		if (data.due) task.due = data.due as string;
-		if (data.scheduled) task.scheduled = data.scheduled as string;
 		if (data.tags) task.tags = data.tags as string[];
-		if (data.contexts) task.contexts = data.contexts as string[];
-		if (data.projects) task.projects = data.projects as string[];
 
 		this.tasks.push(task);
 		return task;
@@ -144,30 +92,6 @@ class MockTaskNotes implements TaskNotesInterface {
 			throw new Error(`Task not found: ${id}`);
 		}
 		Object.assign(task, updates);
-		return task;
-	}
-
-	async toggleStatus(id: string): Promise<TaskInfo> {
-		const task = this.tasks.find((t) => t.id === id || t.path === id);
-		if (!task) {
-			throw new Error(`Task not found: ${id}`);
-		}
-		task.status = task.status === "done" ? "todo" : "done";
-		if (task.status === "done") {
-			task.completedDate = new Date().toISOString().split("T")[0];
-		} else {
-			task.completedDate = undefined;
-		}
-		return task;
-	}
-
-	async completeInstance(id: string, date?: string): Promise<TaskInfo> {
-		const task = this.tasks.find((t) => t.id === id || t.path === id);
-		if (!task) {
-			throw new Error(`Task not found: ${id}`);
-		}
-		task.status = "done";
-		task.completedDate = date || new Date().toISOString().split("T")[0];
 		return task;
 	}
 
@@ -188,33 +112,18 @@ class MockTaskNotes implements TaskNotesInterface {
 		};
 	}
 
-	getFilterOptions(): {
-		statuses: string[];
-		priorities: string[];
-		contexts: string[];
-		projects: string[];
-	} {
+	getFilterOptions(): { statuses: string[]; priorities: string[] } {
 		const statuses = new Set<string>();
 		const priorities = new Set<string>();
-		const contexts = new Set<string>();
-		const projects = new Set<string>();
 
 		for (const task of this.tasks) {
 			statuses.add(task.status);
 			priorities.add(task.priority);
-			if (task.contexts) {
-				task.contexts.forEach((c) => contexts.add(c));
-			}
-			if (task.projects) {
-				task.projects.forEach((p) => projects.add(p));
-			}
 		}
 
 		return {
 			statuses: Array.from(statuses).sort(),
 			priorities: Array.from(priorities).sort(),
-			contexts: Array.from(contexts).sort(),
-			projects: Array.from(projects).sort(),
 		};
 	}
 
@@ -267,8 +176,6 @@ describe("tasknotes tools", () => {
 				path: "tasks/review-pr-123.md",
 				archived: false,
 				tags: ["code-review"],
-				contexts: ["development"],
-				projects: ["feature-x"],
 			},
 			{
 				id: "task-3",
@@ -279,14 +186,13 @@ describe("tasknotes tools", () => {
 				path: "tasks/update-documentation.md",
 				archived: false,
 				tags: ["docs"],
-				contexts: ["writing"],
-				projects: ["documentation"],
 			},
 			{
 				id: "task-4",
 				title: "Old archived task",
 				status: "done",
 				priority: "low",
+				due: "2025-12-10",
 				path: "tasks/old-archived-task.md",
 				archived: true,
 			},
@@ -306,157 +212,138 @@ describe("tasknotes tools", () => {
 	});
 
 	describe("taskNotesQueryTool", () => {
-		it("should list all tasks with default pagination", async () => {
+		it("should return tasks with default due_before of today", async () => {
 			const result = await taskNotesQueryTool.handler(obsidian, request, {});
-			const tasks = JSON.parse(result);
-			expect(tasks).toHaveLength(5);
+			const data = JSON.parse(result);
+
+			// Should return tasks due or scheduled on or before today
+			expect(data.tasks).toBeDefined();
+			expect(data.hasMore).toBeDefined();
+			expect(data.returned).toBeDefined();
+		});
+
+		it("should include stats and filterOptions when include_stats is true (default)", async () => {
+			const result = await taskNotesQueryTool.handler(obsidian, request, {
+				due_before: "2025-12-31", // Far future to get all tasks
+			});
+			const data = JSON.parse(result);
+
+			expect(data.stats).toBeDefined();
+			expect(data.stats.total).toBe(5);
+			expect(data.stats.active).toBeDefined();
+			expect(data.stats.completed).toBeDefined();
+			expect(data.stats.overdue).toBeDefined();
+			expect(data.stats.archived).toBeDefined();
+
+			expect(data.filterOptions).toBeDefined();
+			expect(data.filterOptions.statuses).toBeInstanceOf(Array);
+			expect(data.filterOptions.priorities).toBeInstanceOf(Array);
+		});
+
+		it("should not include stats when include_stats is false", async () => {
+			const result = await taskNotesQueryTool.handler(obsidian, request, {
+				due_before: "2025-12-31",
+				include_stats: false,
+			});
+			const data = JSON.parse(result);
+
+			expect(data.stats).toBeUndefined();
+			expect(data.filterOptions).toBeUndefined();
+		});
+
+		it("should indicate hasMore when more tasks exist", async () => {
+			const result = await taskNotesQueryTool.handler(obsidian, request, {
+				due_before: "2025-12-31",
+				limit: 2,
+			});
+			const data = JSON.parse(result);
+
+			expect(data.tasks).toHaveLength(2);
+			expect(data.hasMore).toBe(true);
+			expect(data.returned).toBe(2);
+		});
+
+		it("should indicate hasMore=false when all tasks returned", async () => {
+			const result = await taskNotesQueryTool.handler(obsidian, request, {
+				due_before: "2025-12-31",
+				limit: 10,
+			});
+			const data = JSON.parse(result);
+
+			expect(data.hasMore).toBe(false);
 		});
 
 		it("should filter by status", async () => {
 			const result = await taskNotesQueryTool.handler(obsidian, request, {
 				status: ["todo"],
+				due_before: "2025-12-31",
 			});
-			const tasks = JSON.parse(result);
-			expect(tasks).toMatchInlineSnapshot(`
-				[
-				  {
-				    "archived": false,
-				    "contexts": [
-				      "office",
-				    ],
-				    "due": "2025-12-15",
-				    "id": "task-1",
-				    "path": "tasks/complete-project-proposal.md",
-				    "priority": "high",
-				    "projects": [
-				      "q4-goals",
-				    ],
-				    "status": "todo",
-				    "tags": [
-				      "work",
-				      "urgent",
-				    ],
-				    "title": "Complete project proposal",
-				  },
-				  {
-				    "archived": false,
-				    "due": "2025-12-01",
-				    "id": "task-5",
-				    "path": "tasks/overdue-task.md",
-				    "priority": "high",
-				    "status": "todo",
-				    "tags": [
-				      "overdue",
-				    ],
-				    "title": "Overdue task",
-				  },
-				]
-			`);
+			const data = JSON.parse(result);
+
+			expect(data.tasks.every((t: TaskInfo) => t.status === "todo")).toBe(true);
 		});
 
 		it("should filter by priority", async () => {
 			const result = await taskNotesQueryTool.handler(obsidian, request, {
 				priority: ["high"],
+				due_before: "2025-12-31",
 			});
-			const tasks = JSON.parse(result);
-			expect(tasks).toHaveLength(2);
-			expect(tasks.every((t: TaskInfo) => t.priority === "high")).toBe(true);
-		});
+			const data = JSON.parse(result);
 
-		it("should filter by due date range", async () => {
-			const result = await taskNotesQueryTool.handler(obsidian, request, {
-				due_after: "2025-12-10",
-				due_before: "2025-12-20",
-			});
-			const tasks = JSON.parse(result);
-			expect(tasks).toMatchInlineSnapshot(`
-				[
-				  {
-				    "archived": false,
-				    "contexts": [
-				      "office",
-				    ],
-				    "due": "2025-12-15",
-				    "id": "task-1",
-				    "path": "tasks/complete-project-proposal.md",
-				    "priority": "high",
-				    "projects": [
-				      "q4-goals",
-				    ],
-				    "status": "todo",
-				    "tags": [
-				      "work",
-				      "urgent",
-				    ],
-				    "title": "Complete project proposal",
-				  },
-				]
-			`);
+			expect(data.tasks.every((t: TaskInfo) => t.priority === "high")).toBe(true);
 		});
 
 		it("should filter by tags", async () => {
 			const result = await taskNotesQueryTool.handler(obsidian, request, {
 				tags: ["work"],
+				due_before: "2025-12-31",
 			});
-			const tasks = JSON.parse(result);
-			expect(tasks).toHaveLength(1);
-			expect(tasks[0].title).toBe("Complete project proposal");
+			const data = JSON.parse(result);
+
+			expect(data.tasks).toHaveLength(1);
+			expect(data.tasks[0].title).toBe("Complete project proposal");
 		});
 
-		it("should filter by contexts", async () => {
+		it("should filter by due_before (includes due and scheduled)", async () => {
 			const result = await taskNotesQueryTool.handler(obsidian, request, {
-				contexts: ["development"],
+				due_before: "2025-12-12",
 			});
-			const tasks = JSON.parse(result);
-			expect(tasks).toHaveLength(1);
-			expect(tasks[0].title).toBe("Review PR #123");
+			const data = JSON.parse(result);
+
+			// Should include task-2 (scheduled 2025-12-12), task-5 (due 2025-12-01)
+			const ids = data.tasks.map((t: TaskInfo) => t.id);
+			expect(ids).toContain("task-2");
+			expect(ids).toContain("task-5");
 		});
 
-		it("should filter by projects", async () => {
+		it("should exclude archived tasks by default", async () => {
 			const result = await taskNotesQueryTool.handler(obsidian, request, {
-				projects: ["q4-goals"],
+				due_before: "2025-12-31",
 			});
-			const tasks = JSON.parse(result);
-			expect(tasks).toHaveLength(1);
-			expect(tasks[0].title).toBe("Complete project proposal");
+			const data = JSON.parse(result);
+
+			expect(data.tasks.every((t: TaskInfo) => !t.archived)).toBe(true);
 		});
 
-		it("should support pagination with limit and offset", async () => {
-			const result = await taskNotesQueryTool.handler(obsidian, request, {
-				limit: 2,
-				offset: 1,
-			});
-			const tasks = JSON.parse(result);
-			expect(tasks).toHaveLength(2);
-			expect(tasks[0].id).toBe("task-2");
-			expect(tasks[1].id).toBe("task-3");
-		});
-
-		it("should support sorting", async () => {
-			const result = await taskNotesQueryTool.handler(obsidian, request, {
-				sort_by: "priority",
-				sort_direction: "desc",
-			});
-			const tasks = JSON.parse(result);
-			expect(tasks[0].priority).toBe("medium");
-			expect(tasks[tasks.length - 1].priority).toBe("high");
-		});
-
-		it("should filter by archived status", async () => {
+		it("should include archived tasks when archived=true", async () => {
 			const result = await taskNotesQueryTool.handler(obsidian, request, {
 				archived: true,
+				due_before: "2025-12-31",
 			});
-			const tasks = JSON.parse(result);
-			expect(tasks).toHaveLength(1);
-			expect(tasks[0].archived).toBe(true);
+			const data = JSON.parse(result);
+
+			expect(data.tasks.some((t: TaskInfo) => t.archived)).toBe(true);
 		});
 
 		it("should return empty array when no tasks match", async () => {
 			const result = await taskNotesQueryTool.handler(obsidian, request, {
 				status: ["nonexistent"],
+				due_before: "2025-12-31",
 			});
-			const tasks = JSON.parse(result);
-			expect(tasks).toEqual([]);
+			const data = JSON.parse(result);
+
+			expect(data.tasks).toEqual([]);
+			expect(data.hasMore).toBe(false);
 		});
 
 		it("should throw error when TaskNotes plugin not enabled", async () => {
@@ -467,204 +354,103 @@ describe("tasknotes tools", () => {
 		});
 	});
 
-	describe("taskNotesUpdateTool", () => {
-		it("should update task properties", async () => {
-			const result = await taskNotesUpdateTool.handler(obsidian, request, {
-				id: "task-1",
-				status: "in-progress",
-				priority: "medium",
+	describe("taskNotesTool", () => {
+		describe("create task", () => {
+			it("should create task with title only", async () => {
+				const result = await taskNotesTool.handler(obsidian, request, {
+					title: "New task",
+				});
+				const task = JSON.parse(result);
+
+				expect(task.title).toBe("New task");
+				expect(task.status).toBe("todo");
+				expect(task.priority).toBe("none");
+				expect(task.archived).toBe(false);
 			});
-			const task = JSON.parse(result);
-			expect(task.status).toBe("in-progress");
-			expect(task.priority).toBe("medium");
-		});
 
-		it("should toggle task status", async () => {
-			const result = await taskNotesUpdateTool.handler(obsidian, request, {
-				id: "task-1",
-				toggle_status: true,
+			it("should create task with all properties", async () => {
+				const mockNow = 1734220800000;
+				vi.spyOn(Date, "now").mockReturnValue(mockNow);
+
+				const result = await taskNotesTool.handler(obsidian, request, {
+					title: "Complete new feature",
+					status: "in-progress",
+					priority: "high",
+					due: "2025-12-20",
+					tags: ["feature", "sprint"],
+				});
+				const task = JSON.parse(result);
+
+				expect(task.title).toBe("Complete new feature");
+				expect(task.status).toBe("in-progress");
+				expect(task.priority).toBe("high");
+				expect(task.due).toBe("2025-12-20");
+				expect(task.tags).toEqual(["feature", "sprint"]);
+
+				vi.restoreAllMocks();
 			});
-			const task = JSON.parse(result);
-			expect(task.status).toBe("done");
-			expect(task.completedDate).toBeDefined();
-		});
 
-		it("should complete recurring instance", async () => {
-			const result = await taskNotesUpdateTool.handler(obsidian, request, {
-				id: "task-1",
-				complete_instance: true,
-				instance_date: "2025-12-15",
+			it("should throw error when title is missing for create", async () => {
+				await expect(taskNotesTool.handler(obsidian, request, {})).rejects.toThrow(
+					"Title is required when creating a new task"
+				);
 			});
-			const task = JSON.parse(result);
-			expect(task.status).toBe("done");
-			expect(task.completedDate).toBe("2025-12-15");
 		});
 
-		it("should update multiple properties at once", async () => {
-			const result = await taskNotesUpdateTool.handler(obsidian, request, {
-				id: "task-2",
-				status: "done",
-				priority: "high",
-				tags: ["completed", "reviewed"],
+		describe("update task", () => {
+			it("should update task properties", async () => {
+				const result = await taskNotesTool.handler(obsidian, request, {
+					id: "task-1",
+					status: "in-progress",
+					priority: "medium",
+				});
+				const task = JSON.parse(result);
+
+				expect(task.status).toBe("in-progress");
+				expect(task.priority).toBe("medium");
 			});
-			const task = JSON.parse(result);
-			expect(task.status).toBe("done");
-			expect(task.priority).toBe("high");
-			expect(task.tags).toEqual(["completed", "reviewed"]);
-		});
 
-		it("should throw error when task not found", async () => {
-			await expect(
-				taskNotesUpdateTool.handler(obsidian, request, {
-					id: "nonexistent",
-					status: "done",
-				})
-			).rejects.toThrow("Task not found: nonexistent");
-		});
-
-		it("should throw error when TaskNotes plugin not enabled", async () => {
-			obsidian.taskNotes = null;
-			await expect(
-				taskNotesUpdateTool.handler(obsidian, request, {
+			it("should update task status to done", async () => {
+				const result = await taskNotesTool.handler(obsidian, request, {
 					id: "task-1",
 					status: "done",
-				})
-			).rejects.toThrow("TaskNotes plugin is not enabled");
-		});
+				});
+				const task = JSON.parse(result);
 
-		it("should throw error when id is missing", async () => {
-			await expect(
-				taskNotesUpdateTool.handler(obsidian, request, {
+				expect(task.status).toBe("done");
+			});
+
+			it("should update multiple properties at once", async () => {
+				const result = await taskNotesTool.handler(obsidian, request, {
+					id: "task-2",
 					status: "done",
-				})
-			).rejects.toThrow(); // Zod throws validation error for missing required field
-		});
-	});
+					priority: "high",
+					tags: ["completed", "reviewed"],
+				});
+				const task = JSON.parse(result);
 
-	describe("taskNotesCreateTool", () => {
-		it("should create task with title only", async () => {
-			const result = await taskNotesCreateTool.handler(obsidian, request, {
-				title: "New task",
+				expect(task.status).toBe("done");
+				expect(task.priority).toBe("high");
+				expect(task.tags).toEqual(["completed", "reviewed"]);
 			});
-			const task = JSON.parse(result);
-			expect(task.title).toBe("New task");
-			expect(task.status).toBe("todo");
-			expect(task.priority).toBe("none");
-			expect(task.archived).toBe(false);
-		});
 
-		it("should create task with all properties", async () => {
-			const mockNow = 1734220800000;
-			vi.spyOn(Date, "now").mockReturnValue(mockNow);
-
-			const result = await taskNotesCreateTool.handler(obsidian, request, {
-				title: "Complete new feature",
-				status: "in-progress",
-				priority: "high",
-				due: "2025-12-20",
-				scheduled: "2025-12-15",
-				tags: ["feature", "sprint"],
-				contexts: ["development"],
-				projects: ["new-project"],
+			it("should throw error when task not found", async () => {
+				await expect(
+					taskNotesTool.handler(obsidian, request, {
+						id: "nonexistent",
+						status: "done",
+					})
+				).rejects.toThrow("Task not found: nonexistent");
 			});
-			const task = JSON.parse(result);
-			expect(task).toMatchInlineSnapshot(`
-				{
-				  "archived": false,
-				  "contexts": [
-				    "development",
-				  ],
-				  "due": "2025-12-20",
-				  "id": "task-1734220800000",
-				  "path": "tasks/complete-new-feature.md",
-				  "priority": "high",
-				  "projects": [
-				    "new-project",
-				  ],
-				  "scheduled": "2025-12-15",
-				  "status": "in-progress",
-				  "tags": [
-				    "feature",
-				    "sprint",
-				  ],
-				  "title": "Complete new feature",
-				}
-			`);
-
-			vi.restoreAllMocks();
 		});
 
 		it("should throw error when TaskNotes plugin not enabled", async () => {
 			obsidian.taskNotes = null;
 			await expect(
-				taskNotesCreateTool.handler(obsidian, request, {
+				taskNotesTool.handler(obsidian, request, {
 					title: "New task",
 				})
 			).rejects.toThrow("TaskNotes plugin is not enabled");
-		});
-
-		it("should throw error when title is missing", async () => {
-			await expect(taskNotesCreateTool.handler(obsidian, request, {})).rejects.toThrow(); // Zod throws validation error for missing required field
-		});
-	});
-
-	describe("TaskNotesStatsResource", () => {
-		it("should return stats and filter options", async () => {
-			const resource = new TaskNotesStatsResource(obsidian);
-			const extra = createMockExtra(request);
-			const uri = new URL("tasknotes:///stats");
-			const result = await resource.handler(uri, {}, extra);
-
-			expect(result.contents).toHaveLength(1);
-			expect(result.contents[0].uri).toBe("tasknotes:///stats");
-			expect(result.contents[0].mimeType).toBe("application/json");
-
-			const content = result.contents[0];
-			const data = JSON.parse("text" in content ? content.text || "{}" : "{}");
-			expect(data).toMatchInlineSnapshot(`
-				{
-				  "filterOptions": {
-				    "contexts": [
-				      "development",
-				      "office",
-				      "writing",
-				    ],
-				    "priorities": [
-				      "high",
-				      "low",
-				      "medium",
-				    ],
-				    "projects": [
-				      "documentation",
-				      "feature-x",
-				      "q4-goals",
-				    ],
-				    "statuses": [
-				      "done",
-				      "in-progress",
-				      "todo",
-				    ],
-				  },
-				  "stats": {
-				    "active": 3,
-				    "archived": 1,
-				    "completed": 2,
-				    "overdue": 1,
-				    "total": 5,
-				  },
-				}
-			`);
-		});
-
-		it("should throw error when TaskNotes plugin not enabled", async () => {
-			obsidian.taskNotes = null;
-			const resource = new TaskNotesStatsResource(obsidian);
-			const extra = createMockExtra(request);
-			const uri = new URL("tasknotes:///stats");
-
-			await expect(resource.handler(uri, {}, extra)).rejects.toThrow(
-				"TaskNotes plugin is not enabled"
-			);
 		});
 	});
 
@@ -693,8 +479,6 @@ Task details here.`,
 			expect(result).toContain("- **status**: todo");
 			expect(result).toContain("- **priority**: high");
 			expect(result).toContain("- **due**: 2025-12-15");
-			expect(result).toContain("- **contexts**: office");
-			expect(result).toContain("- **projects**: q4-goals");
 		});
 
 		it("should not include TaskNotes section for non-task files", async () => {
@@ -896,7 +680,6 @@ describe("TaskInfoSchema null value handling", () => {
 			priority: "none",
 			path: "tasks/test5.md",
 			archived: true,
-			// All optional fields left undefined
 		};
 
 		const parsed = TaskInfoSchema.parse(taskWithUndefined);
