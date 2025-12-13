@@ -72,6 +72,8 @@ test.describe("Integration Toggles", () => {
 			expect(toolNames).toContain("quickadd_execute");
 			expect(toolNames).toContain("tasknotes_query");
 			expect(toolNames).toContain("tasknotes");
+			expect(toolNames).toContain("timeblocks_query");
+			expect(toolNames).toContain("timeblocks");
 		});
 
 		test("should be able to call update_content", async () => {
@@ -144,6 +146,14 @@ test.describe("Integration Toggles", () => {
 
 			const toolNames = result.tools.map((t) => t.name);
 			expect(toolNames).toContain("dataview_query");
+		});
+
+		test("should NOT have timeblocks tools", async () => {
+			const result = await client.listTools();
+
+			const toolNames = result.tools.map((t) => t.name);
+			expect(toolNames).not.toContain("timeblocks_query");
+			expect(toolNames).not.toContain("timeblocks");
 		});
 
 		test("should fail when calling disabled update_content tool", async () => {
@@ -235,6 +245,18 @@ test.describe("Integration Toggles", () => {
 				name: "tasknotes_query",
 				arguments: {
 					query: "status:pending",
+				},
+			});
+
+			expect(result.isError).toBe(true);
+			expect(getToolResultText(result)).toMatch(/not found|unknown/i);
+		});
+
+		test("should fail when calling disabled timeblocks_query tool", async () => {
+			const result = await client.callTool({
+				name: "timeblocks_query",
+				arguments: {
+					date: "today",
 				},
 			});
 

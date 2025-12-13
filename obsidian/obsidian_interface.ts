@@ -54,6 +54,7 @@ export interface ObsidianInterface {
 	getQuickAdd(request: AuthenticatedRequest): QuickAddInterface | null;
 	getDataview(request: AuthenticatedRequest): DataviewInterface | null;
 	getTaskNotes(request: AuthenticatedRequest): TaskNotesInterface | null;
+	getTimeblocks(request: AuthenticatedRequest): TimeblocksInterface | null;
 	dailyNotes: DailyNotesInterface | null;
 }
 
@@ -142,6 +143,28 @@ export interface TaskNotesInterface {
 	updateTask(id: string, updates: Record<string, unknown>): Promise<TaskInfo>;
 	getStats(): Promise<TaskStats>;
 	getFilterOptions(): TaskFilterOptions;
+}
+
+export const TimeBlockSchema = z.object({
+	id: z.string(),
+	title: z.string(),
+	startTime: z.string(),
+	endTime: z.string(),
+	attachments: z.array(z.string()).optional(),
+	color: z.string().optional(),
+	description: z.string().optional(),
+});
+export type TimeBlock = z.infer<typeof TimeBlockSchema>;
+
+export interface TimeblocksInterface {
+	getTimeblocks(date: string): Promise<TimeBlock[]>;
+	createTimeblock(date: string, data: Omit<TimeBlock, "id">): Promise<TimeBlock>;
+	updateTimeblock(
+		date: string,
+		id: string,
+		updates: Partial<Omit<TimeBlock, "id">>
+	): Promise<TimeBlock>;
+	deleteTimeblock(date: string, id: string): Promise<void>;
 }
 
 export interface SearchResult {

@@ -102,6 +102,7 @@ export default async function globalSetup() {
 				dataview_query: true,
 				quickadd: true,
 				tasknotes: true,
+				timeblocks: true,
 			},
 			directoryPermissions: {
 				rules: [],
@@ -120,6 +121,7 @@ export default async function globalSetup() {
 				dataview_query: true,
 				quickadd: true,
 				tasknotes: true,
+				timeblocks: true,
 			},
 			directoryPermissions: {
 				rules: [],
@@ -138,6 +140,7 @@ export default async function globalSetup() {
 				dataview_query: true,
 				quickadd: false,
 				tasknotes: false,
+				timeblocks: false,
 			},
 			directoryPermissions: {
 				rules: [],
@@ -156,6 +159,7 @@ export default async function globalSetup() {
 				dataview_query: false,
 				quickadd: false,
 				tasknotes: false,
+				timeblocks: false,
 			},
 			directoryPermissions: {
 				rules: [],

@@ -16,6 +16,7 @@ import { logger } from "tools/logging";
 import { quickAddExecuteTool, quickAddListTool } from "tools/quickadd";
 import { searchTool } from "tools/search";
 import { taskNotesQueryTool, taskNotesTool } from "tools/tasknotes";
+import { timeblocksQueryTool, timeblocksTool } from "tools/timeblocks";
 import type { ToolRegistration } from "tools/types";
 import { updateContentTool } from "tools/update_content";
 import { VaultDailyNoteResource, VaultFileResource } from "tools/vault_file_resource";
@@ -135,6 +136,11 @@ export class ObsidianMcpServer {
 		if (enabledTools.tasknotes && this.obsidian.getTaskNotes(request)) {
 			this.registerTool(server, taskNotesQueryTool);
 			this.registerTool(server, taskNotesTool);
+		}
+
+		if (enabledTools.timeblocks && this.obsidian.getTimeblocks(request)) {
+			this.registerTool(server, timeblocksQueryTool);
+			this.registerTool(server, timeblocksTool);
 		}
 	}
 

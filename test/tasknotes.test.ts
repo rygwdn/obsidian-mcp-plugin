@@ -148,6 +148,7 @@ describe("tasknotes tools", () => {
 				dataview_query: false,
 				quickadd: false,
 				tasknotes: true,
+				timeblocks: false,
 			},
 		});
 

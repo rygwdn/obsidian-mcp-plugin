@@ -8,6 +8,8 @@ import {
 	QuickAddInterface,
 	SearchResult,
 	TaskNotesInterface,
+	TimeBlock,
+	TimeblocksInterface,
 } from "../obsidian/obsidian_interface";
 import { DEFAULT_SETTINGS, MCPPluginSettings, AuthToken } from "settings/types";
 import { AuthenticatedRequest, AUTHENTICATED_REQUEST_KEY } from "../server/auth";
@@ -227,9 +229,17 @@ export class MockObsidian implements ObsidianInterface {
 		return this.taskNotes;
 	}
 
+	getTimeblocks(request: AuthenticatedRequest): TimeblocksInterface | null {
+		if (!request.token.enabledTools.timeblocks) {
+			return null;
+		}
+		return this.timeblocks;
+	}
+
 	quickAdd: QuickAddInterface | null;
 	dataview: DataviewInterface | null;
 	taskNotes: TaskNotesInterface | null;
+	timeblocks: TimeblocksInterface | null;
 	dailyNotes: DailyNotesInterface | null;
 }
 
@@ -330,6 +340,7 @@ export function createMockRequest(
 			dataview_query: true,
 			quickadd: true,
 			tasknotes: false,
+			timeblocks: false,
 		},
 		directoryPermissions: {
 			rules: [],
@@ -366,4 +377,51 @@ export function createMockExtra(
 			},
 		},
 	};
+}
+
+export class MockTimeblocks implements TimeblocksInterface {
+	private timeblocks: Map<string, TimeBlock[]> = new Map();
+
+	async getTimeblocks(date: string): Promise<TimeBlock[]> {
+		return this.timeblocks.get(date) || [];
+	}
+
+	async createTimeblock(date: string, data: Omit<TimeBlock, "id">): Promise<TimeBlock> {
+		const id = `tb-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
+		const timeblock = { id, ...data };
+		const existing = this.timeblocks.get(date) || [];
+		existing.push(timeblock);
+		this.timeblocks.set(date, existing);
+		return timeblock;
+	}
+
+	async updateTimeblock(
+		date: string,
+		id: string,
+		updates: Partial<Omit<TimeBlock, "id">>
+	): Promise<TimeBlock> {
+		const blocks = this.timeblocks.get(date) || [];
+		const index = blocks.findIndex((b) => b.id === id);
+		if (index === -1) throw new Error(`Timeblock not found: ${id}`);
+		blocks[index] = { ...blocks[index], ...updates };
+		return blocks[index];
+	}
+
+	async deleteTimeblock(date: string, id: string): Promise<void> {
+		const blocks = this.timeblocks.get(date) || [];
+		const index = blocks.findIndex((b) => b.id === id);
+		if (index === -1) throw new Error(`Timeblock not found: ${id}`);
+		blocks.splice(index, 1);
+		this.timeblocks.set(date, blocks);
+	}
+
+	addTestTimeblock(date: string, timeblock: TimeBlock): void {
+		const existing = this.timeblocks.get(date) || [];
+		existing.push(timeblock);
+		this.timeblocks.set(date, existing);
+	}
+
+	clearAll(): void {
+		this.timeblocks.clear();
+	}
 }

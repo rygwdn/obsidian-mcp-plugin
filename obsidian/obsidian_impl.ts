@@ -1,6 +1,7 @@
 import type { App, CachedMetadata, TFile } from "obsidian";
 import { prepareFuzzySearch, prepareSimpleSearch } from "obsidian";
 import { getAPI as getDataviewAPI } from "obsidian-dataview";
+import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 
 import type ObsidianMCPPlugin from "main";
 import type { AuthenticatedRequest } from "../server/auth";
@@ -15,6 +16,7 @@ import {
 	TaskInfoSchema,
 	TaskStatsSchema,
 	TaskFilterOptionsSchema,
+	TimeBlockSchema,
 	type CheckFileResult,
 	type DailyNotesInterface,
 	type DataviewInterface,
@@ -24,6 +26,7 @@ import {
 	type SearchResult,
 	type TaskFilter,
 	type TaskNotesInterface,
+	type TimeblocksInterface,
 } from "./obsidian_interface";
 import type { DailyNotesPlugin, PeriodicNotesPlugin } from "./obsidian_types";
 
@@ -482,6 +485,228 @@ export class ObsidianImpl implements ObsidianInterface {
 		}
 
 		return null;
+	}
+
+	getTimeblocks(request: AuthenticatedRequest): TimeblocksInterface | null {
+		if (!request.token.enabledTools.timeblocks) {
+			return null;
+		}
+		if (!this.dailyNotes) {
+			return null;
+		}
+
+		const ALIASES: Record<string, () => moment.Moment> = {
+			today: () => window.moment(),
+			yesterday: () => window.moment().subtract(1, "day"),
+			tomorrow: () => window.moment().add(1, "day"),
+		};
+
+		const parseDate = (dateStr: string): moment.Moment => {
+			if (Object.keys(ALIASES).includes(dateStr)) {
+				return ALIASES[dateStr]();
+			}
+			const format = this.dailyNotes?.format || "YYYY-MM-DD";
+			return window.moment(dateStr, format);
+		};
+
+		const getDailyNotePath = (date: moment.Moment): string => {
+			const format = this.dailyNotes?.format || "YYYY-MM-DD";
+			const folder = this.dailyNotes?.folder || "";
+			const filename = date.format(format);
+			const folderPath = folder ? `${folder}/` : "";
+			return `${folderPath}${filename}.md`;
+		};
+
+		const parseFrontmatter = (
+			content: string
+		): { frontmatter: Record<string, unknown>; body: string } => {
+			const match = content.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
+			if (!match) {
+				return { frontmatter: {}, body: content };
+			}
+			try {
+				const frontmatter = parseYaml(match[1]) as Record<string, unknown>;
+				return { frontmatter, body: match[2] };
+			} catch {
+				return { frontmatter: {}, body: content };
+			}
+		};
+
+		const serializeWithFrontmatter = (
+			frontmatter: Record<string, unknown>,
+			body: string
+		): string => {
+			const yaml = stringifyYaml(frontmatter);
+			return `---\n${yaml}---\n${body}`;
+		};
+
+		const validateTime = (time: string): boolean => {
+			return /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(time);
+		};
+
+		const validateTimeRange = (startTime: string, endTime: string): boolean => {
+			if (!validateTime(startTime) || !validateTime(endTime)) {
+				return false;
+			}
+			const [startHour, startMin] = startTime.split(":").map(Number);
+			const [endHour, endMin] = endTime.split(":").map(Number);
+			const startMinutes = startHour * 60 + startMin;
+			const endMinutes = endHour * 60 + endMin;
+			return endMinutes > startMinutes;
+		};
+
+		return {
+			getTimeblocks: async (date: string) => {
+				const dateMoment = parseDate(date);
+				if (!dateMoment.isValid()) {
+					throw new Error(`Invalid date: ${date}`);
+				}
+
+				const filePath = getDailyNotePath(dateMoment);
+				const file = this.app.vault.getFileByPath(filePath);
+				if (!file) {
+					return [];
+				}
+
+				const content = await this.read(file, request);
+				const { frontmatter } = parseFrontmatter(content);
+				const timeblocks = frontmatter.timeblocks;
+
+				if (!timeblocks || !Array.isArray(timeblocks)) {
+					return [];
+				}
+
+				const parsed = TimeBlockSchema.array().safeParse(timeblocks);
+				return parsed.success ? parsed.data : [];
+			},
+
+			createTimeblock: async (date: string, data) => {
+				const dateMoment = parseDate(date);
+				if (!dateMoment.isValid()) {
+					throw new Error(`Invalid date: ${date}`);
+				}
+
+				if (!validateTimeRange(data.startTime, data.endTime)) {
+					throw new Error(
+						`Invalid time range: ${data.startTime} to ${data.endTime}. Times must be in HH:MM format and endTime must be after startTime.`
+					);
+				}
+
+				const id = `tb-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
+				const newTimeblock = { id, ...data };
+
+				const filePath = getDailyNotePath(dateMoment);
+				let file = this.app.vault.getFileByPath(filePath);
+				let content: string;
+				let frontmatter: Record<string, unknown>;
+				let body: string;
+
+				if (!file) {
+					file = await this.create(filePath, "", request);
+					frontmatter = {};
+					body = "";
+				} else {
+					content = await this.read(file, request);
+					({ frontmatter, body } = parseFrontmatter(content));
+				}
+
+				const timeblocks = Array.isArray(frontmatter.timeblocks) ? frontmatter.timeblocks : [];
+				timeblocks.push(newTimeblock);
+				frontmatter.timeblocks = timeblocks;
+
+				const newContent = serializeWithFrontmatter(frontmatter, body);
+				await this.modify(file, newContent, request);
+
+				return TimeBlockSchema.parse(newTimeblock);
+			},
+
+			updateTimeblock: async (date: string, id: string, updates) => {
+				const dateMoment = parseDate(date);
+				if (!dateMoment.isValid()) {
+					throw new Error(`Invalid date: ${date}`);
+				}
+
+				const filePath = getDailyNotePath(dateMoment);
+				const file = this.app.vault.getFileByPath(filePath);
+				if (!file) {
+					throw new Error(`Daily note not found for date: ${date}`);
+				}
+
+				const content = await this.read(file, request);
+				const { frontmatter, body } = parseFrontmatter(content);
+
+				if (!Array.isArray(frontmatter.timeblocks)) {
+					throw new Error(`No timeblocks found for date: ${date}`);
+				}
+
+				const timeblocks = frontmatter.timeblocks as Record<string, unknown>[];
+				const index = timeblocks.findIndex((tb) => tb.id === id);
+				if (index === -1) {
+					throw new Error(`Timeblock not found: ${id}`);
+				}
+
+				const updatedTimeblock = { ...timeblocks[index], ...updates };
+
+				if (
+					updates.startTime !== undefined ||
+					updates.endTime !== undefined ||
+					timeblocks[index].startTime !== undefined ||
+					timeblocks[index].endTime !== undefined
+				) {
+					const startTime =
+						updates.startTime !== undefined
+							? updates.startTime
+							: (timeblocks[index].startTime as string);
+					const endTime =
+						updates.endTime !== undefined ? updates.endTime : (timeblocks[index].endTime as string);
+					if (!validateTimeRange(startTime, endTime)) {
+						throw new Error(
+							`Invalid time range: ${startTime} to ${endTime}. Times must be in HH:MM format and endTime must be after startTime.`
+						);
+					}
+				}
+
+				timeblocks[index] = updatedTimeblock;
+				frontmatter.timeblocks = timeblocks;
+
+				const newContent = serializeWithFrontmatter(frontmatter, body);
+				await this.modify(file, newContent, request);
+
+				return TimeBlockSchema.parse(updatedTimeblock);
+			},
+
+			deleteTimeblock: async (date: string, id: string) => {
+				const dateMoment = parseDate(date);
+				if (!dateMoment.isValid()) {
+					throw new Error(`Invalid date: ${date}`);
+				}
+
+				const filePath = getDailyNotePath(dateMoment);
+				const file = this.app.vault.getFileByPath(filePath);
+				if (!file) {
+					throw new Error(`Daily note not found for date: ${date}`);
+				}
+
+				const content = await this.read(file, request);
+				const { frontmatter, body } = parseFrontmatter(content);
+
+				if (!Array.isArray(frontmatter.timeblocks)) {
+					throw new Error(`No timeblocks found for date: ${date}`);
+				}
+
+				const timeblocks = frontmatter.timeblocks as Record<string, unknown>[];
+				const index = timeblocks.findIndex((tb) => tb.id === id);
+				if (index === -1) {
+					throw new Error(`Timeblock not found: ${id}`);
+				}
+
+				timeblocks.splice(index, 1);
+				frontmatter.timeblocks = timeblocks;
+
+				const newContent = serializeWithFrontmatter(frontmatter, body);
+				await this.modify(file, newContent, request);
+			},
+		};
 	}
 }
 

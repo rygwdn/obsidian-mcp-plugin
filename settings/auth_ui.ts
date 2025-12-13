@@ -139,6 +139,7 @@ function updateTokenList(
 			{ key: "dataview_query", icon: "📊", title: "Dataview Integration" },
 			{ key: "quickadd", icon: "⚡", title: "QuickAdd Integration" },
 			{ key: "tasknotes", icon: "✅", title: "TaskNotes Integration" },
+			{ key: "timeblocks", icon: "📅", title: "Timeblocks Integration" },
 		];
 
 		for (const tool of toolsInOrder) {
@@ -227,6 +228,7 @@ function renderCreateTokenConfig(
 			dataview_query: true,
 			quickadd: true,
 			tasknotes: false,
+			timeblocks: false,
 		},
 		directoryPermissions: {
 			rules: [],
@@ -456,6 +458,32 @@ function renderFeaturesConfig(
 			.setDisabled(!isTaskNotesEnabled)
 			.onChange((value) => {
 				token.enabledTools.tasknotes = value;
+			})
+	);
+
+	// Timeblocks requires TaskNotes plugin and daily notes
+	const hasDailyNotes =
+		plugin.app.internalPlugins.plugins["daily-notes"]?.enabled ||
+		plugin.app.plugins.enabledPlugins.has("periodic-notes");
+	const hasTaskNotes = plugin.app.plugins.enabledPlugins.has("tasknotes");
+	const isTimeblocksEnabled = hasDailyNotes && hasTaskNotes;
+
+	const timeblocksSetting = new Setting(containerEl)
+		.setName("📅 Timeblocks Integration")
+		.setDesc(
+			isTimeblocksEnabled
+				? "Manage timeblocks in daily notes (TaskNotes format)"
+				: !hasDailyNotes
+					? "Requires Daily Notes or Periodic Notes plugin"
+					: "Requires TaskNotes plugin"
+		);
+
+	timeblocksSetting.addToggle((toggle) =>
+		toggle
+			.setValue(isTimeblocksEnabled && token.enabledTools.timeblocks)
+			.setDisabled(!isTimeblocksEnabled)
+			.onChange((value) => {
+				token.enabledTools.timeblocks = value;
 			})
 	);
 }

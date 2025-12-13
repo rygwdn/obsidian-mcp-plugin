@@ -152,6 +152,7 @@ export class AuthManager {
 				dataview_query: true,
 				quickadd: true,
 				tasknotes: false,
+				timeblocks: false,
 			},
 			directoryPermissions: {
 				rules: [],
