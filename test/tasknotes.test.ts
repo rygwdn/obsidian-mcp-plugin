@@ -70,8 +70,8 @@ class MockTaskNotes implements TaskNotesInterface {
 	}
 
 	async createTask(data: { title: string; [key: string]: unknown }): Promise<TaskInfo> {
+		// Note: Real TaskNotes plugin does NOT return `id` - it uses `path` as identifier
 		const task: TaskInfo = {
-			id: `task-${Date.now()}`,
 			title: data.title,
 			status: (data.status as string) || "todo",
 			priority: (data.priority as string) || "none",

@@ -89,8 +89,9 @@ export interface DailyNotesInterface {
 
 // TaskNotes Zod schemas - single source of truth for types and validation
 // Use .nullish() to accept both null (from plugin API) and undefined
+// Note: TaskNotes uses `path` as the primary identifier, not `id`
 export const TaskInfoSchema = z.object({
-	id: z.string(),
+	id: z.string().nullish(),
 	title: z.string(),
 	status: z.string(),
 	priority: z.string(),

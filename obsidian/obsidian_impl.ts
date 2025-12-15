@@ -286,7 +286,7 @@ export class ObsidianImpl implements ObsidianInterface {
 
 		const taskService = plugin.taskService as {
 			createTask(data: unknown): Promise<unknown>;
-			updateTask(path: string, updates: unknown): Promise<unknown>;
+			updateTask(originalTask: unknown, updates: unknown): Promise<unknown>;
 			toggleStatus(path: string): Promise<unknown>;
 			toggleRecurringTaskComplete(path: string, date?: string): Promise<unknown>;
 		};
@@ -394,11 +394,52 @@ export class ObsidianImpl implements ObsidianInterface {
 			},
 			createTask: async (data) => {
 				const result = await taskService.createTask(data);
-				return TaskInfoSchema.parse(result);
+				// TaskNotes returns { file, taskInfo } - extract taskInfo
+				const taskInfo = (result as { taskInfo?: unknown }).taskInfo ?? result;
+				const parsed = TaskInfoSchema.safeParse(taskInfo);
+				if (!parsed.success) {
+					throw new Error(
+						`TaskNotes plugin returned invalid data after creating task: ${parsed.error.message}`
+					);
+				}
+				return parsed.data;
 			},
 			updateTask: async (id, updates) => {
-				const result = await taskService.updateTask(id, updates);
-				return TaskInfoSchema.parse(result);
+				// TaskNotes expects (originalTask, updates), not (path, updates)
+				// First try getTaskByPath, but fall back to searching all tasks
+				let originalTask = cacheManager.getTaskByPath(id);
+
+				// Check for null, undefined, or empty object (TaskNotes returns {} for non-task files)
+				if (
+					!originalTask ||
+					(typeof originalTask === "object" && Object.keys(originalTask as object).length === 0)
+				) {
+					// Fallback: search all tasks for matching path
+					const allTasksRaw = await cacheManager.getAllTasks();
+					let allTasks: unknown[];
+					if (Array.isArray(allTasksRaw)) {
+						allTasks = allTasksRaw;
+					} else if (allTasksRaw instanceof Map) {
+						allTasks = Array.from(allTasksRaw.values());
+					} else if (allTasksRaw && typeof allTasksRaw === "object") {
+						allTasks = Object.values(allTasksRaw);
+					} else {
+						allTasks = [];
+					}
+					originalTask = allTasks.find((t) => (t as { path?: string }).path === id);
+				}
+
+				if (!originalTask) {
+					throw new Error(`Task not found: ${id}`);
+				}
+				const result = await taskService.updateTask(originalTask, updates);
+				const parsed = TaskInfoSchema.safeParse(result);
+				if (!parsed.success) {
+					throw new Error(
+						`TaskNotes plugin returned invalid data after updating task: ${parsed.error.message}`
+					);
+				}
+				return parsed.data;
 			},
 			getStats: async () => {
 				// Compute stats from all tasks

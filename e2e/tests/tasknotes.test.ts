@@ -202,4 +202,66 @@ test.describe("TaskNotes Integration", () => {
 		expect(data.tasks).toEqual([]);
 		expect(data.hasMore).toBe(false);
 	});
+
+	test("should create a task", async () => {
+		const uniqueTitle = `E2E Test Task ${Date.now()}`;
+		const result = await client.callTool({
+			name: "tasknotes",
+			arguments: {
+				title: uniqueTitle,
+			},
+		});
+
+		expect(result.isError).toBeFalsy();
+		const text = getToolResultText(result);
+		const task = JSON.parse(text);
+
+		// Note: TaskNotes uses `path` as identifier, not `id`
+		expect(task).toHaveProperty("title", uniqueTitle);
+		expect(task).toHaveProperty("status");
+		expect(task).toHaveProperty("priority");
+		expect(task).toHaveProperty("path");
+		expect(task).toHaveProperty("archived");
+	});
+
+	test("should update an existing task status", async () => {
+		// Query for an existing task from the test vault
+		const queryResult = await client.callTool({
+			name: "tasknotes_query",
+			arguments: {
+				due_before: "2030-12-31",
+				limit: 1,
+			},
+		});
+
+		expect(queryResult.isError).toBeFalsy();
+		const queryData = JSON.parse(getToolResultText(queryResult));
+		expect(queryData.tasks.length).toBeGreaterThan(0);
+
+		const existingTask = queryData.tasks[0];
+		const originalStatus = existingTask.status;
+
+		// Update the task status
+		const newStatus = originalStatus === "completed" ? "incomplete" : "completed";
+		const updateResult = await client.callTool({
+			name: "tasknotes",
+			arguments: {
+				id: existingTask.path,
+				status: newStatus,
+			},
+		});
+
+		expect(updateResult.isError).toBeFalsy();
+		const updated = JSON.parse(getToolResultText(updateResult));
+		expect(updated.status).toBe(newStatus);
+
+		// Restore original status
+		await client.callTool({
+			name: "tasknotes",
+			arguments: {
+				id: existingTask.path,
+				status: originalStatus,
+			},
+		});
+	});
 });
