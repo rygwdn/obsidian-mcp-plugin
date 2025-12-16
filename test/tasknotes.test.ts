@@ -86,10 +86,10 @@ class MockTaskNotes implements TaskNotesInterface {
 		return task;
 	}
 
-	async updateTask(id: string, updates: Record<string, unknown>): Promise<TaskInfo> {
-		const task = this.tasks.find((t) => t.id === id || t.path === id);
+	async updateTask(path: string, updates: Record<string, unknown>): Promise<TaskInfo> {
+		const task = this.tasks.find((t) => t.path === path);
 		if (!task) {
-			throw new Error(`Task not found: ${id}`);
+			throw new Error(`Task not found: ${path}`);
 		}
 		Object.assign(task, updates);
 		return task;
@@ -401,7 +401,7 @@ describe("tasknotes tools", () => {
 		describe("update task", () => {
 			it("should update task properties", async () => {
 				const result = await taskNotesTool.handler(obsidian, request, {
-					id: "task-1",
+					path: "tasks/complete-project-proposal.md",
 					status: "in-progress",
 					priority: "medium",
 				});
@@ -413,7 +413,7 @@ describe("tasknotes tools", () => {
 
 			it("should update task status to done", async () => {
 				const result = await taskNotesTool.handler(obsidian, request, {
-					id: "task-1",
+					path: "tasks/complete-project-proposal.md",
 					status: "done",
 				});
 				const task = JSON.parse(result);
@@ -423,7 +423,7 @@ describe("tasknotes tools", () => {
 
 			it("should update multiple properties at once", async () => {
 				const result = await taskNotesTool.handler(obsidian, request, {
-					id: "task-2",
+					path: "tasks/review-pr-123.md",
 					status: "done",
 					priority: "high",
 					tags: ["completed", "reviewed"],
@@ -438,10 +438,10 @@ describe("tasknotes tools", () => {
 			it("should throw error when task not found", async () => {
 				await expect(
 					taskNotesTool.handler(obsidian, request, {
-						id: "nonexistent",
+						path: "tasks/nonexistent.md",
 						status: "done",
 					})
-				).rejects.toThrow("Task not found: nonexistent");
+				).rejects.toThrow("Task not found: tasks/nonexistent.md");
 			});
 		});
 
@@ -597,7 +597,7 @@ title: Tracked task
 });
 
 describe("TaskInfoSchema null value handling", () => {
-	it("should accept null values for optional string fields", () => {
+	it("should accept null values and convert to undefined for optional string fields", () => {
 		const taskWithNulls = {
 			id: "task-1",
 			title: "Test task",
@@ -615,12 +615,13 @@ describe("TaskInfoSchema null value handling", () => {
 
 		const parsed = TaskInfoSchema.parse(taskWithNulls);
 		expect(parsed.id).toBe("task-1");
-		expect(parsed.due).toBeNull();
-		expect(parsed.scheduled).toBeNull();
-		expect(parsed.recurrence).toBeNull();
+		// null inputs are converted to undefined for type compatibility with official TaskNotes types
+		expect(parsed.due).toBeUndefined();
+		expect(parsed.scheduled).toBeUndefined();
+		expect(parsed.recurrence).toBeUndefined();
 	});
 
-	it("should accept null values for optional array fields", () => {
+	it("should accept null values and convert to undefined for optional array fields", () => {
 		const taskWithNullArrays = {
 			id: "task-2",
 			title: "Test task with null arrays",
@@ -634,12 +635,12 @@ describe("TaskInfoSchema null value handling", () => {
 		};
 
 		const parsed = TaskInfoSchema.parse(taskWithNullArrays);
-		expect(parsed.tags).toBeNull();
-		expect(parsed.contexts).toBeNull();
-		expect(parsed.projects).toBeNull();
+		expect(parsed.tags).toBeUndefined();
+		expect(parsed.contexts).toBeUndefined();
+		expect(parsed.projects).toBeUndefined();
 	});
 
-	it("should accept null values for optional number fields", () => {
+	it("should accept null values and convert to undefined for optional number fields", () => {
 		const taskWithNullNumbers = {
 			id: "task-3",
 			title: "Test task with null numbers",
@@ -652,11 +653,11 @@ describe("TaskInfoSchema null value handling", () => {
 		};
 
 		const parsed = TaskInfoSchema.parse(taskWithNullNumbers);
-		expect(parsed.timeEstimate).toBeNull();
-		expect(parsed.totalTrackedTime).toBeNull();
+		expect(parsed.timeEstimate).toBeUndefined();
+		expect(parsed.totalTrackedTime).toBeUndefined();
 	});
 
-	it("should accept null values for optional boolean fields", () => {
+	it("should accept null values and convert to undefined for optional boolean fields", () => {
 		const taskWithNullBooleans = {
 			id: "task-4",
 			title: "Test task with null booleans",
@@ -669,8 +670,8 @@ describe("TaskInfoSchema null value handling", () => {
 		};
 
 		const parsed = TaskInfoSchema.parse(taskWithNullBooleans);
-		expect(parsed.isBlocked).toBeNull();
-		expect(parsed.isBlocking).toBeNull();
+		expect(parsed.isBlocked).toBeUndefined();
+		expect(parsed.isBlocking).toBeUndefined();
 	});
 
 	it("should accept undefined values for optional fields", () => {
@@ -706,9 +707,10 @@ describe("TaskInfoSchema null value handling", () => {
 
 		const parsed = TaskInfoSchema.parse(taskWithMixed);
 		expect(parsed.due).toBe("2025-12-25");
-		expect(parsed.scheduled).toBeNull();
+		// null converted to undefined
+		expect(parsed.scheduled).toBeUndefined();
 		expect(parsed.tags).toEqual(["important"]);
-		expect(parsed.contexts).toBeNull();
+		expect(parsed.contexts).toBeUndefined();
 		expect(parsed.projects).toBeUndefined();
 	});
 });

@@ -6,6 +6,64 @@ import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import type ObsidianMCPPlugin from "main";
 import type { AuthenticatedRequest } from "../server/auth";
 import type { MCPPluginSettings } from "settings/types";
+import type {
+	TaskInfo as OfficialTaskInfo,
+	TaskCreationData as OfficialTaskCreationData,
+	FilterOptions as OfficialFilterOptions,
+} from "../vendor/tasknotes-types";
+
+// TaskNotes plugin service interfaces - only methods we actually use
+interface TaskNotesCacheManager {
+	getTaskByPath(path: string): OfficialTaskInfo | null;
+	getAllTasks(): Promise<Map<string, OfficialTaskInfo> | OfficialTaskInfo[]>;
+	getAllStatuses(): string[];
+	getAllPriorities(): string[];
+}
+
+interface TaskNotesTaskService {
+	createTask(data: OfficialTaskCreationData): Promise<{ file: TFile; taskInfo: OfficialTaskInfo }>;
+	updateTask(
+		originalTask: OfficialTaskInfo,
+		updates: Partial<OfficialTaskInfo>
+	): Promise<OfficialTaskInfo>;
+}
+
+interface TaskNotesFilterService {
+	getFilterOptions(): OfficialFilterOptions;
+}
+
+interface TaskNotesPlugin {
+	cacheManager: TaskNotesCacheManager;
+	taskService: TaskNotesTaskService;
+	filterService: TaskNotesFilterService;
+}
+
+// Type guard to validate TaskNotes plugin structure
+function isTaskNotesPlugin(plugin: unknown): plugin is TaskNotesPlugin {
+	if (!plugin || typeof plugin !== "object") {
+		return false;
+	}
+	const p = plugin as Record<string, unknown>;
+
+	const hasMethod = (obj: unknown, method: string): boolean =>
+		obj !== null &&
+		typeof obj === "object" &&
+		typeof (obj as Record<string, unknown>)[method] === "function";
+
+	return (
+		typeof p.cacheManager === "object" &&
+		p.cacheManager !== null &&
+		hasMethod(p.cacheManager, "getTaskByPath") &&
+		hasMethod(p.cacheManager, "getAllTasks") &&
+		typeof p.taskService === "object" &&
+		p.taskService !== null &&
+		hasMethod(p.taskService, "createTask") &&
+		hasMethod(p.taskService, "updateTask") &&
+		typeof p.filterService === "object" &&
+		p.filterService !== null &&
+		hasMethod(p.filterService, "getFilterOptions")
+	);
+}
 import {
 	isDirectoryAccessibleWithToken,
 	isFileAccessibleWithToken,
@@ -254,100 +312,41 @@ export class ObsidianImpl implements ObsidianInterface {
 		if (!request.token.enabledTools.tasknotes) {
 			return null;
 		}
-		const plugin = this.app.plugins.plugins["tasknotes"] as Record<string, unknown> | undefined;
-		if (!plugin) {
+		const plugin = this.app.plugins.plugins["tasknotes"];
+		if (!isTaskNotesPlugin(plugin)) {
 			return null;
 		}
 
-		// TaskNotes v4.x API structure:
-		// - cacheManager (TaskManager): getTaskByPath, getAllTasks, getAllStatuses, etc.
-		// - taskService (TaskService): createTask, updateTask, toggleStatus, toggleRecurringTaskComplete
-		// - filterService (FilterService): getFilterOptions, sortTasks, etc.
-
-		if (
-			!plugin.cacheManager ||
-			!plugin.taskService ||
-			!plugin.filterService ||
-			typeof plugin.cacheManager !== "object" ||
-			typeof plugin.taskService !== "object" ||
-			typeof plugin.filterService !== "object"
-		) {
-			return null;
-		}
-
-		const cacheManager = plugin.cacheManager as {
-			getTaskByPath(path: string): unknown | null;
-			getAllTasks(): Promise<unknown>; // Returns Promise of Map, object, or array
-			getAllStatuses(): string[];
-			getAllPriorities(): string[];
-			getAllContexts(): string[];
-			getAllProjects(): string[];
-		};
-
-		const taskService = plugin.taskService as {
-			createTask(data: unknown): Promise<unknown>;
-			updateTask(originalTask: unknown, updates: unknown): Promise<unknown>;
-			toggleStatus(path: string): Promise<unknown>;
-			toggleRecurringTaskComplete(path: string, date?: string): Promise<unknown>;
-		};
-
-		const filterService = plugin.filterService as {
-			getFilterOptions(): unknown;
-		};
-
-		// Validate required methods exist
-		const hasMethod = (obj: unknown, method: string) =>
-			obj &&
-			typeof obj === "object" &&
-			typeof (obj as Record<string, unknown>)[method] === "function";
-
-		if (
-			!hasMethod(cacheManager, "getTaskByPath") ||
-			!hasMethod(cacheManager, "getAllTasks") ||
-			!hasMethod(taskService, "createTask") ||
-			!hasMethod(taskService, "updateTask") ||
-			!hasMethod(taskService, "toggleStatus") ||
-			!hasMethod(filterService, "getFilterOptions")
-		) {
-			return null;
-		}
+		// After type guard, these are properly typed without 'as' casts
+		const { cacheManager, taskService, filterService } = plugin;
 
 		// Helper to filter tasks based on our filter interface
-		const filterTasks = (tasks: unknown[], filter: TaskFilter): unknown[] => {
+		const filterTasks = (tasks: OfficialTaskInfo[], filter: TaskFilter): OfficialTaskInfo[] => {
 			let filtered = [...tasks];
 
 			if (filter.status && filter.status.length > 0) {
-				filtered = filtered.filter((t) => {
-					const task = t as { status?: string };
-					return task.status && filter.status!.includes(task.status);
-				});
+				filtered = filtered.filter((task) => task.status && filter.status!.includes(task.status));
 			}
 
 			if (filter.priority && filter.priority.length > 0) {
-				filtered = filtered.filter((t) => {
-					const task = t as { priority?: string };
-					return task.priority && filter.priority!.includes(task.priority);
-				});
+				filtered = filtered.filter(
+					(task) => task.priority && filter.priority!.includes(task.priority)
+				);
 			}
 
 			if (filter.tags && filter.tags.length > 0) {
-				filtered = filtered.filter((t) => {
-					const task = t as { tags?: string[] };
-					return task.tags && filter.tags!.some((tag) => task.tags!.includes(tag));
-				});
+				filtered = filtered.filter(
+					(task) => task.tags && filter.tags!.some((tag) => task.tags!.includes(tag))
+				);
 			}
 
 			if (filter.archived !== undefined) {
-				filtered = filtered.filter((t) => {
-					const task = t as { archived?: boolean };
-					return task.archived === filter.archived;
-				});
+				filtered = filtered.filter((task) => task.archived === filter.archived);
 			}
 
 			if (filter.dueBefore) {
 				const before = filter.dueBefore;
-				filtered = filtered.filter((t) => {
-					const task = t as { due?: string; scheduled?: string };
+				filtered = filtered.filter((task) => {
 					// Include tasks due OR scheduled on or before the date
 					return (task.due && task.due <= before) || (task.scheduled && task.scheduled <= before);
 				});
@@ -358,6 +357,17 @@ export class ObsidianImpl implements ObsidianInterface {
 			}
 
 			return filtered;
+		};
+
+		// Helper to convert getAllTasks result to array (handles Map, object, or array)
+		const toTaskArray = async (): Promise<OfficialTaskInfo[]> => {
+			const raw = await cacheManager.getAllTasks();
+			if (Array.isArray(raw)) {
+				return raw;
+			} else if (raw instanceof Map) {
+				return Array.from(raw.values());
+			}
+			return [];
 		};
 
 		return {
@@ -376,26 +386,14 @@ export class ObsidianImpl implements ObsidianInterface {
 				return parsed.success ? parsed.data : null;
 			},
 			queryTasks: async (filter) => {
-				const allTasksRaw = await cacheManager.getAllTasks();
-				// Handle case where getAllTasks returns a Map, object, or array
-				let allTasks: unknown[];
-				if (Array.isArray(allTasksRaw)) {
-					allTasks = allTasksRaw;
-				} else if (allTasksRaw instanceof Map) {
-					allTasks = Array.from(allTasksRaw.values());
-				} else if (allTasksRaw && typeof allTasksRaw === "object") {
-					allTasks = Object.values(allTasksRaw);
-				} else {
-					allTasks = [];
-				}
-
+				const allTasks = await toTaskArray();
 				const filtered = filterTasks(allTasks, filter);
 				return filtered.map((task) => TaskInfoSchema.parse(task));
 			},
 			createTask: async (data) => {
 				const result = await taskService.createTask(data);
 				// TaskNotes returns { file, taskInfo } - extract taskInfo
-				const taskInfo = (result as { taskInfo?: unknown }).taskInfo ?? result;
+				const taskInfo = result.taskInfo;
 				const parsed = TaskInfoSchema.safeParse(taskInfo);
 				if (!parsed.success) {
 					throw new Error(
@@ -404,10 +402,10 @@ export class ObsidianImpl implements ObsidianInterface {
 				}
 				return parsed.data;
 			},
-			updateTask: async (id, updates) => {
+			updateTask: async (path, updates) => {
 				// TaskNotes expects (originalTask, updates), not (path, updates)
 				// First try getTaskByPath, but fall back to searching all tasks
-				let originalTask = cacheManager.getTaskByPath(id);
+				let originalTask = cacheManager.getTaskByPath(path);
 
 				// Check for null, undefined, or empty object (TaskNotes returns {} for non-task files)
 				if (
@@ -415,22 +413,12 @@ export class ObsidianImpl implements ObsidianInterface {
 					(typeof originalTask === "object" && Object.keys(originalTask as object).length === 0)
 				) {
 					// Fallback: search all tasks for matching path
-					const allTasksRaw = await cacheManager.getAllTasks();
-					let allTasks: unknown[];
-					if (Array.isArray(allTasksRaw)) {
-						allTasks = allTasksRaw;
-					} else if (allTasksRaw instanceof Map) {
-						allTasks = Array.from(allTasksRaw.values());
-					} else if (allTasksRaw && typeof allTasksRaw === "object") {
-						allTasks = Object.values(allTasksRaw);
-					} else {
-						allTasks = [];
-					}
-					originalTask = allTasks.find((t) => (t as { path?: string }).path === id);
+					const allTasks = await toTaskArray();
+					originalTask = allTasks.find((t) => t.path === path) ?? null;
 				}
 
 				if (!originalTask) {
-					throw new Error(`Task not found: ${id}`);
+					throw new Error(`Task not found: ${path}`);
 				}
 				const result = await taskService.updateTask(originalTask, updates);
 				const parsed = TaskInfoSchema.safeParse(result);
@@ -443,17 +431,7 @@ export class ObsidianImpl implements ObsidianInterface {
 			},
 			getStats: async () => {
 				// Compute stats from all tasks
-				const allTasksRaw = await cacheManager.getAllTasks();
-				let allTasks: unknown[];
-				if (Array.isArray(allTasksRaw)) {
-					allTasks = allTasksRaw;
-				} else if (allTasksRaw instanceof Map) {
-					allTasks = Array.from(allTasksRaw.values());
-				} else if (allTasksRaw && typeof allTasksRaw === "object") {
-					allTasks = Object.values(allTasksRaw);
-				} else {
-					allTasks = [];
-				}
+				const allTasks = await toTaskArray();
 
 				let completed = 0;
 				let active = 0;
@@ -461,8 +439,7 @@ export class ObsidianImpl implements ObsidianInterface {
 				let archived = 0;
 				const today = new Date().toISOString().split("T")[0];
 
-				for (const t of allTasks) {
-					const task = t as { status?: string; archived?: boolean; due?: string };
+				for (const task of allTasks) {
 					if (task.archived) {
 						archived++;
 					} else if (task.status === "completed" || task.status === "done") {
@@ -484,15 +461,13 @@ export class ObsidianImpl implements ObsidianInterface {
 				});
 			},
 			getFilterOptions: () => {
-				// Get filter options from filterService or build from cacheManager
+				// Get filter options from filterService
+				// Official FilterOptions has StatusConfig[] and PriorityConfig[], we extract the value strings
 				try {
-					const options = filterService.getFilterOptions() as {
-						statuses?: string[];
-						priorities?: string[];
-					};
+					const options = filterService.getFilterOptions();
 					return TaskFilterOptionsSchema.parse({
-						statuses: options.statuses ?? [],
-						priorities: options.priorities ?? [],
+						statuses: options.statuses.map((s) => s.value),
+						priorities: options.priorities.map((p) => p.value),
 					});
 				} catch {
 					// Fallback: build from cacheManager methods

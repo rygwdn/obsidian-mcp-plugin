@@ -246,7 +246,7 @@ test.describe("TaskNotes Integration", () => {
 		const updateResult = await client.callTool({
 			name: "tasknotes",
 			arguments: {
-				id: existingTask.path,
+				path: existingTask.path,
 				status: newStatus,
 			},
 		});
@@ -259,7 +259,7 @@ test.describe("TaskNotes Integration", () => {
 		await client.callTool({
 			name: "tasknotes",
 			arguments: {
-				id: existingTask.path,
+				path: existingTask.path,
 				status: originalStatus,
 			},
 		});

@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import type { AuthenticatedRequest } from "../server/auth";
 import type { MCPPluginSettings } from "settings/types";
+import type { TaskInfo as OfficialTaskInfo } from "../vendor/tasknotes-types";
 
 import type { CachedMetadata, TFile } from "./obsidian_types";
 
@@ -88,30 +89,39 @@ export interface DailyNotesInterface {
 }
 
 // TaskNotes Zod schemas - single source of truth for types and validation
-// Use .nullish() to accept both null (from plugin API) and undefined
 // Note: TaskNotes uses `path` as the primary identifier, not `id`
+
+// Helper: accept null from API but transform to undefined for type compatibility with official types
+const nullToUndefined = <T extends z.ZodTypeAny>(schema: T) =>
+	z.preprocess((val) => (val === null ? undefined : val), schema);
+
 export const TaskInfoSchema = z.object({
-	id: z.string().nullish(),
+	id: nullToUndefined(z.string().optional()),
 	title: z.string(),
 	status: z.string(),
 	priority: z.string(),
-	due: z.string().nullish(),
-	scheduled: z.string().nullish(),
+	due: nullToUndefined(z.string().optional()),
+	scheduled: nullToUndefined(z.string().optional()),
 	path: z.string(),
 	archived: z.boolean(),
-	tags: z.array(z.string()).nullish(),
-	contexts: z.array(z.string()).nullish(),
-	projects: z.array(z.string()).nullish(),
-	recurrence: z.string().nullish(),
-	completedDate: z.string().nullish(),
-	timeEstimate: z.number().nullish(),
-	totalTrackedTime: z.number().nullish(),
-	isBlocked: z.boolean().nullish(),
-	isBlocking: z.boolean().nullish(),
-	dateCreated: z.string().nullish(),
-	dateModified: z.string().nullish(),
+	tags: nullToUndefined(z.array(z.string()).optional()),
+	contexts: nullToUndefined(z.array(z.string()).optional()),
+	projects: nullToUndefined(z.array(z.string()).optional()),
+	recurrence: nullToUndefined(z.string().optional()),
+	completedDate: nullToUndefined(z.string().optional()),
+	timeEstimate: nullToUndefined(z.number().optional()),
+	totalTrackedTime: nullToUndefined(z.number().optional()),
+	isBlocked: nullToUndefined(z.boolean().optional()),
+	isBlocking: nullToUndefined(z.boolean().optional()),
+	dateCreated: nullToUndefined(z.string().optional()),
+	dateModified: nullToUndefined(z.string().optional()),
 });
 export type TaskInfo = z.infer<typeof TaskInfoSchema>;
+
+// Compile-time check: ensure our TaskInfo is assignable to the official TaskInfo type
+// This catches any drift between our schema and the official TaskNotes types
+type _TaskInfoAssignableCheck =
+	TaskInfo extends Pick<OfficialTaskInfo, keyof TaskInfo> ? true : never;
 
 export const TaskStatsSchema = z.object({
 	total: z.number(),
@@ -141,7 +151,7 @@ export interface TaskNotesInterface {
 	getTaskByPath(path: string): TaskInfo | null;
 	queryTasks(filter: TaskFilter): Promise<TaskInfo[]>;
 	createTask(data: { title: string; [key: string]: unknown }): Promise<TaskInfo>;
-	updateTask(id: string, updates: Record<string, unknown>): Promise<TaskInfo>;
+	updateTask(path: string, updates: Partial<TaskInfo>): Promise<TaskInfo>;
 	getStats(): Promise<TaskStats>;
 	getFilterOptions(): TaskFilterOptions;
 }

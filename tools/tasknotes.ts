@@ -91,7 +91,7 @@ export const taskNotesQueryTool: ToolRegistration = {
 };
 
 const manageSchema = {
-	id: z.string().optional().describe("Task ID or file path. Required for update, omit for create."),
+	path: z.string().optional().describe("Task file path. Required for update, omit for create."),
 	title: z.string().optional().describe("Task title. Required when creating a new task."),
 	status: z.string().optional().describe("Task status (e.g., 'todo', 'done')"),
 	priority: z.string().optional().describe("Priority level"),
@@ -104,7 +104,7 @@ const manageValidator = z.object(manageSchema);
 export const taskNotesTool: ToolRegistration = {
 	name: "tasknotes",
 	description:
-		"Create or update a task. Provide 'id' to update an existing task, or omit 'id' and provide 'title' to create a new task.",
+		"Create or update a task. Provide 'path' to update an existing task, or omit 'path' and provide 'title' to create a new task.",
 	annotations: {
 		title: "TaskNotes Tool",
 		readOnlyHint: false,
@@ -124,15 +124,15 @@ export const taskNotesTool: ToolRegistration = {
 		}
 
 		const parsed = manageValidator.parse(args);
-		const { id, title, ...updates } = parsed;
+		const { path, title, ...updates } = parsed;
 
 		let result;
-		if (id) {
+		if (path) {
 			// Update existing task
 			const filteredUpdates = Object.fromEntries(
 				Object.entries({ title, ...updates }).filter(([_, v]) => v !== undefined)
 			);
-			result = await taskNotes.updateTask(id, filteredUpdates);
+			result = await taskNotes.updateTask(path, filteredUpdates);
 		} else {
 			// Create new task
 			if (!title) {
