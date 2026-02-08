@@ -149,10 +149,9 @@ export class AuthManager {
 				file_access: true,
 				search: true,
 				update_content: true,
-				dataview_query: true,
+				dataview: true,
 				quickadd: true,
 				tasknotes: false,
-				timeblocks: false,
 			},
 			directoryPermissions: {
 				rules: [],

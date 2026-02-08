@@ -216,7 +216,7 @@ export class MockObsidian implements ObsidianInterface {
 	}
 
 	getDataview(request: AuthenticatedRequest): DataviewInterface | null {
-		if (!request.token.enabledTools.dataview_query) {
+		if (!request.token.enabledTools.dataview) {
 			return null;
 		}
 		return this.dataview;
@@ -230,7 +230,7 @@ export class MockObsidian implements ObsidianInterface {
 	}
 
 	getTimeblocks(request: AuthenticatedRequest): TimeblocksInterface | null {
-		if (!request.token.enabledTools.timeblocks) {
+		if (!request.token.enabledTools.tasknotes) {
 			return null;
 		}
 		return this.timeblocks;
@@ -337,10 +337,9 @@ export function createMockRequest(
 			file_access: true,
 			search: true,
 			update_content: true,
-			dataview_query: true,
+			dataview: true,
 			quickadd: true,
 			tasknotes: false,
-			timeblocks: false,
 		},
 		directoryPermissions: {
 			rules: [],

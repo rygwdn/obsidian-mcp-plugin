@@ -38,10 +38,9 @@ describe("timeblocks tools", () => {
 				file_access: true,
 				search: true,
 				update_content: true,
-				dataview_query: false,
+				dataview: false,
 				quickadd: false,
-				tasknotes: false,
-				timeblocks: true,
+				tasknotes: true,
 			},
 		});
 

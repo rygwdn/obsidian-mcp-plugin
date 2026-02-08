@@ -295,7 +295,7 @@ export class ObsidianImpl implements ObsidianInterface {
 	}
 
 	getDataview(request: AuthenticatedRequest): DataviewInterface | null {
-		if (!request.token.enabledTools.dataview_query) {
+		if (!request.token.enabledTools.dataview) {
 			return null;
 		}
 		const api = getDataviewAPI(this.app);
@@ -504,7 +504,7 @@ export class ObsidianImpl implements ObsidianInterface {
 	}
 
 	getTimeblocks(request: AuthenticatedRequest): TimeblocksInterface | null {
-		if (!request.token.enabledTools.timeblocks) {
+		if (!request.token.enabledTools.tasknotes) {
 			return null;
 		}
 		if (!this.dailyNotes) {

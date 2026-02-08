@@ -122,8 +122,9 @@ export class ObsidianMcpServer {
 			this.registerTool(server, updateContentTool);
 		}
 
+		const allEnabledTools = enabledTools as Record<string, boolean>;
 		for (const extension of this.registry.getAll()) {
-			if (extension.isAvailable(this.obsidian, request)) {
+			if (allEnabledTools[extension.id] !== false) {
 				for (const tool of extension.tools) {
 					this.registerExtensionTool(server, tool, extension.id);
 				}

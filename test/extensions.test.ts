@@ -1,82 +1,15 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { MockObsidian, MockTimeblocks, createMockRequest } from "./mock_obsidian";
 import { dataviewExtension } from "../extensions/dataview";
 import { quickaddExtension } from "../extensions/quickadd";
 import { tasknotesExtension } from "../extensions/tasknotes";
 import { builtinExtensions } from "../extensions/builtin";
 import { ExtensionRegistry } from "../extensions/registry";
 import type { Extension } from "../extensions/types";
-import type {
-	DataviewInterface,
-	QuickAddInterface,
-	TaskNotesInterface,
-	TaskInfo,
-	TaskFilter,
-} from "../obsidian/obsidian_interface";
-
-class MockDataview implements DataviewInterface {
-	async queryMarkdown(
-		_source: string
-	): Promise<{ successful: boolean; value?: string; error?: string }> {
-		return { successful: true, value: "mock result" };
-	}
-}
-
-class MockTaskNotes implements TaskNotesInterface {
-	getTaskByPath(_path: string): TaskInfo | null {
-		return null;
-	}
-	async queryTasks(_filter: TaskFilter): Promise<TaskInfo[]> {
-		return [];
-	}
-	async createTask(data: { title: string }): Promise<TaskInfo> {
-		return {
-			title: data.title,
-			status: "todo",
-			priority: "none",
-			path: "tasks/mock.md",
-			archived: false,
-		};
-	}
-	async updateTask(_path: string, _updates: Partial<TaskInfo>): Promise<TaskInfo> {
-		return {
-			title: "mock",
-			status: "todo",
-			priority: "none",
-			path: "tasks/mock.md",
-			archived: false,
-		};
-	}
-	async getStats() {
-		return { total: 0, completed: 0, active: 0, overdue: 0, archived: 0 };
-	}
-	getFilterOptions() {
-		return { statuses: [], priorities: [] };
-	}
-}
-
-class MockQuickAdd implements QuickAddInterface {
-	getChoices() {
-		return [];
-	}
-	async executeChoice(_choice: string) {
-		// no-op
-	}
-	async formatTemplate(template: string) {
-		return template;
-	}
-}
 
 describe("Extension API", () => {
 	describe("dataviewExtension", () => {
-		let obsidian: MockObsidian;
-
-		beforeEach(() => {
-			obsidian = new MockObsidian();
-		});
-
 		it("should have the correct id and name", () => {
-			expect(dataviewExtension.id).toBe("dataview_query");
+			expect(dataviewExtension.id).toBe("dataview");
 			expect(dataviewExtension.name).toBe("Dataview");
 		});
 
@@ -84,66 +17,9 @@ describe("Extension API", () => {
 			expect(dataviewExtension.tools).toHaveLength(1);
 			expect(dataviewExtension.tools[0].name).toBe("dataview_query");
 		});
-
-		it("should be available when dataview plugin is present and enabled", () => {
-			obsidian.dataview = new MockDataview();
-			const request = createMockRequest(obsidian, {
-				enabledTools: {
-					file_access: true,
-					search: true,
-					update_content: true,
-					dataview_query: true,
-					quickadd: false,
-					tasknotes: false,
-					timeblocks: false,
-				},
-			});
-
-			expect(dataviewExtension.isAvailable(obsidian, request)).toBe(true);
-		});
-
-		it("should not be available when dataview plugin is not installed", () => {
-			obsidian.dataview = null;
-			const request = createMockRequest(obsidian, {
-				enabledTools: {
-					file_access: true,
-					search: true,
-					update_content: true,
-					dataview_query: true,
-					quickadd: false,
-					tasknotes: false,
-					timeblocks: false,
-				},
-			});
-
-			expect(dataviewExtension.isAvailable(obsidian, request)).toBe(false);
-		});
-
-		it("should not be available when dataview is disabled in token", () => {
-			obsidian.dataview = new MockDataview();
-			const request = createMockRequest(obsidian, {
-				enabledTools: {
-					file_access: true,
-					search: true,
-					update_content: true,
-					dataview_query: false,
-					quickadd: false,
-					tasknotes: false,
-					timeblocks: false,
-				},
-			});
-
-			expect(dataviewExtension.isAvailable(obsidian, request)).toBe(false);
-		});
 	});
 
 	describe("quickaddExtension", () => {
-		let obsidian: MockObsidian;
-
-		beforeEach(() => {
-			obsidian = new MockObsidian();
-		});
-
 		it("should have the correct id and name", () => {
 			expect(quickaddExtension.id).toBe("quickadd");
 			expect(quickaddExtension.name).toBe("QuickAdd");
@@ -155,66 +31,9 @@ describe("Extension API", () => {
 			expect(toolNames).toContain("quickadd_list");
 			expect(toolNames).toContain("quickadd_execute");
 		});
-
-		it("should be available when quickadd plugin is present and enabled", () => {
-			obsidian.quickAdd = new MockQuickAdd();
-			const request = createMockRequest(obsidian, {
-				enabledTools: {
-					file_access: true,
-					search: true,
-					update_content: true,
-					dataview_query: false,
-					quickadd: true,
-					tasknotes: false,
-					timeblocks: false,
-				},
-			});
-
-			expect(quickaddExtension.isAvailable(obsidian, request)).toBe(true);
-		});
-
-		it("should not be available when quickadd plugin is not installed", () => {
-			obsidian.quickAdd = null;
-			const request = createMockRequest(obsidian, {
-				enabledTools: {
-					file_access: true,
-					search: true,
-					update_content: true,
-					dataview_query: false,
-					quickadd: true,
-					tasknotes: false,
-					timeblocks: false,
-				},
-			});
-
-			expect(quickaddExtension.isAvailable(obsidian, request)).toBe(false);
-		});
-
-		it("should not be available when quickadd is disabled in token", () => {
-			obsidian.quickAdd = new MockQuickAdd();
-			const request = createMockRequest(obsidian, {
-				enabledTools: {
-					file_access: true,
-					search: true,
-					update_content: true,
-					dataview_query: false,
-					quickadd: false,
-					tasknotes: false,
-					timeblocks: false,
-				},
-			});
-
-			expect(quickaddExtension.isAvailable(obsidian, request)).toBe(false);
-		});
 	});
 
 	describe("tasknotesExtension", () => {
-		let obsidian: MockObsidian;
-
-		beforeEach(() => {
-			obsidian = new MockObsidian();
-		});
-
 		it("should have the correct id and name", () => {
 			expect(tasknotesExtension.id).toBe("tasknotes");
 			expect(tasknotesExtension.name).toBe("TaskNotes");
@@ -228,83 +47,13 @@ describe("Extension API", () => {
 			expect(toolNames).toContain("timeblocks_query");
 			expect(toolNames).toContain("timeblocks");
 		});
-
-		it("should be available when tasknotes plugin is present and enabled", () => {
-			obsidian.taskNotes = new MockTaskNotes();
-			const request = createMockRequest(obsidian, {
-				enabledTools: {
-					file_access: true,
-					search: true,
-					update_content: true,
-					dataview_query: false,
-					quickadd: false,
-					tasknotes: true,
-					timeblocks: false,
-				},
-			});
-
-			expect(tasknotesExtension.isAvailable(obsidian, request)).toBe(true);
-		});
-
-		it("should be available when only timeblocks is enabled", () => {
-			obsidian.timeblocks = new MockTimeblocks();
-			const request = createMockRequest(obsidian, {
-				enabledTools: {
-					file_access: true,
-					search: true,
-					update_content: true,
-					dataview_query: false,
-					quickadd: false,
-					tasknotes: false,
-					timeblocks: true,
-				},
-			});
-
-			expect(tasknotesExtension.isAvailable(obsidian, request)).toBe(true);
-		});
-
-		it("should not be available when neither tasknotes nor timeblocks is available", () => {
-			obsidian.taskNotes = null;
-			obsidian.timeblocks = null;
-			const request = createMockRequest(obsidian, {
-				enabledTools: {
-					file_access: true,
-					search: true,
-					update_content: true,
-					dataview_query: false,
-					quickadd: false,
-					tasknotes: true,
-					timeblocks: true,
-				},
-			});
-
-			expect(tasknotesExtension.isAvailable(obsidian, request)).toBe(false);
-		});
-
-		it("should not be available when both are disabled in token", () => {
-			obsidian.taskNotes = new MockTaskNotes();
-			obsidian.timeblocks = new MockTimeblocks();
-			const request = createMockRequest(obsidian, {
-				enabledTools: {
-					file_access: true,
-					search: true,
-					update_content: true,
-					dataview_query: false,
-					quickadd: false,
-					tasknotes: false,
-					timeblocks: false,
-				},
-			});
-
-			expect(tasknotesExtension.isAvailable(obsidian, request)).toBe(false);
-		});
 	});
 
 	describe("builtinExtensions registry", () => {
 		it("should contain dataview, quickadd, and tasknotes extensions", () => {
 			expect(builtinExtensions).toHaveLength(3);
 			const ids = builtinExtensions.map((e) => e.id);
-			expect(ids).toContain("dataview_query");
+			expect(ids).toContain("dataview");
 			expect(ids).toContain("quickadd");
 			expect(ids).toContain("tasknotes");
 		});
@@ -322,7 +71,6 @@ describe("Extension API", () => {
 				expect(ext.name.length).toBeGreaterThan(0);
 				expect(Array.isArray(ext.tools)).toBe(true);
 				expect(ext.tools.length).toBeGreaterThan(0);
-				expect(typeof ext.isAvailable).toBe("function");
 			}
 		});
 
@@ -358,7 +106,6 @@ describe("Extension API", () => {
 					handler: async () => "test result",
 				},
 			],
-			isAvailable: () => true,
 		};
 
 		beforeEach(() => {
@@ -445,12 +192,10 @@ describe("Extension API", () => {
 						handler: async () => "result",
 					},
 				],
-				isAvailable: () => true,
 			};
 
 			expect(customExtension.id).toBe("custom_ext");
 			expect(customExtension.tools).toHaveLength(1);
-			expect(customExtension.isAvailable({} as never, {} as never)).toBe(true);
 		});
 	});
 });

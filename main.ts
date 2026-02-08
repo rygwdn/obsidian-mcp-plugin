@@ -59,13 +59,23 @@ export default class ObsidianMCPPlugin extends Plugin {
 			this.settings.server = DEFAULT_SETTINGS.server;
 		}
 
-		// Migration: Add missing enabledTools properties to existing tokens
+		// Migration: Rename/merge enabledTools keys for existing tokens
 		for (const token of this.settings.server.tokens) {
+			const tools = token.enabledTools as Record<string, boolean>;
+			// dataview_query → dataview
+			if (tools["dataview_query"] !== undefined) {
+				tools["dataview"] = tools["dataview_query"];
+				delete tools["dataview_query"];
+			}
+			// timeblocks merged into tasknotes extension
+			if (tools["timeblocks"] !== undefined) {
+				if (tools["timeblocks"]) {
+					tools["tasknotes"] = true;
+				}
+				delete tools["timeblocks"];
+			}
 			if (token.enabledTools.tasknotes === undefined) {
 				token.enabledTools.tasknotes = false;
-			}
-			if (token.enabledTools.timeblocks === undefined) {
-				token.enabledTools.timeblocks = false;
 			}
 		}
 

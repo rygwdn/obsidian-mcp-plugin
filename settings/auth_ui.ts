@@ -128,30 +128,33 @@ function updateTokenList(
 			},
 		});
 
-		// Feature icons in same order as config section
+		// Feature icons
 		const featuresEl = tokenEl.createDiv({ cls: "mcp-token-features" });
 		const enabledTools = token.enabledTools as Record<string, boolean>;
 
-		// Core tool icons
 		const coreTools = [
 			{ key: "file_access", icon: "📄", title: "File Access" },
 			{ key: "update_content", icon: "✏️", title: "Content Modification" },
 			{ key: "search", icon: "🔍", title: "Vault Search" },
 		];
 
-		// Extension-derived icons
-		const extensionTools = plugin.extensionRegistry
-			.getAll()
-			.flatMap((ext) =>
-				(ext.settingsUI ?? []).map((t) => ({ key: t.key, icon: t.icon, title: t.name }))
-			);
-
-		for (const tool of [...coreTools, ...extensionTools]) {
+		for (const tool of coreTools) {
 			if (enabledTools[tool.key]) {
 				featuresEl.createSpan({
 					text: tool.icon,
 					cls: "mcp-token-feature-icon",
 					attr: { title: tool.title },
+				});
+			}
+		}
+
+		// Show enabled extension names
+		for (const ext of plugin.extensionRegistry.getAll()) {
+			if (enabledTools[ext.id] !== false) {
+				featuresEl.createSpan({
+					text: ext.name,
+					cls: "mcp-token-feature-icon",
+					attr: { title: ext.name },
 				});
 			}
 		}
@@ -229,10 +232,9 @@ function renderCreateTokenConfig(
 			file_access: true,
 			update_content: true,
 			search: true,
-			dataview_query: true,
+			dataview: true,
 			quickadd: true,
 			tasknotes: false,
-			timeblocks: false,
 		},
 		directoryPermissions: {
 			rules: [],
@@ -410,32 +412,14 @@ function renderFeaturesConfig(
 			})
 		);
 
-	// Extension-provided integration toggles
+	// Extension toggles
 	const enabledTools = token.enabledTools as Record<string, boolean>;
 	for (const ext of plugin.extensionRegistry.getAll()) {
-		if (!ext.settingsUI) continue;
-		for (const toggle of ext.settingsUI) {
-			const available = toggle.isPluginAvailable(plugin.app);
-			const setting = new Setting(containerEl)
-				.setName(toggle.name)
-				.setDesc(available ? toggle.description : toggle.unavailableDescription(plugin.app));
-
-			if (available && toggle.warning) {
-				setting.descEl.createSpan({
-					text: ` ⚠️ ${toggle.warning}`,
-					cls: "mcp-warning-text",
-				});
-			}
-
-			setting.addToggle((t) =>
-				t
-					.setValue(available && (enabledTools[toggle.key] ?? false))
-					.setDisabled(!available)
-					.onChange((value) => {
-						enabledTools[toggle.key] = value;
-					})
-			);
-		}
+		new Setting(containerEl).setName(ext.name).addToggle((t) =>
+			t.setValue(enabledTools[ext.id] ?? false).onChange((value) => {
+				enabledTools[ext.id] = value;
+			})
+		);
 	}
 }
 
