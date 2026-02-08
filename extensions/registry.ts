@@ -6,16 +6,8 @@ import type { Extension } from "./types";
  * Event name triggered on `app.workspace` when the extension registry is ready.
  * The callback receives the `ExtensionRegistry` instance as its argument.
  *
- * Third-party plugins should listen for this event to handle the case where
- * they load before the MCP plugin:
- *
- * ```ts
- * this.registerEvent(
- *   this.app.workspace.on("obsidian-mcp:registry-ready", (registry) => {
- *     registry.register(myExtension);
- *   })
- * );
- * ```
+ * This event fires on initial load and whenever the MCP plugin reloads,
+ * so listeners automatically re-register their extensions after a reload.
  */
 export const REGISTRY_READY_EVENT = "obsidian-mcp:registry-ready";
 
@@ -25,25 +17,26 @@ export const REGISTRY_READY_EVENT = "obsidian-mcp:registry-ready";
  *
  * Because MCP sessions are created on-demand per HTTP request, extensions
  * registered after the server starts are automatically picked up by the next
- * session. This makes registration load-order independent — a third-party
- * plugin can register before or after the MCP plugin loads.
+ * session.
  *
  * ### Usage from another Obsidian plugin
  *
+ * Always listen for the event so your extension re-registers if the MCP
+ * plugin reloads. Also register directly in case the MCP plugin loaded first.
+ *
  * ```ts
  * // In your plugin's onload():
+ *
+ * // Always listen — handles initial load and MCP plugin reloads
+ * this.registerEvent(
+ *   this.app.workspace.on("obsidian-mcp:registry-ready", (registry) => {
+ *     registry.register(myExtension);
+ *   })
+ * );
+ *
+ * // Also register now if MCP plugin is already loaded
  * const mcpPlugin = this.app.plugins.plugins["obsidian-mcp-plugin"];
- * if (mcpPlugin?.extensionRegistry) {
- *   // MCP plugin already loaded — register directly
- *   mcpPlugin.extensionRegistry.register(myExtension);
- * } else {
- *   // MCP plugin not yet loaded — wait for the event
- *   this.registerEvent(
- *     this.app.workspace.on("obsidian-mcp:registry-ready", (registry) => {
- *       registry.register(myExtension);
- *     })
- *   );
- * }
+ * mcpPlugin?.extensionRegistry?.register(myExtension);
  *
  * // In your plugin's onunload():
  * const mcpPlugin = this.app.plugins.plugins["obsidian-mcp-plugin"];
