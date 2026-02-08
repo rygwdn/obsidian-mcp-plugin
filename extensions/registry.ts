@@ -3,6 +3,23 @@ import { logger } from "../tools/logging";
 import type { Extension } from "./types";
 
 /**
+ * Event name triggered on `app.workspace` when the extension registry is ready.
+ * The callback receives the `ExtensionRegistry` instance as its argument.
+ *
+ * Third-party plugins should listen for this event to handle the case where
+ * they load before the MCP plugin:
+ *
+ * ```ts
+ * this.registerEvent(
+ *   this.app.workspace.on("obsidian-mcp:registry-ready", (registry) => {
+ *     registry.register(myExtension);
+ *   })
+ * );
+ * ```
+ */
+export const REGISTRY_READY_EVENT = "obsidian-mcp:registry-ready";
+
+/**
  * Registry for MCP extensions. Built-in extensions are registered during
  * plugin startup, and third-party plugins can register extensions at any time.
  *
@@ -14,18 +31,18 @@ import type { Extension } from "./types";
  * ### Usage from another Obsidian plugin
  *
  * ```ts
- * import type { Extension } from "obsidian-mcp-plugin/extensions/types";
- *
  * // In your plugin's onload():
  * const mcpPlugin = this.app.plugins.plugins["obsidian-mcp-plugin"];
  * if (mcpPlugin?.extensionRegistry) {
+ *   // MCP plugin already loaded — register directly
  *   mcpPlugin.extensionRegistry.register(myExtension);
  * } else {
- *   // MCP plugin not yet loaded — wait for layout ready
- *   this.app.workspace.onLayoutReady(() => {
- *     const mcp = this.app.plugins.plugins["obsidian-mcp-plugin"];
- *     mcp?.extensionRegistry?.register(myExtension);
- *   });
+ *   // MCP plugin not yet loaded — wait for the event
+ *   this.registerEvent(
+ *     this.app.workspace.on("obsidian-mcp:registry-ready", (registry) => {
+ *       registry.register(myExtension);
+ *     })
+ *   );
  * }
  *
  * // In your plugin's onunload():

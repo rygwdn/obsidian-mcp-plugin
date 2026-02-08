@@ -4,7 +4,7 @@ import { Plugin } from "obsidian";
 import type { ObsidianInterface } from "./obsidian/obsidian_interface";
 import { ObsidianImpl } from "./obsidian/obsidian_impl";
 import { builtinExtensions } from "extensions/builtin";
-import { ExtensionRegistry } from "extensions/registry";
+import { ExtensionRegistry, REGISTRY_READY_EVENT } from "extensions/registry";
 import { ObsidianMcpServer } from "mcp_server";
 import { ServerManager } from "./server/server_manager";
 import { TokenTracker } from "./server/connection_tracker";
@@ -88,6 +88,7 @@ export default class ObsidianMCPPlugin extends Plugin {
 		for (const ext of builtinExtensions) {
 			this.extensionRegistry.register(ext);
 		}
+		this.app.workspace.trigger(REGISTRY_READY_EVENT, this.extensionRegistry);
 
 		await this.registerRoutes();
 
