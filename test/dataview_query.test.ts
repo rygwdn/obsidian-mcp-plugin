@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { dataviewQueryTool } from "../tools/dataview_query";
+import { dataviewQueryTool } from "../extensions/dataview";
 import { MockObsidian, createMockRequest } from "./mock_obsidian";
 import type * as DataView from "obsidian-dataview/lib/api/result.d.ts";
 import type { DataviewInterface } from "../obsidian/obsidian_interface";

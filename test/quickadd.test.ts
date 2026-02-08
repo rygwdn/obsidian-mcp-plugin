@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { quickAddListTool, quickAddExecuteTool } from "../tools/quickadd";
+import { quickAddListTool, quickAddExecuteTool } from "../extensions/quickadd";
 import { MockObsidian, createMockRequest } from "./mock_obsidian";
 import type { QuickAddChoice, QuickAddInterface } from "../obsidian/obsidian_interface";
 

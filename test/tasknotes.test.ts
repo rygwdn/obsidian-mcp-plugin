@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { taskNotesQueryTool, taskNotesTool } from "../tools/tasknotes";
+import { taskNotesQueryTool, taskNotesTool } from "../extensions/tasknotes";
 import { generateFileMetadata } from "../tools/file_metadata";
 import { MockObsidian, createMockRequest } from "./mock_obsidian";
 import type { TaskNotesInterface, TaskInfo, TaskFilter } from "../obsidian/obsidian_interface";

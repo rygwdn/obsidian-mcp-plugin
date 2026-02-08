@@ -125,10 +125,23 @@ export class ObsidianMcpServer {
 		for (const extension of this.registry.getAll()) {
 			if (extension.isAvailable(this.obsidian, request)) {
 				for (const tool of extension.tools) {
-					this.registerTool(server, tool);
+					this.registerExtensionTool(server, tool, extension.id);
 				}
 			}
 		}
+	}
+
+	private registerExtensionTool(server: McpServer, toolReg: ToolRegistration, extensionId: string) {
+		const guarded: ToolRegistration = {
+			...toolReg,
+			handler: async (obsidian, request, args) => {
+				if (!this.registry.getAll().some((e) => e.id === extensionId)) {
+					throw new Error(`Extension "${extensionId}" has been unregistered`);
+				}
+				return toolReg.handler(obsidian, request, args);
+			},
+		};
+		this.registerTool(server, guarded);
 	}
 
 	private registerTool(server: McpServer, toolReg: ToolRegistration) {

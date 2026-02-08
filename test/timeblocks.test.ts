@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { timeblocksQueryTool, timeblocksTool } from "../tools/timeblocks";
+import { timeblocksQueryTool, timeblocksTool } from "../extensions/tasknotes";
 import { MockObsidian, MockTimeblocks, createMockRequest } from "./mock_obsidian";
 import type { TimeBlock } from "../obsidian/obsidian_interface";
 
