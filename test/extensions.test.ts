@@ -1,11 +1,14 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { MockObsidian, createMockRequest } from "./mock_obsidian";
+import { MockObsidian, MockTimeblocks, createMockRequest } from "./mock_obsidian";
 import { dataviewExtension } from "../extensions/dataview";
+import { quickaddExtension } from "../extensions/quickadd";
 import { tasknotesExtension } from "../extensions/tasknotes";
 import { builtinExtensions } from "../extensions/builtin";
+import { ExtensionRegistry } from "../extensions/registry";
 import type { Extension } from "../extensions/types";
 import type {
 	DataviewInterface,
+	QuickAddInterface,
 	TaskNotesInterface,
 	TaskInfo,
 	TaskFilter,
@@ -49,6 +52,18 @@ class MockTaskNotes implements TaskNotesInterface {
 	}
 	getFilterOptions() {
 		return { statuses: [], priorities: [] };
+	}
+}
+
+class MockQuickAdd implements QuickAddInterface {
+	getChoices() {
+		return [];
+	}
+	async executeChoice(_choice: string) {
+		// no-op
+	}
+	async formatTemplate(template: string) {
+		return template;
 	}
 }
 
@@ -122,6 +137,77 @@ describe("Extension API", () => {
 		});
 	});
 
+	describe("quickaddExtension", () => {
+		let obsidian: MockObsidian;
+
+		beforeEach(() => {
+			obsidian = new MockObsidian();
+		});
+
+		it("should have the correct id and name", () => {
+			expect(quickaddExtension.id).toBe("quickadd");
+			expect(quickaddExtension.name).toBe("QuickAdd");
+		});
+
+		it("should expose quickadd_list and quickadd_execute tools", () => {
+			expect(quickaddExtension.tools).toHaveLength(2);
+			const toolNames = quickaddExtension.tools.map((t) => t.name);
+			expect(toolNames).toContain("quickadd_list");
+			expect(toolNames).toContain("quickadd_execute");
+		});
+
+		it("should be available when quickadd plugin is present and enabled", () => {
+			obsidian.quickAdd = new MockQuickAdd();
+			const request = createMockRequest(obsidian, {
+				enabledTools: {
+					file_access: true,
+					search: true,
+					update_content: true,
+					dataview_query: false,
+					quickadd: true,
+					tasknotes: false,
+					timeblocks: false,
+				},
+			});
+
+			expect(quickaddExtension.isAvailable(obsidian, request)).toBe(true);
+		});
+
+		it("should not be available when quickadd plugin is not installed", () => {
+			obsidian.quickAdd = null;
+			const request = createMockRequest(obsidian, {
+				enabledTools: {
+					file_access: true,
+					search: true,
+					update_content: true,
+					dataview_query: false,
+					quickadd: true,
+					tasknotes: false,
+					timeblocks: false,
+				},
+			});
+
+			expect(quickaddExtension.isAvailable(obsidian, request)).toBe(false);
+		});
+
+		it("should not be available when quickadd is disabled in token", () => {
+			obsidian.quickAdd = new MockQuickAdd();
+			const request = createMockRequest(obsidian, {
+				enabledTools: {
+					file_access: true,
+					search: true,
+					update_content: true,
+					dataview_query: false,
+					quickadd: false,
+					tasknotes: false,
+					timeblocks: false,
+				},
+			});
+
+			expect(quickaddExtension.isAvailable(obsidian, request)).toBe(false);
+		});
+	});
+
 	describe("tasknotesExtension", () => {
 		let obsidian: MockObsidian;
 
@@ -134,11 +220,13 @@ describe("Extension API", () => {
 			expect(tasknotesExtension.name).toBe("TaskNotes");
 		});
 
-		it("should expose tasknotes_query and tasknotes tools", () => {
-			expect(tasknotesExtension.tools).toHaveLength(2);
+		it("should expose tasknotes and timeblocks tools", () => {
+			expect(tasknotesExtension.tools).toHaveLength(4);
 			const toolNames = tasknotesExtension.tools.map((t) => t.name);
 			expect(toolNames).toContain("tasknotes_query");
 			expect(toolNames).toContain("tasknotes");
+			expect(toolNames).toContain("timeblocks_query");
+			expect(toolNames).toContain("timeblocks");
 		});
 
 		it("should be available when tasknotes plugin is present and enabled", () => {
@@ -158,8 +246,26 @@ describe("Extension API", () => {
 			expect(tasknotesExtension.isAvailable(obsidian, request)).toBe(true);
 		});
 
-		it("should not be available when tasknotes plugin is not installed", () => {
+		it("should be available when only timeblocks is enabled", () => {
+			obsidian.timeblocks = new MockTimeblocks();
+			const request = createMockRequest(obsidian, {
+				enabledTools: {
+					file_access: true,
+					search: true,
+					update_content: true,
+					dataview_query: false,
+					quickadd: false,
+					tasknotes: false,
+					timeblocks: true,
+				},
+			});
+
+			expect(tasknotesExtension.isAvailable(obsidian, request)).toBe(true);
+		});
+
+		it("should not be available when neither tasknotes nor timeblocks is available", () => {
 			obsidian.taskNotes = null;
+			obsidian.timeblocks = null;
 			const request = createMockRequest(obsidian, {
 				enabledTools: {
 					file_access: true,
@@ -168,15 +274,16 @@ describe("Extension API", () => {
 					dataview_query: false,
 					quickadd: false,
 					tasknotes: true,
-					timeblocks: false,
+					timeblocks: true,
 				},
 			});
 
 			expect(tasknotesExtension.isAvailable(obsidian, request)).toBe(false);
 		});
 
-		it("should not be available when tasknotes is disabled in token", () => {
+		it("should not be available when both are disabled in token", () => {
 			obsidian.taskNotes = new MockTaskNotes();
+			obsidian.timeblocks = new MockTimeblocks();
 			const request = createMockRequest(obsidian, {
 				enabledTools: {
 					file_access: true,
@@ -194,10 +301,11 @@ describe("Extension API", () => {
 	});
 
 	describe("builtinExtensions registry", () => {
-		it("should contain dataview and tasknotes extensions", () => {
-			expect(builtinExtensions).toHaveLength(2);
+		it("should contain dataview, quickadd, and tasknotes extensions", () => {
+			expect(builtinExtensions).toHaveLength(3);
 			const ids = builtinExtensions.map((e) => e.id);
 			expect(ids).toContain("dataview_query");
+			expect(ids).toContain("quickadd");
 			expect(ids).toContain("tasknotes");
 		});
 
@@ -227,6 +335,94 @@ describe("Extension API", () => {
 					expect(tool.annotations).toBeDefined();
 				}
 			}
+		});
+	});
+
+	describe("ExtensionRegistry", () => {
+		let registry: ExtensionRegistry;
+
+		const testExtension: Extension = {
+			id: "test_ext",
+			name: "Test Extension",
+			tools: [
+				{
+					name: "test_tool",
+					description: "A test tool",
+					annotations: {
+						title: "Test Tool",
+						readOnlyHint: true,
+						destructiveHint: false,
+						idempotentHint: true,
+						openWorldHint: false,
+					},
+					handler: async () => "test result",
+				},
+			],
+			isAvailable: () => true,
+		};
+
+		beforeEach(() => {
+			registry = new ExtensionRegistry();
+		});
+
+		it("should start empty", () => {
+			expect(registry.getAll()).toEqual([]);
+		});
+
+		it("should register an extension", () => {
+			registry.register(testExtension);
+			expect(registry.getAll()).toHaveLength(1);
+			expect(registry.getAll()[0].id).toBe("test_ext");
+		});
+
+		it("should register multiple extensions", () => {
+			registry.register(testExtension);
+			registry.register({
+				...testExtension,
+				id: "another_ext",
+				name: "Another Extension",
+			});
+			expect(registry.getAll()).toHaveLength(2);
+		});
+
+		it("should replace extension with same id on re-register", () => {
+			registry.register(testExtension);
+			const updated = { ...testExtension, name: "Updated Extension" };
+			registry.register(updated);
+
+			expect(registry.getAll()).toHaveLength(1);
+			expect(registry.getAll()[0].name).toBe("Updated Extension");
+		});
+
+		it("should unregister an extension by id", () => {
+			registry.register(testExtension);
+			registry.unregister("test_ext");
+			expect(registry.getAll()).toEqual([]);
+		});
+
+		it("should handle unregister of non-existent id gracefully", () => {
+			registry.unregister("nonexistent");
+			expect(registry.getAll()).toEqual([]);
+		});
+
+		it("should preserve other extensions when unregistering one", () => {
+			registry.register(testExtension);
+			registry.register({
+				...testExtension,
+				id: "another_ext",
+				name: "Another Extension",
+			});
+			registry.unregister("test_ext");
+
+			expect(registry.getAll()).toHaveLength(1);
+			expect(registry.getAll()[0].id).toBe("another_ext");
+		});
+
+		it("should allow registering built-in extensions", () => {
+			for (const ext of builtinExtensions) {
+				registry.register(ext);
+			}
+			expect(registry.getAll()).toHaveLength(builtinExtensions.length);
 		});
 	});
 

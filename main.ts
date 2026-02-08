@@ -3,6 +3,8 @@ import { Plugin } from "obsidian";
 
 import type { ObsidianInterface } from "./obsidian/obsidian_interface";
 import { ObsidianImpl } from "./obsidian/obsidian_impl";
+import { builtinExtensions } from "extensions/builtin";
+import { ExtensionRegistry } from "extensions/registry";
 import { ObsidianMcpServer } from "mcp_server";
 import { ServerManager } from "./server/server_manager";
 import { TokenTracker } from "./server/connection_tracker";
@@ -16,6 +18,7 @@ export default class ObsidianMCPPlugin extends Plugin {
 	public settings: MCPPluginSettings;
 	public obsidianInterface: ObsidianInterface | null = null;
 	public tokenTracker: TokenTracker;
+	public extensionRegistry: ExtensionRegistry = new ExtensionRegistry();
 
 	private errorResponse(response: Response, error: Error) {
 		logger.logError("Error handling MCP request:", error);
@@ -32,7 +35,11 @@ export default class ObsidianMCPPlugin extends Plugin {
 	async registerRoutes() {
 		this.obsidianInterface = new ObsidianImpl(this.app, this);
 		const serverManager = this.getServerManager();
-		this.mcpServer = new ObsidianMcpServer(this.obsidianInterface, this.manifest);
+		this.mcpServer = new ObsidianMcpServer(
+			this.obsidianInterface,
+			this.manifest,
+			this.extensionRegistry
+		);
 
 		serverManager.addRoute("/mcp").all(async (request, response) => {
 			try {
@@ -77,6 +84,10 @@ export default class ObsidianMCPPlugin extends Plugin {
 
 		this.tokenTracker = new TokenTracker();
 		logger.tokenTracker = this.tokenTracker;
+
+		for (const ext of builtinExtensions) {
+			this.extensionRegistry.register(ext);
+		}
 
 		await this.registerRoutes();
 

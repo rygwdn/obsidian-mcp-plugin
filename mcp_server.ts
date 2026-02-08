@@ -9,13 +9,11 @@ import type { ObsidianInterface } from "./obsidian/obsidian_interface";
 import type { AuthenticatedRequest } from "./server/auth";
 import { getRequest } from "./server/auth";
 import { DEFAULT_SETTINGS } from "./settings/types";
-import { builtinExtensions } from "extensions/builtin";
+import type { ExtensionRegistry } from "extensions/registry";
 import { FileMetadataResource, getFileMetadataTool } from "tools/file_metadata";
 import { getContentsTool } from "tools/get_contents";
 import { logger } from "tools/logging";
-import { quickAddExecuteTool, quickAddListTool } from "tools/quickadd";
 import { searchTool } from "tools/search";
-import { timeblocksQueryTool, timeblocksTool } from "tools/timeblocks";
 import type { ToolRegistration } from "tools/types";
 import { updateContentTool } from "tools/update_content";
 import { VaultDailyNoteResource, VaultFileResource } from "tools/vault_file_resource";
@@ -25,7 +23,8 @@ export class ObsidianMcpServer {
 
 	constructor(
 		private obsidian: ObsidianInterface,
-		private manifest: { version: string; name: string }
+		private manifest: { version: string; name: string },
+		private registry: ExtensionRegistry
 	) {}
 
 	public async handleHttpRequest(request: Request, response: Response) {
@@ -123,22 +122,12 @@ export class ObsidianMcpServer {
 			this.registerTool(server, updateContentTool);
 		}
 
-		for (const extension of builtinExtensions) {
+		for (const extension of this.registry.getAll()) {
 			if (extension.isAvailable(this.obsidian, request)) {
 				for (const tool of extension.tools) {
 					this.registerTool(server, tool);
 				}
 			}
-		}
-
-		if (this.obsidian.getQuickAdd(request) && enabledTools.quickadd) {
-			this.registerTool(server, quickAddListTool);
-			this.registerTool(server, quickAddExecuteTool);
-		}
-
-		if (enabledTools.timeblocks && this.obsidian.getTimeblocks(request)) {
-			this.registerTool(server, timeblocksQueryTool);
-			this.registerTool(server, timeblocksTool);
 		}
 	}
 
