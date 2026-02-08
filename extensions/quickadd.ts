@@ -153,4 +153,15 @@ export const quickaddExtension: Extension = {
 	name: "QuickAdd",
 	tools: [quickAddListTool, quickAddExecuteTool],
 	isAvailable: (obsidian, request) => obsidian.getQuickAdd(request) !== null,
+	settingsUI: [
+		{
+			key: "quickadd",
+			icon: "⚡",
+			name: "⚡ QuickAdd Integration",
+			description: "Execute QuickAdd macros and choices",
+			warning: "Allows direct changes to vault",
+			isPluginAvailable: (app) => app.plugins.enabledPlugins.has("quickadd"),
+			unavailableDescription: () => "QuickAdd plugin is not enabled",
+		},
+	],
 };

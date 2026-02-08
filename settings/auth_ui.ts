@@ -130,20 +130,24 @@ function updateTokenList(
 
 		// Feature icons in same order as config section
 		const featuresEl = tokenEl.createDiv({ cls: "mcp-token-features" });
+		const enabledTools = token.enabledTools as Record<string, boolean>;
 
-		// Icon mapping in display order
-		const toolsInOrder = [
+		// Core tool icons
+		const coreTools = [
 			{ key: "file_access", icon: "📄", title: "File Access" },
 			{ key: "update_content", icon: "✏️", title: "Content Modification" },
 			{ key: "search", icon: "🔍", title: "Vault Search" },
-			{ key: "dataview_query", icon: "📊", title: "Dataview Integration" },
-			{ key: "quickadd", icon: "⚡", title: "QuickAdd Integration" },
-			{ key: "tasknotes", icon: "✅", title: "TaskNotes Integration" },
-			{ key: "timeblocks", icon: "📅", title: "Timeblocks Integration" },
 		];
 
-		for (const tool of toolsInOrder) {
-			if (token.enabledTools[tool.key as keyof typeof token.enabledTools]) {
+		// Extension-derived icons
+		const extensionTools = plugin.extensionRegistry
+			.getAll()
+			.flatMap((ext) =>
+				(ext.settingsUI ?? []).map((t) => ({ key: t.key, icon: t.icon, title: t.name }))
+			);
+
+		for (const tool of [...coreTools, ...extensionTools]) {
+			if (enabledTools[tool.key]) {
 				featuresEl.createSpan({
 					text: tool.icon,
 					cls: "mcp-token-feature-icon",
@@ -406,86 +410,33 @@ function renderFeaturesConfig(
 			})
 		);
 
-	const isDataviewEnabled = plugin.app.plugins.enabledPlugins.has("dataview");
-	const dataviewSetting = new Setting(containerEl)
-		.setName("📊 Dataview Integration")
-		.setDesc(isDataviewEnabled ? "Execute Dataview queries" : "Dataview plugin is not enabled");
+	// Extension-provided integration toggles
+	const enabledTools = token.enabledTools as Record<string, boolean>;
+	for (const ext of plugin.extensionRegistry.getAll()) {
+		if (!ext.settingsUI) continue;
+		for (const toggle of ext.settingsUI) {
+			const available = toggle.isPluginAvailable(plugin.app);
+			const setting = new Setting(containerEl)
+				.setName(toggle.name)
+				.setDesc(available ? toggle.description : toggle.unavailableDescription(plugin.app));
 
-	dataviewSetting.addToggle((toggle) =>
-		toggle
-			.setValue(isDataviewEnabled && token.enabledTools.dataview_query)
-			.setDisabled(!isDataviewEnabled)
-			.onChange((value) => {
-				token.enabledTools.dataview_query = value;
-			})
-	);
+			if (available && toggle.warning) {
+				setting.descEl.createSpan({
+					text: ` ⚠️ ${toggle.warning}`,
+					cls: "mcp-warning-text",
+				});
+			}
 
-	const isQuickAddEnabled = plugin.app.plugins.enabledPlugins.has("quickadd");
-	const quickAddSetting = new Setting(containerEl)
-		.setName("⚡ QuickAdd Integration")
-		.setDesc(
-			isQuickAddEnabled ? "Execute QuickAdd macros and choices" : "QuickAdd plugin is not enabled"
-		);
-
-	if (isQuickAddEnabled) {
-		quickAddSetting.descEl.createSpan({
-			text: " ⚠️ Allows direct changes to vault",
-			cls: "mcp-warning-text",
-		});
+			setting.addToggle((t) =>
+				t
+					.setValue(available && (enabledTools[toggle.key] ?? false))
+					.setDisabled(!available)
+					.onChange((value) => {
+						enabledTools[toggle.key] = value;
+					})
+			);
+		}
 	}
-
-	quickAddSetting.addToggle((toggle) =>
-		toggle
-			.setValue(isQuickAddEnabled && token.enabledTools.quickadd)
-			.setDisabled(!isQuickAddEnabled)
-			.onChange((value) => {
-				token.enabledTools.quickadd = value;
-			})
-	);
-
-	const isTaskNotesEnabled = plugin.app.plugins.enabledPlugins.has("tasknotes");
-	const taskNotesSetting = new Setting(containerEl)
-		.setName("✅ TaskNotes Integration")
-		.setDesc(
-			isTaskNotesEnabled
-				? "Query and manage tasks across your vault"
-				: "TaskNotes plugin is not enabled"
-		);
-
-	taskNotesSetting.addToggle((toggle) =>
-		toggle
-			.setValue(isTaskNotesEnabled && (token.enabledTools.tasknotes ?? false))
-			.setDisabled(!isTaskNotesEnabled)
-			.onChange((value) => {
-				token.enabledTools.tasknotes = value;
-			})
-	);
-
-	// Timeblocks requires TaskNotes plugin and daily notes
-	const hasDailyNotes =
-		plugin.app.internalPlugins.plugins["daily-notes"]?.enabled ||
-		plugin.app.plugins.enabledPlugins.has("periodic-notes");
-	const hasTaskNotes = plugin.app.plugins.enabledPlugins.has("tasknotes");
-	const isTimeblocksEnabled = hasDailyNotes && hasTaskNotes;
-
-	const timeblocksSetting = new Setting(containerEl)
-		.setName("📅 Timeblocks Integration")
-		.setDesc(
-			isTimeblocksEnabled
-				? "Manage timeblocks in daily notes (TaskNotes format)"
-				: !hasDailyNotes
-					? "Requires Daily Notes or Periodic Notes plugin"
-					: "Requires TaskNotes plugin"
-		);
-
-	timeblocksSetting.addToggle((toggle) =>
-		toggle
-			.setValue(isTimeblocksEnabled && (token.enabledTools.timeblocks ?? false))
-			.setDisabled(!isTimeblocksEnabled)
-			.onChange((value) => {
-				token.enabledTools.timeblocks = value;
-			})
-	);
 }
 
 function renderDirectoriesConfig(

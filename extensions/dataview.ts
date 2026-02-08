@@ -64,4 +64,14 @@ export const dataviewExtension: Extension = {
 	name: "Dataview",
 	tools: [dataviewQueryTool],
 	isAvailable: (obsidian, request) => obsidian.getDataview(request) !== null,
+	settingsUI: [
+		{
+			key: "dataview_query",
+			icon: "📊",
+			name: "📊 Dataview Integration",
+			description: "Execute Dataview queries",
+			isPluginAvailable: (app) => app.plugins.enabledPlugins.has("dataview"),
+			unavailableDescription: () => "Dataview plugin is not enabled",
+		},
+	],
 };

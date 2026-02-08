@@ -282,4 +282,36 @@ export const tasknotesExtension: Extension = {
 	tools: [taskNotesQueryTool, taskNotesTool, timeblocksQueryTool, timeblocksTool],
 	isAvailable: (obsidian, request) =>
 		obsidian.getTaskNotes(request) !== null || obsidian.getTimeblocks(request) !== null,
+	settingsUI: [
+		{
+			key: "tasknotes",
+			icon: "✅",
+			name: "✅ TaskNotes Integration",
+			description: "Query and manage tasks across your vault",
+			isPluginAvailable: (app) => app.plugins.enabledPlugins.has("tasknotes"),
+			unavailableDescription: () => "TaskNotes plugin is not enabled",
+		},
+		{
+			key: "timeblocks",
+			icon: "📅",
+			name: "📅 Timeblocks Integration",
+			description: "Manage timeblocks in daily notes (TaskNotes format)",
+			isPluginAvailable: (app) => {
+				const hasDailyNotes =
+					(app as unknown as { internalPlugins: { plugins: Record<string, { enabled: boolean }> } })
+						.internalPlugins.plugins["daily-notes"]?.enabled ||
+					app.plugins.enabledPlugins.has("periodic-notes");
+				return hasDailyNotes && app.plugins.enabledPlugins.has("tasknotes");
+			},
+			unavailableDescription: (app) => {
+				const hasDailyNotes =
+					(app as unknown as { internalPlugins: { plugins: Record<string, { enabled: boolean }> } })
+						.internalPlugins.plugins["daily-notes"]?.enabled ||
+					app.plugins.enabledPlugins.has("periodic-notes");
+				return !hasDailyNotes
+					? "Requires Daily Notes or Periodic Notes plugin"
+					: "Requires TaskNotes plugin";
+			},
+		},
+	],
 };
