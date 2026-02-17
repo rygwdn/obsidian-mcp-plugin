@@ -1,26 +1,25 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { timeblocksQueryTool, timeblocksTool } from "../extensions/tasknotes";
-import { MockObsidian, MockTimeblocks, createMockRequest } from "./mock_obsidian";
+import {
+	MockObsidian,
+	MockTimeblocks,
+	createMockRequest,
+	createMockContext,
+} from "./mock_obsidian";
 import type { TimeBlock } from "../obsidian/obsidian_interface";
+import type { ToolContext } from "../extensions/types";
 
-describe("timeblocks tool annotations", () => {
-	it("should have the correct annotations for the query tool", () => {
-		expect(timeblocksQueryTool.annotations).toEqual({
-			title: "Timeblocks Query Tool",
-			readOnlyHint: true,
-			destructiveHint: false,
-			idempotentHint: true,
-			openWorldHint: false,
+describe("timeblocks tool hints", () => {
+	it("should have the correct hints for the query tool", () => {
+		expect(timeblocksQueryTool.hints).toEqual({
+			readOnly: true,
+			idempotent: true,
 		});
 	});
 
-	it("should have the correct annotations for the timeblocks tool", () => {
-		expect(timeblocksTool.annotations).toEqual({
-			title: "Timeblocks Tool",
-			readOnlyHint: false,
-			destructiveHint: true,
-			idempotentHint: false,
-			openWorldHint: false,
+	it("should have the correct hints for the timeblocks tool", () => {
+		expect(timeblocksTool.hints).toEqual({
+			destructive: true,
 		});
 	});
 });
@@ -28,21 +27,21 @@ describe("timeblocks tool annotations", () => {
 describe("timeblocks tools", () => {
 	let obsidian: MockObsidian;
 	let timeblocksPlugin: MockTimeblocks;
-	let request: ReturnType<typeof createMockRequest>;
+	let context: ToolContext;
 
 	beforeEach(() => {
 		vi.clearAllMocks();
 		obsidian = new MockObsidian();
-		request = createMockRequest(obsidian, {
+		const request = createMockRequest(obsidian, {
 			enabledTools: {
 				file_access: true,
-				search: true,
 				update_content: true,
 				dataview: false,
 				quickadd: false,
 				tasknotes: true,
 			},
 		});
+		context = createMockContext(obsidian, request);
 
 		timeblocksPlugin = new MockTimeblocks();
 		obsidian.timeblocks = timeblocksPlugin;
@@ -50,9 +49,12 @@ describe("timeblocks tools", () => {
 
 	describe("timeblocksQueryTool", () => {
 		it("should return empty array when no timeblocks exist", async () => {
-			const result = await timeblocksQueryTool.handler(obsidian, request, {
-				date: "2025-12-12",
-			});
+			const result = await timeblocksQueryTool.handler(
+				{
+					date: "2025-12-12",
+				},
+				context
+			);
 			const data = JSON.parse(result);
 
 			expect(data.date).toBe("2025-12-12");
@@ -81,9 +83,12 @@ describe("timeblocks tools", () => {
 			timeblocksPlugin.addTestTimeblock("2025-12-12", testBlocks[0]);
 			timeblocksPlugin.addTestTimeblock("2025-12-12", testBlocks[1]);
 
-			const result = await timeblocksQueryTool.handler(obsidian, request, {
-				date: "2025-12-12",
-			});
+			const result = await timeblocksQueryTool.handler(
+				{
+					date: "2025-12-12",
+				},
+				context
+			);
 			const data = JSON.parse(result);
 
 			expect(data.date).toBe("2025-12-12");
@@ -112,7 +117,7 @@ describe("timeblocks tools", () => {
 
 			timeblocksPlugin.addTestTimeblock("today", testBlock);
 
-			const result = await timeblocksQueryTool.handler(obsidian, request, {});
+			const result = await timeblocksQueryTool.handler({}, context);
 			const data = JSON.parse(result);
 
 			expect(data.date).toBe("today");
@@ -122,21 +127,24 @@ describe("timeblocks tools", () => {
 
 		it("should throw error when timeblocks feature not enabled", async () => {
 			obsidian.timeblocks = null;
-			await expect(
-				timeblocksQueryTool.handler(obsidian, request, { date: "2025-12-12" })
-			).rejects.toThrow("Timeblocks feature is not enabled or daily notes plugin is not active");
+			await expect(timeblocksQueryTool.handler({ date: "2025-12-12" }, context)).rejects.toThrow(
+				"Timeblocks feature is not enabled or daily notes plugin is not active"
+			);
 		});
 	});
 
 	describe("timeblocksTool", () => {
 		describe("create timeblock", () => {
 			it("should create a new timeblock with required fields", async () => {
-				const result = await timeblocksTool.handler(obsidian, request, {
-					date: "2025-12-12",
-					title: "Team meeting",
-					startTime: "14:00",
-					endTime: "15:00",
-				});
+				const result = await timeblocksTool.handler(
+					{
+						date: "2025-12-12",
+						title: "Team meeting",
+						startTime: "14:00",
+						endTime: "15:00",
+					},
+					context
+				);
 				const timeblock = JSON.parse(result);
 
 				expect(timeblock.id).toBeDefined();
@@ -146,15 +154,18 @@ describe("timeblocks tools", () => {
 			});
 
 			it("should create timeblock with optional fields", async () => {
-				const result = await timeblocksTool.handler(obsidian, request, {
-					date: "2025-12-12",
-					title: "Code review",
-					startTime: "10:00",
-					endTime: "11:00",
-					color: "#ef4444",
-					description: "Review PR #456",
-					attachments: ["[[PR 456]]", "[[Codebase notes]]"],
-				});
+				const result = await timeblocksTool.handler(
+					{
+						date: "2025-12-12",
+						title: "Code review",
+						startTime: "10:00",
+						endTime: "11:00",
+						color: "#ef4444",
+						description: "Review PR #456",
+						attachments: ["[[PR 456]]", "[[Codebase notes]]"],
+					},
+					context
+				);
 				const timeblock = JSON.parse(result);
 
 				expect(timeblock.title).toBe("Code review");
@@ -165,11 +176,14 @@ describe("timeblocks tools", () => {
 
 			it("should throw error when creating without title", async () => {
 				await expect(
-					timeblocksTool.handler(obsidian, request, {
-						date: "2025-12-12",
-						startTime: "14:00",
-						endTime: "15:00",
-					})
+					timeblocksTool.handler(
+						{
+							date: "2025-12-12",
+							startTime: "14:00",
+							endTime: "15:00",
+						},
+						context
+					)
 				).rejects.toThrow(
 					"title, startTime, and endTime are required when creating a new timeblock"
 				);
@@ -177,11 +191,14 @@ describe("timeblocks tools", () => {
 
 			it("should throw error when creating without startTime", async () => {
 				await expect(
-					timeblocksTool.handler(obsidian, request, {
-						date: "2025-12-12",
-						title: "Meeting",
-						endTime: "15:00",
-					})
+					timeblocksTool.handler(
+						{
+							date: "2025-12-12",
+							title: "Meeting",
+							endTime: "15:00",
+						},
+						context
+					)
 				).rejects.toThrow(
 					"title, startTime, and endTime are required when creating a new timeblock"
 				);
@@ -189,11 +206,14 @@ describe("timeblocks tools", () => {
 
 			it("should throw error when creating without endTime", async () => {
 				await expect(
-					timeblocksTool.handler(obsidian, request, {
-						date: "2025-12-12",
-						title: "Meeting",
-						startTime: "14:00",
-					})
+					timeblocksTool.handler(
+						{
+							date: "2025-12-12",
+							title: "Meeting",
+							startTime: "14:00",
+						},
+						context
+					)
 				).rejects.toThrow(
 					"title, startTime, and endTime are required when creating a new timeblock"
 				);
@@ -211,12 +231,15 @@ describe("timeblocks tools", () => {
 			});
 
 			it("should update existing timeblock", async () => {
-				const result = await timeblocksTool.handler(obsidian, request, {
-					date: "2025-12-12",
-					id: "tb-existing",
-					title: "Updated title",
-					color: "#10b981",
-				});
+				const result = await timeblocksTool.handler(
+					{
+						date: "2025-12-12",
+						id: "tb-existing",
+						title: "Updated title",
+						color: "#10b981",
+					},
+					context
+				);
 				const timeblock = JSON.parse(result);
 
 				expect(timeblock.id).toBe("tb-existing");
@@ -227,12 +250,15 @@ describe("timeblocks tools", () => {
 			});
 
 			it("should update time fields", async () => {
-				const result = await timeblocksTool.handler(obsidian, request, {
-					date: "2025-12-12",
-					id: "tb-existing",
-					startTime: "10:00",
-					endTime: "11:30",
-				});
+				const result = await timeblocksTool.handler(
+					{
+						date: "2025-12-12",
+						id: "tb-existing",
+						startTime: "10:00",
+						endTime: "11:30",
+					},
+					context
+				);
 				const timeblock = JSON.parse(result);
 
 				expect(timeblock.startTime).toBe("10:00");
@@ -241,11 +267,14 @@ describe("timeblocks tools", () => {
 
 			it("should throw error when timeblock not found", async () => {
 				await expect(
-					timeblocksTool.handler(obsidian, request, {
-						date: "2025-12-12",
-						id: "nonexistent",
-						title: "Updated",
-					})
+					timeblocksTool.handler(
+						{
+							date: "2025-12-12",
+							id: "nonexistent",
+							title: "Updated",
+						},
+						context
+					)
 				).rejects.toThrow("Timeblock not found: nonexistent");
 			});
 		});
@@ -261,11 +290,14 @@ describe("timeblocks tools", () => {
 			});
 
 			it("should delete timeblock when delete=true", async () => {
-				const result = await timeblocksTool.handler(obsidian, request, {
-					date: "2025-12-12",
-					id: "tb-to-delete",
-					delete: true,
-				});
+				const result = await timeblocksTool.handler(
+					{
+						date: "2025-12-12",
+						id: "tb-to-delete",
+						delete: true,
+					},
+					context
+				);
 				const data = JSON.parse(result);
 
 				expect(data.success).toBe(true);
@@ -277,20 +309,26 @@ describe("timeblocks tools", () => {
 
 			it("should throw error when deleting without id", async () => {
 				await expect(
-					timeblocksTool.handler(obsidian, request, {
-						date: "2025-12-12",
-						delete: true,
-					})
+					timeblocksTool.handler(
+						{
+							date: "2025-12-12",
+							delete: true,
+						},
+						context
+					)
 				).rejects.toThrow("ID is required for delete");
 			});
 
 			it("should throw error when deleting nonexistent timeblock", async () => {
 				await expect(
-					timeblocksTool.handler(obsidian, request, {
-						date: "2025-12-12",
-						id: "nonexistent",
-						delete: true,
-					})
+					timeblocksTool.handler(
+						{
+							date: "2025-12-12",
+							id: "nonexistent",
+							delete: true,
+						},
+						context
+					)
 				).rejects.toThrow("Timeblock not found: nonexistent");
 			});
 		});
@@ -298,12 +336,15 @@ describe("timeblocks tools", () => {
 		it("should throw error when Timeblocks plugin not enabled", async () => {
 			obsidian.timeblocks = null;
 			await expect(
-				timeblocksTool.handler(obsidian, request, {
-					date: "2025-12-12",
-					title: "New block",
-					startTime: "14:00",
-					endTime: "15:00",
-				})
+				timeblocksTool.handler(
+					{
+						date: "2025-12-12",
+						title: "New block",
+						startTime: "14:00",
+						endTime: "15:00",
+					},
+					context
+				)
 			).rejects.toThrow("Timeblocks feature is not enabled or daily notes plugin is not active");
 		});
 	});

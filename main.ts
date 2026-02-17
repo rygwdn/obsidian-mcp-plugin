@@ -74,6 +74,8 @@ export default class ObsidianMCPPlugin extends Plugin {
 				}
 				delete tools["timeblocks"];
 			}
+			// search merged into file_access
+			delete tools["search"];
 			if (token.enabledTools.tasknotes === undefined) {
 				token.enabledTools.tasknotes = false;
 			}

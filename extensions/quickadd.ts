@@ -1,10 +1,6 @@
-import { z } from "zod";
+import type { QuickAddChoice, QuickAddInterface } from "../obsidian/obsidian_interface";
 
-import type { ObsidianInterface, QuickAddChoice } from "../obsidian/obsidian_interface";
-import type { AuthenticatedRequest } from "../server/auth";
-import type { ToolRegistration } from "../tools/types";
-
-import type { Extension } from "./types";
+import type { Extension, ExtensionTool, ToolContext } from "./types";
 
 /**
  * Extracts variable names from a template string based on QuickAdd template syntax
@@ -54,23 +50,13 @@ function formatChoicesAsMarkdown(choices: QuickAddChoice[]): string {
 	return markdown;
 }
 
-export const quickAddListTool: ToolRegistration = {
+export const quickAddListTool: ExtensionTool = {
 	name: "quickadd_list",
+	title: "QuickAdd List Tool",
 	description: "List available QuickAdd choices",
-	annotations: {
-		title: "QuickAdd List Tool",
-		readOnlyHint: true,
-		destructiveHint: false,
-		idempotentHint: true,
-		openWorldHint: false,
-	},
-	schema: undefined,
-	handler: async (
-		obsidian: ObsidianInterface,
-		request: AuthenticatedRequest,
-		_args: Record<string, unknown>
-	) => {
-		const quickAdd = obsidian.getQuickAdd(request);
+	hints: { readOnly: true, idempotent: true },
+	handler: async (_args: Record<string, unknown>, context: ToolContext) => {
+		const quickAdd = context.getPlugin("quickadd") as QuickAddInterface | null;
 		if (!quickAdd) {
 			throw new Error("QuickAdd plugin is not enabled");
 		}
@@ -83,36 +69,31 @@ export const quickAddListTool: ToolRegistration = {
 	},
 };
 
-export const quickAddExecuteTool: ToolRegistration = {
+export const quickAddExecuteTool: ExtensionTool = {
 	name: "quickadd_execute",
+	title: "QuickAdd Execute Tool",
 	description: "Execute a QuickAdd choice or format a template with optional variables",
-	annotations: {
-		title: "QuickAdd Execute Tool",
-		readOnlyHint: false,
-		destructiveHint: true,
-		idempotentHint: false,
-		openWorldHint: false,
+	hints: { destructive: true },
+	parameters: {
+		choice: {
+			type: "string",
+			description: "The name or ID of the QuickAdd choice to execute",
+		},
+		template: { type: "string", description: "The template content to format" },
+		variables: {
+			type: "object",
+			description:
+				"Optional variables to pass to the QuickAdd choice or template. Values can be strings, numbers, or booleans.",
+		},
 	},
-	schema: {
-		choice: z.string().optional().describe("The name or ID of the QuickAdd choice to execute"),
-		template: z.string().optional().describe("The template content to format"),
-		variables: z
-			.record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
-			.optional()
-			.describe("Optional variables to pass to the QuickAdd choice or template"),
-	},
-	handler: async (
-		obsidian: ObsidianInterface,
-		request: AuthenticatedRequest,
-		args: {
+	handler: async (args: Record<string, unknown>, context: ToolContext) => {
+		const { choice, template, variables } = args as {
 			choice?: string;
 			template?: string;
 			variables?: Record<string, unknown>;
-		}
-	) => {
-		const { choice, template, variables } = args;
+		};
 
-		const quickAdd = obsidian.getQuickAdd(request);
+		const quickAdd = context.getPlugin("quickadd") as QuickAddInterface | null;
 		if (!quickAdd) {
 			throw new Error("QuickAdd plugin is not enabled");
 		}

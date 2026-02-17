@@ -1,28 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { taskNotesQueryTool, taskNotesTool } from "../extensions/tasknotes";
 import { generateFileMetadata } from "../tools/file_metadata";
-import { MockObsidian, createMockRequest } from "./mock_obsidian";
+import { MockObsidian, createMockRequest, createMockContext } from "./mock_obsidian";
 import type { TaskNotesInterface, TaskInfo, TaskFilter } from "../obsidian/obsidian_interface";
 import { TaskInfoSchema } from "../obsidian/obsidian_interface";
+import type { ToolContext } from "../extensions/types";
 
-describe("tasknotes tool annotations", () => {
-	it("should have the correct annotations for the query tool", () => {
-		expect(taskNotesQueryTool.annotations).toEqual({
-			title: "TaskNotes Query Tool",
-			readOnlyHint: true,
-			destructiveHint: false,
-			idempotentHint: true,
-			openWorldHint: false,
+describe("tasknotes tool hints", () => {
+	it("should have the correct hints for the query tool", () => {
+		expect(taskNotesQueryTool.hints).toEqual({
+			readOnly: true,
+			idempotent: true,
 		});
 	});
 
-	it("should have the correct annotations for the tasknotes tool", () => {
-		expect(taskNotesTool.annotations).toEqual({
-			title: "TaskNotes Tool",
-			readOnlyHint: false,
-			destructiveHint: true,
-			idempotentHint: false,
-			openWorldHint: false,
+	it("should have the correct hints for the tasknotes tool", () => {
+		expect(taskNotesTool.hints).toEqual({
+			destructive: true,
 		});
 	});
 });
@@ -136,6 +130,7 @@ describe("tasknotes tools", () => {
 	let obsidian: MockObsidian;
 	let taskNotesPlugin: MockTaskNotes;
 	let request: ReturnType<typeof createMockRequest>;
+	let context: ToolContext;
 
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -143,13 +138,13 @@ describe("tasknotes tools", () => {
 		request = createMockRequest(obsidian, {
 			enabledTools: {
 				file_access: true,
-				search: true,
 				update_content: true,
 				dataview: false,
 				quickadd: false,
 				tasknotes: true,
 			},
 		});
+		context = createMockContext(obsidian, request);
 
 		taskNotesPlugin = new MockTaskNotes();
 		obsidian.taskNotes = taskNotesPlugin;
@@ -213,7 +208,7 @@ describe("tasknotes tools", () => {
 
 	describe("taskNotesQueryTool", () => {
 		it("should return tasks with default due_before of today", async () => {
-			const result = await taskNotesQueryTool.handler(obsidian, request, {});
+			const result = await taskNotesQueryTool.handler({}, context);
 			const data = JSON.parse(result);
 
 			// Should return tasks due or scheduled on or before today
@@ -223,9 +218,12 @@ describe("tasknotes tools", () => {
 		});
 
 		it("should include stats and filterOptions when include_stats is true (default)", async () => {
-			const result = await taskNotesQueryTool.handler(obsidian, request, {
-				due_before: "2025-12-31", // Far future to get all tasks
-			});
+			const result = await taskNotesQueryTool.handler(
+				{
+					due_before: "2025-12-31", // Far future to get all tasks
+				},
+				context
+			);
 			const data = JSON.parse(result);
 
 			expect(data.stats).toBeDefined();
@@ -241,10 +239,13 @@ describe("tasknotes tools", () => {
 		});
 
 		it("should not include stats when include_stats is false", async () => {
-			const result = await taskNotesQueryTool.handler(obsidian, request, {
-				due_before: "2025-12-31",
-				include_stats: false,
-			});
+			const result = await taskNotesQueryTool.handler(
+				{
+					due_before: "2025-12-31",
+					include_stats: false,
+				},
+				context
+			);
 			const data = JSON.parse(result);
 
 			expect(data.stats).toBeUndefined();
@@ -252,10 +253,13 @@ describe("tasknotes tools", () => {
 		});
 
 		it("should indicate hasMore when more tasks exist", async () => {
-			const result = await taskNotesQueryTool.handler(obsidian, request, {
-				due_before: "2025-12-31",
-				limit: 2,
-			});
+			const result = await taskNotesQueryTool.handler(
+				{
+					due_before: "2025-12-31",
+					limit: 2,
+				},
+				context
+			);
 			const data = JSON.parse(result);
 
 			expect(data.tasks).toHaveLength(2);
@@ -264,40 +268,52 @@ describe("tasknotes tools", () => {
 		});
 
 		it("should indicate hasMore=false when all tasks returned", async () => {
-			const result = await taskNotesQueryTool.handler(obsidian, request, {
-				due_before: "2025-12-31",
-				limit: 10,
-			});
+			const result = await taskNotesQueryTool.handler(
+				{
+					due_before: "2025-12-31",
+					limit: 10,
+				},
+				context
+			);
 			const data = JSON.parse(result);
 
 			expect(data.hasMore).toBe(false);
 		});
 
 		it("should filter by status", async () => {
-			const result = await taskNotesQueryTool.handler(obsidian, request, {
-				status: ["todo"],
-				due_before: "2025-12-31",
-			});
+			const result = await taskNotesQueryTool.handler(
+				{
+					status: ["todo"],
+					due_before: "2025-12-31",
+				},
+				context
+			);
 			const data = JSON.parse(result);
 
 			expect(data.tasks.every((t: TaskInfo) => t.status === "todo")).toBe(true);
 		});
 
 		it("should filter by priority", async () => {
-			const result = await taskNotesQueryTool.handler(obsidian, request, {
-				priority: ["high"],
-				due_before: "2025-12-31",
-			});
+			const result = await taskNotesQueryTool.handler(
+				{
+					priority: ["high"],
+					due_before: "2025-12-31",
+				},
+				context
+			);
 			const data = JSON.parse(result);
 
 			expect(data.tasks.every((t: TaskInfo) => t.priority === "high")).toBe(true);
 		});
 
 		it("should filter by tags", async () => {
-			const result = await taskNotesQueryTool.handler(obsidian, request, {
-				tags: ["work"],
-				due_before: "2025-12-31",
-			});
+			const result = await taskNotesQueryTool.handler(
+				{
+					tags: ["work"],
+					due_before: "2025-12-31",
+				},
+				context
+			);
 			const data = JSON.parse(result);
 
 			expect(data.tasks).toHaveLength(1);
@@ -305,9 +321,12 @@ describe("tasknotes tools", () => {
 		});
 
 		it("should filter by due_before (includes due and scheduled)", async () => {
-			const result = await taskNotesQueryTool.handler(obsidian, request, {
-				due_before: "2025-12-12",
-			});
+			const result = await taskNotesQueryTool.handler(
+				{
+					due_before: "2025-12-12",
+				},
+				context
+			);
 			const data = JSON.parse(result);
 
 			// Should include task-2 (scheduled 2025-12-12), task-5 (due 2025-12-01)
@@ -317,29 +336,38 @@ describe("tasknotes tools", () => {
 		});
 
 		it("should exclude archived tasks by default", async () => {
-			const result = await taskNotesQueryTool.handler(obsidian, request, {
-				due_before: "2025-12-31",
-			});
+			const result = await taskNotesQueryTool.handler(
+				{
+					due_before: "2025-12-31",
+				},
+				context
+			);
 			const data = JSON.parse(result);
 
 			expect(data.tasks.every((t: TaskInfo) => !t.archived)).toBe(true);
 		});
 
 		it("should include archived tasks when archived=true", async () => {
-			const result = await taskNotesQueryTool.handler(obsidian, request, {
-				archived: true,
-				due_before: "2025-12-31",
-			});
+			const result = await taskNotesQueryTool.handler(
+				{
+					archived: true,
+					due_before: "2025-12-31",
+				},
+				context
+			);
 			const data = JSON.parse(result);
 
 			expect(data.tasks.some((t: TaskInfo) => t.archived)).toBe(true);
 		});
 
 		it("should return empty array when no tasks match", async () => {
-			const result = await taskNotesQueryTool.handler(obsidian, request, {
-				status: ["nonexistent"],
-				due_before: "2025-12-31",
-			});
+			const result = await taskNotesQueryTool.handler(
+				{
+					status: ["nonexistent"],
+					due_before: "2025-12-31",
+				},
+				context
+			);
 			const data = JSON.parse(result);
 
 			expect(data.tasks).toEqual([]);
@@ -348,7 +376,17 @@ describe("tasknotes tools", () => {
 
 		it("should throw error when TaskNotes plugin not enabled", async () => {
 			obsidian.taskNotes = null;
-			await expect(taskNotesQueryTool.handler(obsidian, request, {})).rejects.toThrow(
+			const noTnRequest = createMockRequest(obsidian, {
+				enabledTools: {
+					file_access: true,
+					update_content: true,
+					dataview: false,
+					quickadd: false,
+					tasknotes: false,
+				},
+			});
+			const noTnContext = createMockContext(obsidian, noTnRequest);
+			await expect(taskNotesQueryTool.handler({}, noTnContext)).rejects.toThrow(
 				"TaskNotes plugin is not enabled"
 			);
 		});
@@ -357,9 +395,12 @@ describe("tasknotes tools", () => {
 	describe("taskNotesTool", () => {
 		describe("create task", () => {
 			it("should create task with title only", async () => {
-				const result = await taskNotesTool.handler(obsidian, request, {
-					title: "New task",
-				});
+				const result = await taskNotesTool.handler(
+					{
+						title: "New task",
+					},
+					context
+				);
 				const task = JSON.parse(result);
 
 				expect(task.title).toBe("New task");
@@ -372,13 +413,16 @@ describe("tasknotes tools", () => {
 				const mockNow = 1734220800000;
 				vi.spyOn(Date, "now").mockReturnValue(mockNow);
 
-				const result = await taskNotesTool.handler(obsidian, request, {
-					title: "Complete new feature",
-					status: "in-progress",
-					priority: "high",
-					due: "2025-12-20",
-					tags: ["feature", "sprint"],
-				});
+				const result = await taskNotesTool.handler(
+					{
+						title: "Complete new feature",
+						status: "in-progress",
+						priority: "high",
+						due: "2025-12-20",
+						tags: ["feature", "sprint"],
+					},
+					context
+				);
 				const task = JSON.parse(result);
 
 				expect(task.title).toBe("Complete new feature");
@@ -391,7 +435,7 @@ describe("tasknotes tools", () => {
 			});
 
 			it("should throw error when title is missing for create", async () => {
-				await expect(taskNotesTool.handler(obsidian, request, {})).rejects.toThrow(
+				await expect(taskNotesTool.handler({}, context)).rejects.toThrow(
 					"Title is required when creating a new task"
 				);
 			});
@@ -399,11 +443,14 @@ describe("tasknotes tools", () => {
 
 		describe("update task", () => {
 			it("should update task properties", async () => {
-				const result = await taskNotesTool.handler(obsidian, request, {
-					path: "tasks/complete-project-proposal.md",
-					status: "in-progress",
-					priority: "medium",
-				});
+				const result = await taskNotesTool.handler(
+					{
+						path: "tasks/complete-project-proposal.md",
+						status: "in-progress",
+						priority: "medium",
+					},
+					context
+				);
 				const task = JSON.parse(result);
 
 				expect(task.status).toBe("in-progress");
@@ -411,22 +458,28 @@ describe("tasknotes tools", () => {
 			});
 
 			it("should update task status to done", async () => {
-				const result = await taskNotesTool.handler(obsidian, request, {
-					path: "tasks/complete-project-proposal.md",
-					status: "done",
-				});
+				const result = await taskNotesTool.handler(
+					{
+						path: "tasks/complete-project-proposal.md",
+						status: "done",
+					},
+					context
+				);
 				const task = JSON.parse(result);
 
 				expect(task.status).toBe("done");
 			});
 
 			it("should update multiple properties at once", async () => {
-				const result = await taskNotesTool.handler(obsidian, request, {
-					path: "tasks/review-pr-123.md",
-					status: "done",
-					priority: "high",
-					tags: ["completed", "reviewed"],
-				});
+				const result = await taskNotesTool.handler(
+					{
+						path: "tasks/review-pr-123.md",
+						status: "done",
+						priority: "high",
+						tags: ["completed", "reviewed"],
+					},
+					context
+				);
 				const task = JSON.parse(result);
 
 				expect(task.status).toBe("done");
@@ -436,20 +489,36 @@ describe("tasknotes tools", () => {
 
 			it("should throw error when task not found", async () => {
 				await expect(
-					taskNotesTool.handler(obsidian, request, {
-						path: "tasks/nonexistent.md",
-						status: "done",
-					})
+					taskNotesTool.handler(
+						{
+							path: "tasks/nonexistent.md",
+							status: "done",
+						},
+						context
+					)
 				).rejects.toThrow("Task not found: tasks/nonexistent.md");
 			});
 		});
 
 		it("should throw error when TaskNotes plugin not enabled", async () => {
 			obsidian.taskNotes = null;
+			const noTnRequest = createMockRequest(obsidian, {
+				enabledTools: {
+					file_access: true,
+					update_content: true,
+					dataview: false,
+					quickadd: false,
+					tasknotes: false,
+				},
+			});
+			const noTnContext = createMockContext(obsidian, noTnRequest);
 			await expect(
-				taskNotesTool.handler(obsidian, request, {
-					title: "New task",
-				})
+				taskNotesTool.handler(
+					{
+						title: "New task",
+					},
+					noTnContext
+				)
 			).rejects.toThrow("TaskNotes plugin is not enabled");
 		});
 	});

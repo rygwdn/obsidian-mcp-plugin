@@ -21,7 +21,6 @@ export interface AuthToken {
 	lastUsed?: number;
 	enabledTools: {
 		file_access: boolean;
-		search: boolean;
 		update_content: boolean;
 		dataview: boolean;
 		quickadd: boolean;

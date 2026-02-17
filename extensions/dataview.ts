@@ -1,10 +1,6 @@
-import { z } from "zod";
+import type { DataviewInterface } from "../obsidian/obsidian_interface";
 
-import type { ObsidianInterface } from "../obsidian/obsidian_interface";
-import type { AuthenticatedRequest } from "../server/auth";
-import type { ToolRegistration } from "../tools/types";
-
-import type { Extension } from "./types";
+import type { Extension, ExtensionTool, ToolContext } from "./types";
 
 const description = `
 Executes a Dataview query against your vault's notes and returns the results in markdown format.
@@ -20,28 +16,22 @@ Examples:
 For more examples, see the [Dataview Query Examples](https://blacksmithgu.github.io/obsidian-dataview/queries/query-types/).
 `;
 
-export const dataviewQueryTool: ToolRegistration = {
+export const dataviewQueryTool: ExtensionTool = {
 	name: "dataview_query",
+	title: "Execute Dataview Query",
 	description: description,
-	annotations: {
-		title: "Execute Dataview Query",
-		readOnlyHint: true,
-		destructiveHint: false,
-		idempotentHint: true,
-		openWorldHint: false,
+	hints: { readOnly: true, idempotent: true },
+	parameters: {
+		query: {
+			type: "string",
+			description:
+				"Dataview query to execute. See tool description for examples and documentation.",
+		},
 	},
-	schema: {
-		query: z
-			.string()
-			.describe("Dataview query to execute. See tool description for examples and documentation."),
-	},
-	handler: async (
-		obsidian: ObsidianInterface,
-		request: AuthenticatedRequest,
-		args: { query: string }
-	) => {
+	required: ["query"],
+	handler: async (args: Record<string, unknown>, context: ToolContext) => {
 		const { query } = args as { query: string };
-		const dataview = obsidian.getDataview(request);
+		const dataview = context.getPlugin("dataview") as DataviewInterface | null;
 		if (!dataview) {
 			throw new Error("Dataview plugin is not enabled");
 		}

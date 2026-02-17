@@ -74,13 +74,13 @@ describe("Extension API", () => {
 			}
 		});
 
-		it("every extension tool should have required ToolRegistration fields", () => {
+		it("every extension tool should have required ExtensionTool fields", () => {
 			for (const ext of builtinExtensions) {
 				for (const tool of ext.tools) {
 					expect(typeof tool.name).toBe("string");
 					expect(typeof tool.description).toBe("string");
 					expect(typeof tool.handler).toBe("function");
-					expect(tool.annotations).toBeDefined();
+					expect(tool.hints).toBeDefined();
 				}
 			}
 		});
@@ -95,13 +95,11 @@ describe("Extension API", () => {
 			tools: [
 				{
 					name: "test_tool",
+					title: "Test Tool",
 					description: "A test tool",
-					annotations: {
-						title: "Test Tool",
-						readOnlyHint: true,
-						destructiveHint: false,
-						idempotentHint: true,
-						openWorldHint: false,
+					hints: {
+						readOnly: true,
+						idempotent: true,
 					},
 					handler: async () => "test result",
 				},
@@ -181,13 +179,11 @@ describe("Extension API", () => {
 				tools: [
 					{
 						name: "custom_tool",
+						title: "Custom Tool",
 						description: "A custom tool",
-						annotations: {
-							title: "Custom Tool",
-							readOnlyHint: true,
-							destructiveHint: false,
-							idempotentHint: true,
-							openWorldHint: false,
+						hints: {
+							readOnly: true,
+							idempotent: true,
 						},
 						handler: async () => "result",
 					},

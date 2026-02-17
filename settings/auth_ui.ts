@@ -133,9 +133,8 @@ function updateTokenList(
 		const enabledTools = token.enabledTools as Record<string, boolean>;
 
 		const coreTools = [
-			{ key: "file_access", icon: "📄", title: "File Access" },
+			{ key: "file_access", icon: "📄", title: "File Access & Search" },
 			{ key: "update_content", icon: "✏️", title: "Content Modification" },
-			{ key: "search", icon: "🔍", title: "Vault Search" },
 		];
 
 		for (const tool of coreTools) {
@@ -231,7 +230,6 @@ function renderCreateTokenConfig(
 		enabledTools: {
 			file_access: true,
 			update_content: true,
-			search: true,
 			dataview: true,
 			quickadd: true,
 			tasknotes: false,
@@ -380,8 +378,10 @@ function renderFeaturesConfig(
 	});
 
 	new Setting(containerEl)
-		.setName("📄 File Access")
-		.setDesc("Enable reading files, listing directories, and retrieving file metadata")
+		.setName("📄 File Access & Search")
+		.setDesc(
+			"Enable reading files, listing directories, searching vault, and retrieving file metadata"
+		)
 		.addToggle((toggle) =>
 			toggle.setValue(token.enabledTools.file_access).onChange((value) => {
 				token.enabledTools.file_access = value;
@@ -402,15 +402,6 @@ function renderFeaturesConfig(
 			token.enabledTools.update_content = value;
 		})
 	);
-
-	new Setting(containerEl)
-		.setName("🔍 Vault Search")
-		.setDesc("Search for text in vault files")
-		.addToggle((toggle) =>
-			toggle.setValue(token.enabledTools.search).onChange((value) => {
-				token.enabledTools.search = value;
-			})
-		);
 
 	// Extension toggles
 	const enabledTools = token.enabledTools as Record<string, boolean>;
