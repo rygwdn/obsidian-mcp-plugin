@@ -21,12 +21,10 @@ export interface AuthToken {
 	lastUsed?: number;
 	enabledTools: {
 		file_access: boolean;
-		search: boolean;
 		update_content: boolean;
-		dataview_query: boolean;
+		dataview: boolean;
 		quickadd: boolean;
 		tasknotes: boolean;
-		timeblocks: boolean;
 	};
 	directoryPermissions: {
 		rules: DirectoryRule[];

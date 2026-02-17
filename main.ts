@@ -3,6 +3,8 @@ import { Plugin } from "obsidian";
 
 import type { ObsidianInterface } from "./obsidian/obsidian_interface";
 import { ObsidianImpl } from "./obsidian/obsidian_impl";
+import { builtinExtensions } from "extensions/builtin";
+import { ExtensionRegistry, REGISTRY_READY_EVENT } from "extensions/registry";
 import { ObsidianMcpServer } from "mcp_server";
 import { ServerManager } from "./server/server_manager";
 import { TokenTracker } from "./server/connection_tracker";
@@ -16,6 +18,7 @@ export default class ObsidianMCPPlugin extends Plugin {
 	public settings: MCPPluginSettings;
 	public obsidianInterface: ObsidianInterface | null = null;
 	public tokenTracker: TokenTracker;
+	public extensionRegistry: ExtensionRegistry = new ExtensionRegistry();
 
 	private errorResponse(response: Response, error: Error) {
 		logger.logError("Error handling MCP request:", error);
@@ -32,7 +35,11 @@ export default class ObsidianMCPPlugin extends Plugin {
 	async registerRoutes() {
 		this.obsidianInterface = new ObsidianImpl(this.app, this);
 		const serverManager = this.getServerManager();
-		this.mcpServer = new ObsidianMcpServer(this.obsidianInterface, this.manifest);
+		this.mcpServer = new ObsidianMcpServer(
+			this.obsidianInterface,
+			this.manifest,
+			this.extensionRegistry
+		);
 
 		serverManager.addRoute("/mcp").all(async (request, response) => {
 			try {
@@ -52,13 +59,25 @@ export default class ObsidianMCPPlugin extends Plugin {
 			this.settings.server = DEFAULT_SETTINGS.server;
 		}
 
-		// Migration: Add missing enabledTools properties to existing tokens
+		// Migration: Rename/merge enabledTools keys for existing tokens
 		for (const token of this.settings.server.tokens) {
+			const tools = token.enabledTools as Record<string, boolean>;
+			// dataview_query → dataview
+			if (tools["dataview_query"] !== undefined) {
+				tools["dataview"] = tools["dataview_query"];
+				delete tools["dataview_query"];
+			}
+			// timeblocks merged into tasknotes extension
+			if (tools["timeblocks"] !== undefined) {
+				if (tools["timeblocks"]) {
+					tools["tasknotes"] = true;
+				}
+				delete tools["timeblocks"];
+			}
+			// search merged into file_access
+			delete tools["search"];
 			if (token.enabledTools.tasknotes === undefined) {
 				token.enabledTools.tasknotes = false;
-			}
-			if (token.enabledTools.timeblocks === undefined) {
-				token.enabledTools.timeblocks = false;
 			}
 		}
 
@@ -77,6 +96,11 @@ export default class ObsidianMCPPlugin extends Plugin {
 
 		this.tokenTracker = new TokenTracker();
 		logger.tokenTracker = this.tokenTracker;
+
+		for (const ext of builtinExtensions) {
+			this.extensionRegistry.register(ext);
+		}
+		this.app.workspace.trigger(REGISTRY_READY_EVENT, this.extensionRegistry);
 
 		await this.registerRoutes();
 

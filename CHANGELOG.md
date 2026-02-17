@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+### Added
+
+- **Extension API**: Introduce an extension API for plugin integrations. Extensions bundle related
+  MCP tools with availability detection, providing a standard interface for Obsidian plugin
+  integrations.
+- **Extension Registry**: Third-party plugins can register extensions via
+  `extensionRegistry.register()` on the MCP plugin instance, with load-order-independent
+  registration.
+- Convert Dataview, QuickAdd, and TaskNotes/Timeblocks integrations into built-in extensions
+
 ## [0.9.0] - 2025-12-12
 
 ### Added

@@ -128,26 +128,32 @@ function updateTokenList(
 			},
 		});
 
-		// Feature icons in same order as config section
+		// Feature icons
 		const featuresEl = tokenEl.createDiv({ cls: "mcp-token-features" });
+		const enabledTools = token.enabledTools as Record<string, boolean>;
 
-		// Icon mapping in display order
-		const toolsInOrder = [
-			{ key: "file_access", icon: "📄", title: "File Access" },
+		const coreTools = [
+			{ key: "file_access", icon: "📄", title: "File Access & Search" },
 			{ key: "update_content", icon: "✏️", title: "Content Modification" },
-			{ key: "search", icon: "🔍", title: "Vault Search" },
-			{ key: "dataview_query", icon: "📊", title: "Dataview Integration" },
-			{ key: "quickadd", icon: "⚡", title: "QuickAdd Integration" },
-			{ key: "tasknotes", icon: "✅", title: "TaskNotes Integration" },
-			{ key: "timeblocks", icon: "📅", title: "Timeblocks Integration" },
 		];
 
-		for (const tool of toolsInOrder) {
-			if (token.enabledTools[tool.key as keyof typeof token.enabledTools]) {
+		for (const tool of coreTools) {
+			if (enabledTools[tool.key]) {
 				featuresEl.createSpan({
 					text: tool.icon,
 					cls: "mcp-token-feature-icon",
 					attr: { title: tool.title },
+				});
+			}
+		}
+
+		// Show enabled extension names
+		for (const ext of plugin.extensionRegistry.getAll()) {
+			if (enabledTools[ext.id] !== false) {
+				featuresEl.createSpan({
+					text: ext.name,
+					cls: "mcp-token-feature-icon",
+					attr: { title: ext.name },
 				});
 			}
 		}
@@ -224,11 +230,9 @@ function renderCreateTokenConfig(
 		enabledTools: {
 			file_access: true,
 			update_content: true,
-			search: true,
-			dataview_query: true,
+			dataview: true,
 			quickadd: true,
 			tasknotes: false,
-			timeblocks: false,
 		},
 		directoryPermissions: {
 			rules: [],
@@ -374,8 +378,10 @@ function renderFeaturesConfig(
 	});
 
 	new Setting(containerEl)
-		.setName("📄 File Access")
-		.setDesc("Enable reading files, listing directories, and retrieving file metadata")
+		.setName("📄 File Access & Search")
+		.setDesc(
+			"Enable reading files, listing directories, searching vault, and retrieving file metadata"
+		)
 		.addToggle((toggle) =>
 			toggle.setValue(token.enabledTools.file_access).onChange((value) => {
 				token.enabledTools.file_access = value;
@@ -397,95 +403,15 @@ function renderFeaturesConfig(
 		})
 	);
 
-	new Setting(containerEl)
-		.setName("🔍 Vault Search")
-		.setDesc("Search for text in vault files")
-		.addToggle((toggle) =>
-			toggle.setValue(token.enabledTools.search).onChange((value) => {
-				token.enabledTools.search = value;
+	// Extension toggles
+	const enabledTools = token.enabledTools as Record<string, boolean>;
+	for (const ext of plugin.extensionRegistry.getAll()) {
+		new Setting(containerEl).setName(ext.name).addToggle((t) =>
+			t.setValue(enabledTools[ext.id] ?? false).onChange((value) => {
+				enabledTools[ext.id] = value;
 			})
 		);
-
-	const isDataviewEnabled = plugin.app.plugins.enabledPlugins.has("dataview");
-	const dataviewSetting = new Setting(containerEl)
-		.setName("📊 Dataview Integration")
-		.setDesc(isDataviewEnabled ? "Execute Dataview queries" : "Dataview plugin is not enabled");
-
-	dataviewSetting.addToggle((toggle) =>
-		toggle
-			.setValue(isDataviewEnabled && token.enabledTools.dataview_query)
-			.setDisabled(!isDataviewEnabled)
-			.onChange((value) => {
-				token.enabledTools.dataview_query = value;
-			})
-	);
-
-	const isQuickAddEnabled = plugin.app.plugins.enabledPlugins.has("quickadd");
-	const quickAddSetting = new Setting(containerEl)
-		.setName("⚡ QuickAdd Integration")
-		.setDesc(
-			isQuickAddEnabled ? "Execute QuickAdd macros and choices" : "QuickAdd plugin is not enabled"
-		);
-
-	if (isQuickAddEnabled) {
-		quickAddSetting.descEl.createSpan({
-			text: " ⚠️ Allows direct changes to vault",
-			cls: "mcp-warning-text",
-		});
 	}
-
-	quickAddSetting.addToggle((toggle) =>
-		toggle
-			.setValue(isQuickAddEnabled && token.enabledTools.quickadd)
-			.setDisabled(!isQuickAddEnabled)
-			.onChange((value) => {
-				token.enabledTools.quickadd = value;
-			})
-	);
-
-	const isTaskNotesEnabled = plugin.app.plugins.enabledPlugins.has("tasknotes");
-	const taskNotesSetting = new Setting(containerEl)
-		.setName("✅ TaskNotes Integration")
-		.setDesc(
-			isTaskNotesEnabled
-				? "Query and manage tasks across your vault"
-				: "TaskNotes plugin is not enabled"
-		);
-
-	taskNotesSetting.addToggle((toggle) =>
-		toggle
-			.setValue(isTaskNotesEnabled && (token.enabledTools.tasknotes ?? false))
-			.setDisabled(!isTaskNotesEnabled)
-			.onChange((value) => {
-				token.enabledTools.tasknotes = value;
-			})
-	);
-
-	// Timeblocks requires TaskNotes plugin and daily notes
-	const hasDailyNotes =
-		plugin.app.internalPlugins.plugins["daily-notes"]?.enabled ||
-		plugin.app.plugins.enabledPlugins.has("periodic-notes");
-	const hasTaskNotes = plugin.app.plugins.enabledPlugins.has("tasknotes");
-	const isTimeblocksEnabled = hasDailyNotes && hasTaskNotes;
-
-	const timeblocksSetting = new Setting(containerEl)
-		.setName("📅 Timeblocks Integration")
-		.setDesc(
-			isTimeblocksEnabled
-				? "Manage timeblocks in daily notes (TaskNotes format)"
-				: !hasDailyNotes
-					? "Requires Daily Notes or Periodic Notes plugin"
-					: "Requires TaskNotes plugin"
-		);
-
-	timeblocksSetting.addToggle((toggle) =>
-		toggle
-			.setValue(isTimeblocksEnabled && (token.enabledTools.timeblocks ?? false))
-			.setDisabled(!isTimeblocksEnabled)
-			.onChange((value) => {
-				token.enabledTools.timeblocks = value;
-			})
-	);
 }
 
 function renderDirectoriesConfig(

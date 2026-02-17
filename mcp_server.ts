@@ -4,29 +4,130 @@ import type { ToolCallback } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types";
+import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types";
+import { z } from "zod";
+import type { ZodTypeAny } from "zod";
 
 import type { ObsidianInterface } from "./obsidian/obsidian_interface";
 import type { AuthenticatedRequest } from "./server/auth";
 import { getRequest } from "./server/auth";
 import { DEFAULT_SETTINGS } from "./settings/types";
-import { dataviewQueryTool } from "tools/dataview_query";
+import type { ExtensionRegistry } from "extensions/registry";
+import type { ExtensionTool, ToolContext, ToolHints, ToolParameter } from "extensions/types";
 import { FileMetadataResource, getFileMetadataTool } from "tools/file_metadata";
 import { getContentsTool } from "tools/get_contents";
 import { logger } from "tools/logging";
-import { quickAddExecuteTool, quickAddListTool } from "tools/quickadd";
 import { searchTool } from "tools/search";
-import { taskNotesQueryTool, taskNotesTool } from "tools/tasknotes";
-import { timeblocksQueryTool, timeblocksTool } from "tools/timeblocks";
 import type { ToolRegistration } from "tools/types";
 import { updateContentTool } from "tools/update_content";
 import { VaultDailyNoteResource, VaultFileResource } from "tools/vault_file_resource";
+
+// ---------------------------------------------------------------------------
+// Bridge: ExtensionTool → MCP SDK types
+// ---------------------------------------------------------------------------
+
+/** Convert a ToolParameter to a Zod schema. */
+function paramToZod(param: ToolParameter, isRequired: boolean): ZodTypeAny {
+	let schema: ZodTypeAny;
+
+	if (param.enum) {
+		schema = z.enum(param.enum as [string, ...string[]]);
+	} else {
+		switch (param.type) {
+			case "string":
+				schema = z.string();
+				break;
+			case "number":
+				schema = z.number();
+				break;
+			case "boolean":
+				schema = z.boolean();
+				break;
+			case "array":
+				schema = z.array(param.items ? paramToZod(param.items, true) : z.unknown());
+				break;
+			case "object":
+				schema = z.record(z.string(), z.unknown());
+				break;
+		}
+	}
+
+	if (param.description) schema = schema.describe(param.description);
+	if (param.default !== undefined) schema = schema.default(param.default);
+	if (!isRequired && param.default === undefined) schema = schema.optional();
+
+	return schema;
+}
+
+/** Convert ExtensionTool.parameters → Record<string, ZodTypeAny> for the MCP SDK. */
+function extensionParamsToZod(tool: ExtensionTool): Record<string, ZodTypeAny> | undefined {
+	if (!tool.parameters) return undefined;
+	const shape: Record<string, ZodTypeAny> = {};
+	for (const [key, param] of Object.entries(tool.parameters)) {
+		shape[key] = paramToZod(param, tool.required?.includes(key) ?? false);
+	}
+	return shape;
+}
+
+/** Convert ToolHints → MCP ToolAnnotations. */
+function hintsToAnnotations(tool: ExtensionTool): ToolAnnotations {
+	const h: ToolHints = tool.hints ?? {};
+	return {
+		title: tool.title,
+		readOnlyHint: h.readOnly ?? false,
+		destructiveHint: h.destructive ?? false,
+		idempotentHint: h.idempotent ?? false,
+		openWorldHint: false,
+	};
+}
+
+// ---------------------------------------------------------------------------
+// ToolContext implementation
+// ---------------------------------------------------------------------------
+
+class ToolContextImpl implements ToolContext {
+	constructor(
+		private obsidian: ObsidianInterface,
+		private request: AuthenticatedRequest
+	) {}
+
+	async isFileAccessible(path: string): Promise<boolean> {
+		const result = await this.obsidian.checkFile(path, this.request);
+		return result.exists && result.isAccessible;
+	}
+
+	async isFileModifiable(path: string): Promise<boolean> {
+		const result = await this.obsidian.checkFile(path, this.request);
+		return result.exists && result.isModifiable;
+	}
+
+	getPlugin(name: string): unknown {
+		switch (name) {
+			case "dataview":
+				return this.obsidian.getDataview(this.request);
+			case "quickadd":
+				return this.obsidian.getQuickAdd(this.request);
+			case "tasknotes":
+				return this.obsidian.getTaskNotes(this.request);
+			case "timeblocks":
+				return this.obsidian.getTimeblocks(this.request);
+			default:
+				return null;
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// MCP Server
+// ---------------------------------------------------------------------------
 
 export class ObsidianMcpServer {
 	private transports: StreamableHTTPServerTransport[] = [];
 
 	constructor(
 		private obsidian: ObsidianInterface,
-		private manifest: { version: string; name: string }
+		private manifest: { version: string; name: string },
+		private registry: ExtensionRegistry
 	) {}
 
 	public async handleHttpRequest(request: Request, response: Response) {
@@ -112,39 +213,69 @@ export class ObsidianMcpServer {
 			new VaultFileResource(this.obsidian).register(server);
 			new VaultDailyNoteResource(this.obsidian).register(server);
 			new FileMetadataResource(this.obsidian).register(server);
-			this.registerTool(server, getContentsTool);
-			this.registerTool(server, getFileMetadataTool);
-		}
-
-		if (enabledTools.search) {
-			this.registerTool(server, searchTool);
+			this.registerCoreTool(server, getContentsTool);
+			this.registerCoreTool(server, getFileMetadataTool);
+			this.registerCoreTool(server, searchTool);
 		}
 
 		if (enabledTools.update_content) {
-			this.registerTool(server, updateContentTool);
+			this.registerCoreTool(server, updateContentTool);
 		}
 
-		if (enabledTools.dataview_query && this.obsidian.getDataview(request)) {
-			this.registerTool(server, dataviewQueryTool);
-		}
-
-		if (this.obsidian.getQuickAdd(request) && enabledTools.quickadd) {
-			this.registerTool(server, quickAddListTool);
-			this.registerTool(server, quickAddExecuteTool);
-		}
-
-		if (enabledTools.tasknotes && this.obsidian.getTaskNotes(request)) {
-			this.registerTool(server, taskNotesQueryTool);
-			this.registerTool(server, taskNotesTool);
-		}
-
-		if (enabledTools.timeblocks && this.obsidian.getTimeblocks(request)) {
-			this.registerTool(server, timeblocksQueryTool);
-			this.registerTool(server, timeblocksTool);
+		const allEnabledTools = enabledTools as Record<string, boolean>;
+		for (const extension of this.registry.getAll()) {
+			if (allEnabledTools[extension.id] !== false) {
+				for (const tool of extension.tools) {
+					this.registerExtensionTool(server, tool, extension.id, request);
+				}
+			}
 		}
 	}
 
-	private registerTool(server: McpServer, toolReg: ToolRegistration) {
+	private registerExtensionTool(
+		server: McpServer,
+		tool: ExtensionTool,
+		extensionId: string,
+		request: AuthenticatedRequest
+	) {
+		const toolName = tool.name;
+		const context = new ToolContextImpl(this.obsidian, request);
+
+		const handler: ToolCallback = async (...cbArgs) => {
+			const extra = cbArgs[cbArgs.length - 1];
+			const req = getRequest(extra);
+
+			const trackerParams = {
+				type: "tool",
+				name: toolName,
+				details: { args: cbArgs },
+			} as const;
+
+			try {
+				if (!this.registry.getAll().some((e) => e.id === extensionId)) {
+					throw new Error(`Extension "${extensionId}" has been unregistered`);
+				}
+				const data = await tool.handler(cbArgs[0], context);
+				req.trackAction({ ...trackerParams, success: true });
+				return { content: [{ type: "text", text: data }] };
+			} catch (error) {
+				req.trackAction({ ...trackerParams, success: false, error: error.toString() });
+				return { isError: true, content: [{ type: "text", text: error.toString() }] };
+			}
+		};
+
+		const zodShape = extensionParamsToZod(tool);
+		const annotations = hintsToAnnotations(tool);
+
+		if (zodShape) {
+			server.tool(toolName, tool.description, zodShape, annotations, handler);
+		} else {
+			server.tool(toolName, tool.description, annotations, handler);
+		}
+	}
+
+	/** Register an internal core tool (uses the old ToolRegistration interface). */
+	private registerCoreTool(server: McpServer, toolReg: ToolRegistration) {
 		const toolName = toolReg.name;
 
 		const handler: ToolCallback = async (...args) => {
@@ -159,25 +290,13 @@ export class ObsidianMcpServer {
 
 			try {
 				const data = await toolReg.handler(this.obsidian, request, args[0]);
-				request.trackAction({
-					...trackerParams,
-					success: true,
-				});
+				request.trackAction({ ...trackerParams, success: true });
 				return { content: [{ type: "text", text: data }] };
 			} catch (error) {
-				request.trackAction({
-					...trackerParams,
-					success: false,
-					error: error.toString(),
-				});
+				request.trackAction({ ...trackerParams, success: false, error: error.toString() });
 				return {
 					isError: true,
-					content: [
-						{
-							type: "text",
-							text: error.toString(),
-						},
-					],
+					content: [{ type: "text", text: error.toString() }],
 				};
 			}
 		};

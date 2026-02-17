@@ -12,6 +12,7 @@ import {
 	TimeblocksInterface,
 } from "../obsidian/obsidian_interface";
 import { DEFAULT_SETTINGS, MCPPluginSettings, AuthToken } from "settings/types";
+import type { ToolContext } from "../extensions/types";
 import { AuthenticatedRequest, AUTHENTICATED_REQUEST_KEY } from "../server/auth";
 import { isFileAccessibleWithToken, isFileModifiableWithToken } from "../tools/permissions";
 import { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol";
@@ -216,7 +217,7 @@ export class MockObsidian implements ObsidianInterface {
 	}
 
 	getDataview(request: AuthenticatedRequest): DataviewInterface | null {
-		if (!request.token.enabledTools.dataview_query) {
+		if (!request.token.enabledTools.dataview) {
 			return null;
 		}
 		return this.dataview;
@@ -230,7 +231,7 @@ export class MockObsidian implements ObsidianInterface {
 	}
 
 	getTimeblocks(request: AuthenticatedRequest): TimeblocksInterface | null {
-		if (!request.token.enabledTools.timeblocks) {
+		if (!request.token.enabledTools.tasknotes) {
 			return null;
 		}
 		return this.timeblocks;
@@ -335,12 +336,10 @@ export function createMockRequest(
 		createdAt: Date.now(),
 		enabledTools: {
 			file_access: true,
-			search: true,
 			update_content: true,
-			dataview_query: true,
+			dataview: true,
 			quickadd: true,
 			tasknotes: false,
-			timeblocks: false,
 		},
 		directoryPermissions: {
 			rules: [],
@@ -375,6 +374,40 @@ export function createMockExtra(
 			extra: {
 				request,
 			},
+		},
+	};
+}
+
+/**
+ * Create a mock ToolContext for testing extension tools.
+ * Wraps a MockObsidian + AuthenticatedRequest the same way ToolContextImpl does.
+ */
+export function createMockContext(
+	obsidian: MockObsidian,
+	request: AuthenticatedRequest
+): ToolContext {
+	return {
+		async isFileAccessible(path: string): Promise<boolean> {
+			const result = await obsidian.checkFile(path, request);
+			return result.exists && result.isAccessible;
+		},
+		async isFileModifiable(path: string): Promise<boolean> {
+			const result = await obsidian.checkFile(path, request);
+			return result.exists && result.isModifiable;
+		},
+		getPlugin(name: string): unknown {
+			switch (name) {
+				case "dataview":
+					return obsidian.getDataview(request);
+				case "quickadd":
+					return obsidian.getQuickAdd(request);
+				case "tasknotes":
+					return obsidian.getTaskNotes(request);
+				case "timeblocks":
+					return obsidian.getTimeblocks(request);
+				default:
+					return null;
+			}
 		},
 	};
 }

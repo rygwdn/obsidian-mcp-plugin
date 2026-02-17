@@ -97,12 +97,10 @@ export default async function globalSetup() {
 			createdAt: Date.now(),
 			enabledTools: {
 				file_access: true,
-				search: true,
 				update_content: true,
-				dataview_query: true,
+				dataview: true,
 				quickadd: true,
 				tasknotes: true,
-				timeblocks: true,
 			},
 			directoryPermissions: {
 				rules: [],
@@ -116,12 +114,10 @@ export default async function globalSetup() {
 			createdAt: Date.now(),
 			enabledTools: {
 				file_access: true,
-				search: true,
 				update_content: true,
-				dataview_query: true,
+				dataview: true,
 				quickadd: true,
 				tasknotes: true,
-				timeblocks: true,
 			},
 			directoryPermissions: {
 				rules: [],
@@ -135,12 +131,10 @@ export default async function globalSetup() {
 			createdAt: Date.now(),
 			enabledTools: {
 				file_access: true,
-				search: true,
 				update_content: false,
-				dataview_query: true,
+				dataview: true,
 				quickadd: false,
 				tasknotes: false,
-				timeblocks: false,
 			},
 			directoryPermissions: {
 				rules: [],
@@ -154,12 +148,10 @@ export default async function globalSetup() {
 			createdAt: Date.now(),
 			enabledTools: {
 				file_access: true,
-				search: true,
 				update_content: true,
-				dataview_query: false,
+				dataview: false,
 				quickadd: false,
 				tasknotes: false,
-				timeblocks: false,
 			},
 			directoryPermissions: {
 				rules: [],
